@@ -15,11 +15,12 @@ proj.root.children.add('Items');
 
 var item = root.models.add('Item');
 item.members.add('name', 'string', 'default');
-item.members.add('cost', 'decimal', '0.0')
-item.members.add('canSell', 'bool', 'true');
+item.members.add('cost', 'decimal', 0.0)
+item.members.add('canSell', 'bool', true);
 
 
 var iceSword = root.instances.add('Ice Sword', item);
 iceSword.fields.set('name', 'Ice Sword');
 var name = iceSword.fields.get('name');
+name.reset();
 iceSwords.reset('name'); // returns to default

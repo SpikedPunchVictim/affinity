@@ -1,0 +1,14 @@
+Each type must contain the following:
+
+    - function createType(...)
+        This function will create the Type information (TypeInfo). Since each type is different,
+        the parameters will vary with each type.
+
+    - function create()
+        Will create an instance of that Type's value. The object returned must have a 'type' member
+        that is the TypeInfo for that value.
+
+
+TypeInfo:
+    - name (string): The name of the type
+    - function equals(typeInfo): returns true if the typeInfo passed in is equals the source TypeInfo, otherwise false

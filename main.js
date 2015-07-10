@@ -1,22 +1,24 @@
 var ObservableCollection = require('./lib/collections/observableCollection.js');
-var Project = require('./lib/project.js')
-var QualifiedObject = require('./lib/qualifiedObject.js');
 var gaia = require('./lib/index.js');
 
 var proj = gaia.create();
 var root = proj.root;
 
+var types = gaia.types;
+
 proj.root.children.on('items-adding', function(items) {
     console.log('Namespace <Root: items-adding>: %j', items);
 });
 
-proj.root.children.add('Items');
-
+var items = proj.root.children.add('Items');
+proj.root.children.indexOf('Items');
 
 var item = root.models.add('Item');
-item.members.add('name', 'string', 'default');
-item.members.add('cost', 'decimal', 0.0)
-item.members.add('canSell', 'bool', true);
+console.log('Types: %j', gaia.types);
+
+item.members.add('name', gaia.types.string.create('default'));
+item.members.add('cost', types.decimal.create(0.0));
+item.members.add('canSell', types.bool.create(true));
 
 
 var iceSword = root.instances.add('Ice Sword', item);

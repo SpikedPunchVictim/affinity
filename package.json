@@ -2,13 +2,14 @@
   "name": "gaia",
   "version": "1.0.0",
   "description": "Dynamic data modeling",
-  "main": "main.js",
+  "main": ".lib/index.js",
   "dependencies": {
-    "lodash": "^3.9.3"
+    "lodash": "^3.9.3",
+    "undo.js": "^0.2.0"
   },
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha --recursive --reporter spec"
   },
   "keywords": [
     "dynamic",

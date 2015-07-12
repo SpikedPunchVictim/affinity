@@ -1,6 +1,6 @@
 Each type must contain the following:
 
-    - function createType(...)
+    - function type(...)
         This function will create the Type information (TypeInfo). Since each type is different,
         the parameters will vary with each type.
 
@@ -12,3 +12,16 @@ Each type must contain the following:
 TypeInfo:
     - name (string): The name of the type
     - function equals(typeInfo): returns true if the typeInfo passed in is equals the source TypeInfo, otherwise false
+
+var exports = module.exports;
+exports.type = type;
+exports.create = create;
+
+
+The Value requires:
+    // Returns an exact copy of the value. It may or may not require a deep
+    // copy. This will have to be decided depending on the type.
+    - clone();
+
+    // Returns true if the other value is equal, otherwise false
+    - equals(other);

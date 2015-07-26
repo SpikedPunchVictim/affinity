@@ -1,10 +1,38 @@
 var ObservableCollection = require('./lib/collections/observableCollection.js');
 var gaia = require('./lib/index.js');
 
+var o = new ObservableCollection();
+o.splice(0, 0, 1);
+o.splice(0, 0, 2);
+o.splice(2, 0, 3, 4, 5)
+o.splice(1, 0, 3);
+o.splice(2, 0, 4);
+o.splice(1, 1);
+o.splice(0, 2);
+
+o.addMany([1, 2, 3, 4, 5]);
+o.removeMany([1, 2, 3, 4]);
+
+
+//-----------------------------------------------------------------------------------
+var expect = require('chai').expect;
+var proj = gaia.create();
+var model = proj.root.models.add('test');
+var name = 'name';
+var value = gaia.types.bool.create();
+var member = model.members.add(name, value);
+expect(member.type.equals(value.type)).to.be.true;
+expect(member.value.equals(value)).to.be.true;  
+
+//----------------------------------------------------------------------------------
+
+var coll = gaia.types.collection.create(gaia.types.string.type());
+
 var proj = gaia.create();
 var root = proj.root;
 
 var types = gaia.types;
+var value = gaia.types.string.create();
 
 proj.root.children.on('items-adding', function(items) {
     console.log('Namespace <Root: items-adding>: %j', items);
@@ -14,6 +42,7 @@ var items = proj.root.children.add('Items');
 proj.root.children.indexOf('Items');
 
 var item = root.models.add('Item');
+var iceSword = root.instances.add('Ice Sword', item);
 console.log('Types: %j', gaia.types);
 
 item.members.add('name', gaia.types.string.create('default'));
@@ -22,7 +51,7 @@ item.members.add('canSell', types.bool.create(true));
 
 
 var iceSword = root.instances.add('Ice Sword', item);
-iceSword.fields.set('name', 'Ice Sword');
-var name = iceSword.fields.get('name');
+iceSword.members.set('name', 'Ice Sword');
+var name = iceSword.members.get('name');
 name.reset();
 iceSwords.reset('name'); // returns to default

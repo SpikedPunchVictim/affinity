@@ -16,13 +16,14 @@ o.removeMany([1, 2, 3, 4]);
 
 //-----------------------------------------------------------------------------------
 var expect = require('chai').expect;
+var util = require('util');
+var EventEmitter = require('events').EventEmitter;
+var CommonCollection = require('./lib/collections/commonCollection.js');
+
 var proj = gaia.create();
 var model = proj.root.models.add('test');
-var name = 'name';
-var value = gaia.types.bool.create();
-var member = model.members.add(name, value);
-expect(member.type.equals(value.type)).to.be.true;
-expect(member.value.equals(value)).to.be.true;  
+var instance = proj.root.instances.add('test-instance', model)
+expect(instance).to.be.instanceof(Instance);
 
 //----------------------------------------------------------------------------------
 
@@ -34,12 +35,12 @@ var root = proj.root;
 var types = gaia.types;
 var value = gaia.types.string.create();
 
-proj.root.children.on('items-adding', function(items) {
-    console.log('Namespace <Root: items-adding>: %j', items);
+proj.root.children.on('adding', function(items) {
+    console.log('Namespace <Root: adding>: %j', items);
 });
 
 var items = proj.root.children.add('Items');
-proj.root.children.indexOf('Items');
+var itemIndex = proj.root.children.indexOf('Items');
 
 var item = root.models.add('Item');
 var iceSword = root.instances.add('Ice Sword', item);

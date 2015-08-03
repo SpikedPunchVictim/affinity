@@ -13,6 +13,7 @@ function testCreatedType(createValue) {
     expect(member.value.equals(value)).to.be.true;    
 }
 
+
 describe('Model', function() {
 
     it('should be able to create a new Model', function() {
@@ -38,6 +39,14 @@ describe('Model', function() {
 
     it('should be able to create member: string', function() {
         testCreatedType(function() { return gaia.types.string.create(); });
+    });
+
+    it('should be able to create member: int', function() {
+        testCreatedType(function() { return gaia.types.int.create(); });
+    });
+
+    it('should be able to create member: uint', function() {
+        testCreatedType(function() { return gaia.types.uint.create(); });
     });
 
 

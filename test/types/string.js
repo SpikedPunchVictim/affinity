@@ -1,5 +1,6 @@
 var expect = require('chai').expect;
 var gaia = require('../../lib/index.js');
+var utility = require('../../lib/utility.js');
 
 function validateTypeInterface(type) {
     expect(type).to.include.keys(['equals']);
@@ -39,19 +40,16 @@ describe('Types:', function() {
             var value = gaia.types.string.create();
             validateValueInterface(value);
         });
+
+        it('should raise the value-changing event', function(done) {
+            var value = gaia.types.string.create();
+            utility.validateEvent(value, 'value-changing', function() { value.value = 'new'; }, done);
+        });
+
+        it('should raise the value-changed event', function(done) {
+            var value = gaia.types.string.create();
+            utility.validateEvent(value, 'value-changed', function() { value.value = 'new'; }, done);
+        });
     });
-
-    // describe('collection', function() {
-    //     it('should have \'collection\' as name', function() {
-    //         var typeInfo = gaia.types.collection.type(gaia.types.string.type());
-    //         expect(typeInfo.name).eql('collection');
-    //     });
-
-    //     it('should be able to create a value', function() {
-    //         var typeInfo = gaia.types.collection.value(gaia.types.string.type());
-    //         expect(value.value).eql('test');
-    //         expect(value.type.name).eql('string');
-    //     });
-    // });
 });
 

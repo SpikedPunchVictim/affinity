@@ -9,18 +9,17 @@ function testMemberCreation(createValue) {
     var instance = proj.root.instances.add('test-instance', model)
     var name = 'test-member-name';
     var value = createValue();
-    var member = model.members.add(name, value);
-    var member = instance.members.get(name);
 
-    var member = model.members.add(name, value);
-    expect(member.name).to.equal(name);
-    expect(member.name).to.equal(name);
+    var modelMember = model.members.add(name, value);
+    var instanceMember = instance.members.get(name);
 
-    expect(member.value.equals(value)).to.be.true;
-    expect(member.value.equals(value)).to.be.true;
+    expect(modelMember.type.equals(value.type)).to.be.true;
+    expect(modelMember.name).to.equal(name);
+    expect(modelMember.value.equals(value)).to.be.true;
 
-    expect(member.type.equals(value.type)).to.be.true;
-    expect(member.type.equals(value.type)).to.be.true; 
+    expect(instanceMember.type.equals(value.type)).to.be.true; 
+    expect(instanceMember.name).to.equal(name);   
+    expect(instanceMember.value.equals(value)).to.be.true;
 }
 
 describe('Instance', function() {
@@ -33,60 +32,56 @@ describe('Instance', function() {
         expect(instance).to.be.instanceof(Instance);
     });
 
-    it('should be able to inherit member: bool', function() {
-        testMemberCreation(function() { return gaia.types.bool.create(); });
+    it('should remove a member when the Model\'s member is removed', function() {
+        var proj = gaia.create();
+        var model = proj.root.models.add('test');
+        var instance = proj.root.instances.add('test-instance', model);
+
+        var stringMember = model.members.add('stringMember', types.string.create());
+        var intMember = model.members.add('intMember', types.int.create());
+        var decimalMember = model.members.add('decimalMember', types.decimal.create());
+
+        expect(instance.members.at(0)).to.equal(stringMember);
+        expect(instance.members.at(1)).to.equal(intMember);
+        expect(instance.members.at(2)).to.equal(decimalMember);
+
+        model.members.remove(intMember);
+        expect(instance.members.at(0)).to.equal(stringMember);
+        expect(instance.members.at(1)).to.equal(decimalMember);
+        expect(instance.members.length).to.equal(2);
     });
 
-    // it('should be able to create member: collection', function() {
-    //     testCreatedType(function() { return gaia.types.collection.create(gaia.types.string.type()); });
-    // });
+    it('should add a member when member is added to the Model', function() {
 
-    // it('should be able to create member: decimal', function() {
-    //     testCreatedType(function() { return gaia.types.decimal.create(); });
-    // });
+    });
 
-    // it('should be able to create member: string', function() {
-    //     testCreatedType(function() { return gaia.types.string.create(); });
-    // });
+    it('InstanceMember indexes should match their model member\'s counterpart', function() {
 
+    });
 
-    // it('should have a children property', function() {
-    //     expect(nspace).to.have.property('children');
-    // });
+    it('changing a value model member should also update the inheriting instances', function() {
+        // Test both inheriting and non-inheriting instances
+    });
 
-    // it('should have the parent property', function() {
-    //     expect(nspace).to.have.property('parent');
-    // });
+    it('should no longer inherit when setting an instance member\'s value', function() {
 
-    // it('should have the proper parent', function() {        
-    //     expect(nspace.parent).to.eql(proj.root);
-    // });
+    });
 
-    // it('new child should also have the proper parent', function() {
-    //     var child = nspace.children.add('child');
-    //     expect(child.parent).to.eql(nspace);
-    //     nspace.children.remove(child);
-    //     expect(nspace.children.find(child)).to.be.null;
-    // });
+    describe('#Types', function() {
+        it('should be able to inherit member: bool', function() {
+            testMemberCreation(function() { return gaia.types.bool.create(); });
+        });
 
-    // it('should be able to find a namespace by name', function() {
-    //     var child = nspace.children.add('child');
-    //     expect(nspace.children.indexOf('child')).to.be.at.least(0);
-    //     nspace.children.remove(child);
-    //     expect(nspace.children.find(child)).to.be.null;
-    // });
+        it('should be able to create member: collection', function() {
+            testMemberCreation(function() { return gaia.types.collection.create(gaia.types.string.type()); });
+        });
 
-    // it('should be able to find a namespace by instance', function() {
-    //     var child = nspace.children.add('child');
-    //     expect(nspace.children.indexOf(child)).to.be.at.least(0);
-    //     nspace.children.remove(child);
-    //     expect(nspace.children.find(child)).to.be.null;
-    // });
+        it('should be able to create member: decimal', function() {
+            testMemberCreation(function() { return gaia.types.decimal.create(); });
+        });
 
-    // it('child can be deleted', function() {
-    //     var child = nspace.children.add('child');
-    //     expect(nspace.children.indexOf(child)).to.be.at.least(0);
-    //     nspace.children.remove(child);
-    //     expect(nspace.children.find(child)).to.be.null;
-    // });
+        it('should be able to create member: string', function() {
+            testMemberCreation(function() { return gaia.types.string.create(); });
+        });
+    });
 });

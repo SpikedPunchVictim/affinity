@@ -37,6 +37,9 @@ describe('Namespace', function() {
     });
 
     it('new child should also have the proper parent', function() {
+        var proj = gaia.create();
+        var name = 'test';
+        var nspace = proj.root.children.add(name);
         var child = nspace.children.add('child');
         expect(child.parent).to.eql(nspace);
         nspace.children.remove(child);

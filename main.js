@@ -42,7 +42,10 @@ proj.root.children.on('adding', function(items) {
 var items = proj.root.children.add('Items');
 var itemIndex = proj.root.children.indexOf('Items');
 
+//-- Model
 var item = root.models.add('Item');
+item.on()
+
 var iceSword = root.instances.add('Ice Sword', item);
 console.log('Types: %j', gaia.types);
 

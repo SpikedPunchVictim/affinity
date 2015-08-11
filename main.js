@@ -19,11 +19,24 @@ var expect = require('chai').expect;
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var CommonCollection = require('./lib/collections/commonCollection.js');
+var types = gaia.types;
 
 var proj = gaia.create();
 var model = proj.root.models.add('test');
-var instance = proj.root.instances.add('test-instance', model)
-expect(instance).to.be.instanceof(Instance);
+var instance = proj.root.instances.add('test-instance', model);
+
+var stringMember = model.members.add('stringMember', types.string.create());
+var intMember = model.members.add('intMember', types.int.create());
+var decimalMember = model.members.add('decimalMember', types.decimal.create());
+
+expect(instance.members.at(0).modelMember).to.equal(stringMember);
+expect(instance.members.at(1).modelMember).to.equal(intMember);
+expect(instance.members.at(2).modelMember).to.equal(decimalMember);
+
+model.members.remove(intMember);
+expect(instance.members.at(0)).to.equal(stringMember);
+expect(instance.members.at(1)).to.equal(decimalMember);
+expect(instance.members.length).to.equal(2);
 
 //----------------------------------------------------------------------------------
 

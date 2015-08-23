@@ -1,5 +1,6 @@
 var expect = require('chai').expect;
 var util = require('util');
+var _ = require('lodash');
 var EventEmitter = require('events').EventEmitter;
 var gaia = require('../lib/index.js');
 var CommonCollection = require('../lib/collections/commonCollection.js');
@@ -13,7 +14,7 @@ function TestCollection() {
     this.sync = utility.events.forward({
         source: this._items,
         dest: this,
-        events: ObservableCollection.events
+        events: _.values(ObservableCollection.events)
     });
 
     this.sync.subscribe();

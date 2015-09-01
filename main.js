@@ -26,7 +26,7 @@ function forwarding(builder, mapping) {
 
 
 }
-
+/*
 
 var source = {
     items: new ObservableCollection()
@@ -35,12 +35,19 @@ var source = {
 forwarding(b, {
         from: source.items,
         to: source,
-        events: b.map('adding', ['item-adding', 'value-changing'])
+        events: [
+            ['adding', ['item-adding', 'value-changing']],
+
+        ]
+
+
+        b.map('adding', ['item-adding', 'value-changing'])
                  .map('added', ['item-added', 'value-changed'])
                  .map('removing', ['item-removing', 'value-chaning'])
                  .map('removed', ['item-removed', 'value-changed'])
                  .build()
     });
+*/
 
 
 //----------------------------------------------------------------------------------

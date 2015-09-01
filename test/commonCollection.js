@@ -170,7 +170,7 @@ describe('commonCollection', function() {
 
         it('should generate an adding event', function(done) {
             var collection = new TestCollection();
-            utility.validateEvent(collection, 'adding', function() { collection.add(1); },  function() {
+            utility.validateEvent(collection, 'adding', function() { collection.splice(1, 0, 2); },  function() {
                 collection.dispose();
                 done();
             });
@@ -178,7 +178,7 @@ describe('commonCollection', function() {
 
         it('should generate an added event', function(done) {
             var collection = new TestCollection();
-            utility.validateEvent(collection, 'added', function() { collection.add(1); },  function() {
+            utility.validateEvent(collection, 'added', function() { collection.splice(1, 0, 2); },  function() {
                 collection.dispose();
                 done();
             });

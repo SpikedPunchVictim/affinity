@@ -1,5 +1,6 @@
 var expect = require('chai').expect;
 var gaia = require('../lib/index.js');
+var utility = require('../lib/utility.js');
 var Model = gaia.Model;
 
 function testCreatedType(createValue) {
@@ -47,6 +48,48 @@ describe('Model', function() {
 
     it('should be able to create member: uint', function() {
         testCreatedType(function() { return gaia.types.uint.create(); });
+    });
+
+    it('should raise an event on member change: adding', function(done) {
+        var proj = gaia.create();
+        var model = proj.root.models.add('test');
+
+        // (emitter, event, triggerEvent, callback)
+        utility.validateEvent(proj, Model.events.adding, function() { proj.root.models.add('model1'); }, done);
+    });
+
+    it('should raise an event on member change: adding', function(done) {
+        var proj = gaia.create();
+        var model = proj.root.models.add('test');
+
+        // (emitter, event, triggerEvent, callback)
+        utility.validateEvent(proj, Model.events.adding, function() { proj.root.models.add('model1'); }, done);
+    });
+
+    it('should raise an event on member change: added', function(done) {
+        var proj = gaia.create();
+        var model = proj.root.models.add('test');
+
+        // (emitter, event, triggerEvent, callback)
+        utility.validateEvent(proj, Model.events.added, function() { proj.root.models.add('model1'); }, done);
+    });
+
+    it('should raise an event on member change: removing', function(done) {
+        var proj = gaia.create();
+        var model = proj.root.models.add('test');
+        model.members.add('test');
+
+        // (emitter, event, triggerEvent, callback)
+        utility.validateEvent(proj, Model.events.removing, function() { model.members.remove('test'); }, done);
+    });
+
+    it('should raise an event on member change: removed', function(done) {
+        var proj = gaia.create();
+        var model = proj.root.models.add('test');
+        model.members.add('test');
+
+        // (emitter, event, triggerEvent, callback)
+        utility.validateEvent(proj, Model.events.removed, function() { model.members.remove('test'); }, done);
     });
 
 

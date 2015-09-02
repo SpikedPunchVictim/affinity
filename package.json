@@ -9,7 +9,8 @@
   },
   "devDependencies": {},
   "scripts": {
-    "test": "mocha --recursive --reporter spec"
+    "test": "mocha --recursive --reporter spec",
+    "hihat": "hihat --dir ./ --node"
   },
   "keywords": [
     "dynamic",

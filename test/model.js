@@ -2,6 +2,7 @@ var expect = require('chai').expect;
 var gaia = require('../lib/index.js');
 var utility = require('../lib/utility.js');
 var Model = gaia.Model;
+var types = gaia.types;
 
 function testCreatedType(createValue) {
     var proj = gaia.create();
@@ -27,27 +28,27 @@ describe('Model', function() {
     });
 
     it('should be able to create member: bool', function() {
-        testCreatedType(function() { return gaia.types.bool.create(); });
+        testCreatedType(function() { return types.bool.create(); });
     });
 
     it('should be able to create member: collection', function() {
-        testCreatedType(function() { return gaia.types.collection.create(gaia.types.string.type()); });
+        testCreatedType(function() { return types.collection.create(types.string.type()); });
     });
 
     it('should be able to create member: decimal', function() {
-        testCreatedType(function() { return gaia.types.decimal.create(); });
+        testCreatedType(function() { return types.decimal.create(); });
     });
 
     it('should be able to create member: string', function() {
-        testCreatedType(function() { return gaia.types.string.create(); });
+        testCreatedType(function() { return types.string.create(); });
     });
 
     it('should be able to create member: int', function() {
-        testCreatedType(function() { return gaia.types.int.create(); });
+        testCreatedType(function() { return types.int.create(); });
     });
 
     it('should be able to create member: uint', function() {
-        testCreatedType(function() { return gaia.types.uint.create(); });
+        testCreatedType(function() { return types.uint.create(); });
     });
 
     it('should raise an event on member change: adding', function(done) {
@@ -55,15 +56,7 @@ describe('Model', function() {
         var model = proj.root.models.add('test');
 
         // (emitter, event, triggerEvent, callback)
-        utility.validateEvent(proj, Model.events.adding, function() { proj.root.models.add('model1'); }, done);
-    });
-
-    it('should raise an event on member change: adding', function(done) {
-        var proj = gaia.create();
-        var model = proj.root.models.add('test');
-
-        // (emitter, event, triggerEvent, callback)
-        utility.validateEvent(proj, Model.events.adding, function() { proj.root.models.add('model1'); }, done);
+        utility.validateEvent(proj, Model.events.adding, function() { model.members.add('model1', ty); }, done);
     });
 
     it('should raise an event on member change: added', function(done) {
@@ -71,7 +64,15 @@ describe('Model', function() {
         var model = proj.root.models.add('test');
 
         // (emitter, event, triggerEvent, callback)
-        utility.validateEvent(proj, Model.events.added, function() { proj.root.models.add('model1'); }, done);
+        utility.validateEvent(proj, Model.events.added, function() { model.members.add('member', types.string.create()); }, done);
+    });
+
+    it('should raise an event on member change: removing', function(done) {
+        var proj = gaia.create();
+        var model = proj.root.models.add('test');
+
+        // (emitter, event, triggerEvent, callback)
+        utility.validateEvent(proj, Model.events.removing, function() { proj.root.models.add('model1'); }, done);
     });
 
     it('should raise an event on member change: removing', function(done) {

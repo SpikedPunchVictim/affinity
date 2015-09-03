@@ -19,13 +19,20 @@ var expect = require('chai').expect;
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var Emitter = require('./lib/eventEmitter.js');
+var Model = gaia.Model;
 var CommonCollection = require('./lib/collections/commonCollection.js');
 var types = gaia.types;
 
-function forwarding(builder, mapping) {
+var proj = gaia.create();
+var model = proj.root.models.add('test');
+var instance = proj.root.instances.add('test-instance', model);
 
+var stringMember = model.members.add('stringMember', types.string.create());
+var intMember = model.members.add('intMember', types.int.create());
+var decimalMember = model.members.add('decimalMember', types.decimal.create());
 
-}
+model.members.remove(intMember);
+
 /*
 
 var source = {

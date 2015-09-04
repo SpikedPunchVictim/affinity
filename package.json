@@ -4,14 +4,17 @@
   "description": "Dynamic data modeling",
   "main": ".lib/index.js",
   "dependencies": {
+    "event-emitter": "^0.3.3",
     "lodash": "^3.9.3",
     "undo.js": "^0.2.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "mocha": "^2.3.0"
+  },
   "scripts": {
     "test": "mocha --recursive --reporter spec",
     "hihat": "hihat --dir ./ --node",
-    "debug": "node-debug main.js"
+    "debug": "node-debug ./node_modules/mocha/bin/_mocha"
   },
   "keywords": [
     "dynamic",

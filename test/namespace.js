@@ -51,7 +51,7 @@ describe('Namespace', function() {
         var name = 'test';
         var nspace = proj.root.children.add(name);
         var child = nspace.children.add('child');
-        expect(nspace.children.indexOf('child')).to.be.at.least(0);
+        expect(nspace.children.indexByName('child')).to.be.at.least(0);
         nspace.children.remove(child);
         expect(nspace.children.find(child)).to.be.null;
     });

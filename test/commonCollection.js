@@ -1,14 +1,14 @@
 var expect = require('chai').expect;
 var util = require('util');
 var _ = require('lodash');
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('../lib/eventEmitter');
 var gaia = require('../lib/index.js');
 var CommonCollection = require('../lib/collections/commonCollection.js');
 var ObservableCollection = require('../lib/collections/observableCollection.js');
 var utility = require('../lib/utility.js');
 
 function TestCollection() {
-    EventEmitter.call(this);
+    EventEmitter.mixin(this);
     CommonCollection.mixin(this);
     this._items = new ObservableCollection();
     this.sync = utility.events.forward({
@@ -19,8 +19,6 @@ function TestCollection() {
 
     this.sync.subscribe();
 }
-
-util.inherits(TestCollection, EventEmitter);
 
 TestCollection.prototype.dispose = function dispose() {
     this.sync.unsubscribe();
@@ -91,6 +89,24 @@ describe('commonCollection', function() {
             collection.dispose();
         });
 
+        it('should remove an item by predicate', function() {
+            var collection = new TestCollection();
+            var obj = new TestObject();
+            obj.name = 'testme';
+            
+            var obj2 = new TestObject();
+            obj2.name = 'thinkofmefondly';
+
+            collection.add(obj);
+            collection.add(obj2);
+
+            expect(collection.at(0)).to.equal(obj);
+            expect(collection.at(1)).to.equal(obj2);
+            collection.remove(function(item, indx, collection) { return item.name === 'testme'; });
+            expect(collection.at(0)).to.equal(obj2);
+            expect(collection.length).to.equal(1);
+        });
+
         it('should support custom predicates', function() {
             var collection = new TestCollection();
 
@@ -107,11 +123,11 @@ describe('commonCollection', function() {
             collection.add(obj1);
             collection.add(obj2);
 
-            expect(collection.remove('key3', function(item) {
+            expect(collection.remove(function(item) {
                 return item.key1 === 'key3';
             })).to.be.true;
 
-            expect(collection.remove('key3', function(item) {
+            expect(collection.remove(function(item) {
                 return item.key1 === 'key3';
             })).to.be.false;
 

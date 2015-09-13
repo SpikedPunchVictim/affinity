@@ -25,13 +25,22 @@ var types = gaia.types;
 
 var proj = gaia.create();
 var model = proj.root.models.add('test');
-var instance = proj.root.instances.add('test-instance', model);
 
-var stringMember = model.members.add('stringMember', types.string.create());
-var intMember = model.members.add('intMember', types.int.create());
-var decimalMember = model.members.add('decimalMember', types.decimal.create());
+model.on(Model.events.valueChanging, function(change) {
+    console.log('changing');
+});
 
-model.members.remove(intMember);
+model.on(Model.events.valueChanged, function(change) {
+    console.log('changed');
+});
+
+
+var member = model.members.add('test', types.string.create());
+member.value.value = 'testme';
+member.value.value = 'work-it-testme';
+
+// (emitter, event, triggerEvent, callback)
+//utility.validateEvent(proj, Model.events.adding, function() { model.members.add('model1', types.string.create()); }, done);
 
 /*
 

@@ -36,8 +36,10 @@ model.on(Model.events.valueChanged, function(change) {
 
 
 var member = model.members.add('test', types.string.create());
+var member2 = model.members.add('test2', types.string.create())
 member.value.value = 'testme';
 member.value.value = 'work-it-testme';
+member2.value.value = "lols"
 
 // (emitter, event, triggerEvent, callback)
 //utility.validateEvent(proj, Model.events.adding, function() { model.members.add('model1', types.string.create()); }, done);

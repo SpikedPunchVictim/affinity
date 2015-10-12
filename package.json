@@ -9,11 +9,11 @@
     "undo.js": "^0.2.0"
   },
   "devDependencies": {
+    "chai": "^3.3.0",
     "mocha": "^2.3.0"
   },
   "scripts": {
     "test": "mocha --recursive --reporter spec",
-    "hihat": "hihat --dir ./ --node",
     "debug": "node-debug ./node_modules/mocha/bin/_mocha"
   },
   "keywords": [

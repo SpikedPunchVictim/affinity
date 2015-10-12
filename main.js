@@ -23,6 +23,9 @@ var Model = gaia.Model;
 var CommonCollection = require('./lib/collections/commonCollection.js');
 var types = gaia.types;
 
+var str = types.String.create();
+console.log("str: %s", str);
+
 var proj = gaia.create();
 var model = proj.root.models.add('test');
 
@@ -35,8 +38,8 @@ model.on(Model.events.valueChanged, function(change) {
 });
 
 
-var member = model.members.add('test', types.string.create());
-var member2 = model.members.add('test2', types.string.create())
+var member = model.members.add('test', types.String.create());
+var member2 = model.members.add('test2', types.String.create())
 member.value.value = 'testme';
 member.value.value = 'work-it-testme';
 member2.value.value = "lols"

@@ -37,9 +37,12 @@ describe('Instance', function() {
         var model = proj.root.models.add('test');
         var instance = proj.root.instances.add('test-instance', model);
 
-        var stringMember = model.members.add('stringMember', types.string.create());
-        var intMember = model.members.add('intMember', types.int.create());
-        var decimalMember = model.members.add('decimalMember', types.decimal.create());
+        // [REMOVE]
+        console.log("types.String.create(): %j", types.String.create());
+        
+        var stringMember = model.members.add('stringMember', types.String.create());
+        var intMember = model.members.add('intMember', types.Int.create());
+        var decimalMember = model.members.add('decimalMember', types.Decimal.create());
 
         expect(instance.members.at(0).modelMember).to.equal(stringMember);
         expect(instance.members.at(1).modelMember).to.equal(intMember);
@@ -56,13 +59,13 @@ describe('Instance', function() {
         var model = proj.root.models.add('test');
         var instance = proj.root.instances.add('test-instance', model);
 
-        var stringMember = model.members.add('stringMember', types.string.create());
+        var stringMember = model.members.add('stringMember', types.String.create());
         expect(instance.members.at(0).modelMember).to.equal(stringMember);
 
         var intMember = model.members.add('intMember', types.int.create());
         expect(instance.members.at(1).modelMember).to.equal(intMember);
 
-        var decimalMember = model.members.add('decimalMember', types.decimal.create());        
+        var decimalMember = model.members.add('decimalMember', types.Decimal.create());        
         expect(instance.members.at(2).modelMember).to.equal(decimalMember);
     });
 
@@ -71,13 +74,13 @@ describe('Instance', function() {
         var model = proj.root.models.add('test');
         var instance = proj.root.instances.add('test-instance', model);
 
-        var stringMember = model.members.add('stringMember', types.string.create());
+        var stringMember = model.members.add('stringMember', types.String.create());
         expect(instance.members.at(0).modelMember).to.equal(stringMember);
 
         var intMember = model.members.add('intMember', types.int.create());
         expect(instance.members.at(1).modelMember).to.equal(intMember);
 
-        var decimalMember = model.members.add('decimalMember', types.decimal.create());        
+        var decimalMember = model.members.add('decimalMember', types.Decimal.create());        
         expect(instance.members.at(2).modelMember).to.equal(decimalMember);
     });
 
@@ -91,19 +94,19 @@ describe('Instance', function() {
 
     describe('#Types', function() {
         it('should be able to inherit member: bool', function() {
-            testMemberCreation(function() { return gaia.types.bool.create(); });
+            testMemberCreation(function() { return gaia.types.Bool.create(); });
         });
 
         it('should be able to create member: collection', function() {
-            testMemberCreation(function() { return gaia.types.collection.create(gaia.types.string.type()); });
+            testMemberCreation(function() { return gaia.types.collection.create(gaia.types.String.type()); });
         });
 
         it('should be able to create member: decimal', function() {
-            testMemberCreation(function() { return gaia.types.decimal.create(); });
+            testMemberCreation(function() { return gaia.types.Decimal.create(); });
         });
 
         it('should be able to create member: string', function() {
-            testMemberCreation(function() { return gaia.types.string.create(); });
+            testMemberCreation(function() { return gaia.types.String.create(); });
         });
     });
 });

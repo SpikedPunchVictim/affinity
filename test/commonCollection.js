@@ -5,28 +5,48 @@ var EventEmitter = require('../lib/eventEmitter');
 var gaia = require('../lib/index.js');
 var CommonCollection = require('../lib/collections/commonCollection.js');
 var ObservableCollection = require('../lib/collections/observableCollection.js');
-var utility = require('../lib/utility.js');
+var helpers = require('../lib/helpers.js');
 
-function TestCollection() {
-    EventEmitter.mixin(this);
-    CommonCollection.mixin(this);
-    this._items = new ObservableCollection();
-    this.sync = utility.events.forward({
-        source: this._items,
-        dest: this,
-        events: _.values(ObservableCollection.events)
-    });
 
-    this.sync.subscribe();
+var events = {
+    'adding': 'test-adding',
+    'added': 'test-added',
+    'removing': 'test-removing',
+    'removed': 'test-removed'
 }
 
-TestCollection.prototype.dispose = function dispose() {
-    this.sync.unsubscribe();
+var createCollection = function createCollection() {
+    var coll = {};
+    CommonCollection.mixin(coll);
+    coll._onItemsAdding = function(items) { this.emit(events.adding, items); };
+    coll._onItemsAdded = function(items) { this.emit(events.added, items); };
+    coll._onItemsRemoving = function(items) { this.emit(events.removing, items); };
+    coll._onItemsRemoved = function(items) { this.emit(events.removed, items); };
+    coll.add = function(item) { this._items.add(item); };
+    
+    return coll;
 }
 
-TestCollection.prototype.add = function add(item) {
-    this._items.add(item);
-}
+// function TestCollection() {
+//     //EventEmitter.mixin(this);
+//     CommonCollection.mixin(this);
+
+//     this.sync = helpers.events.forward({
+//         source: this._items,
+//         dest: this,
+//         events: _.values(ObservableCollection.events)
+//     });
+
+//     this.sync.subscribe();
+// }
+
+// TestCollection.prototype.dispose = function dispose() {
+//     this.sync.unsubscribe();
+// }
+
+// TestCollection.prototype.add = function add(item) {
+//     this._items.add(item);
+// }
 
 function TestObject() {
     this.name = 'test-object';
@@ -36,27 +56,25 @@ describe('commonCollection', function() {
 
     describe('#indexOf', function() {
         it('should return -1 when the item does not exist', function() {
-            var collection = new TestCollection();
+            var collection = createCollection();
             expect(collection.indexOf(3)).to.be.equal(-1);
             collection.add(1);
             collection.add(2);
             expect(collection.indexOf(3)).to.be.equal(-1);
-            collection.dispose();
         });
 
         it('should return the item\'s index if it does exist', function() {
-            var collection = new TestCollection();
+            var collection = createCollection();
             collection.add(1);
             expect(collection.indexOf(1)).to.be.equal(0);
             collection.add(2);
             expect(collection.indexOf(2)).to.be.equal(1);
-            collection.dispose();
         });
     });
 
     describe('#at', function() {
         it('should return the item at the specified index', function() {
-            var collection = new TestCollection();
+            var collection = createCollection();
             collection.add(1);
             expect(collection.at(0)).to.be.equal(1);
             collection.add(2);
@@ -64,33 +82,30 @@ describe('commonCollection', function() {
 
             var badCall = function() { collection.at(3); };
             expect(badCall).to.throw(RangeError);
-            collection.dispose();
         });
     });
 
-    // utility.validateEvent(o, 'adding', function() { o.add(1); }, done);
+    // helpers.validateEvent(o, 'adding', function() { o.add(1); }, done);
 
     describe('#remove', function() {
         it('should remove the item by strict equality for simple types', function() {
-            var collection = new TestCollection();
+            var collection = createCollection();
             collection.add(1);
             expect(collection.remove(1)).to.be.true;
             expect(collection.remove(1)).to.be.false;
-            collection.dispose();
         });
 
         it('should remove the item by reference for objects', function() {
-            var collection = new TestCollection();
+            var collection = createCollection();
             var obj = new TestObject();
 
             collection.add(obj);
             expect(collection.remove(obj)).to.be.true;
             expect(collection.remove(obj)).to.be.false;
-            collection.dispose();
         });
 
         it('should remove an item by predicate', function() {
-            var collection = new TestCollection();
+            var collection = createCollection();
             var obj = new TestObject();
             obj.name = 'testme';
             
@@ -108,7 +123,7 @@ describe('commonCollection', function() {
         });
 
         it('should support custom predicates', function() {
-            var collection = new TestCollection();
+            var collection = createCollection();
 
             var obj1 = {
                 key1: 'key1',
@@ -132,25 +147,22 @@ describe('commonCollection', function() {
             })).to.be.false;
 
             expect(collection.at(0)).to.equal(obj1);
-            collection.dispose();
         });
 
         it('should generate a removing event', function(done) {
-            var collection = new TestCollection();
+            var collection = createCollection();
             collection.add(1);
             collection.add(2);
-            utility.validateEvent(collection, 'removing', function() { collection.remove(1); }, function() {
-                collection.dispose();
+            helpers.validateEvent(collection, 'removing', function() { collection.remove(1); }, function() {
                 done();
             });
         });
 
         it('should generate a removed event', function(done) {
-            var collection = new TestCollection();
+            var collection =createCollection();
             collection.add(1);
             collection.add(2);
-            utility.validateEvent(collection, 'removed', function() { collection.remove(1); }, function() {
-                collection.dispose();
+            helpers.validateEvent(collection, 'removed', function() { collection.remove(1); }, function() {
                 done();
             });
         });
@@ -158,16 +170,15 @@ describe('commonCollection', function() {
 
     describe('#splice', function() {
         it('should be able to add items', function() {
-            var collection = new TestCollection();
+            var collection = createCollection();
             collection.splice(0, 0, 1);
             collection.splice(1, 0, 2);
             expect(collection.at(0)).to.equal(1);
             expect(collection.at(1)).to.equal(2);
-            collection.dispose();
         });
 
         it('should be able to remove items', function() {
-            var collection = new TestCollection();
+            var collection = createCollection();
             collection.add(1);
             collection.add(2);
             collection.add(3);
@@ -181,39 +192,34 @@ describe('commonCollection', function() {
             collection.splice(1, 1);
             expect(collection.at(0)).to.equal(1);
             expect(collection.at(1)).to.equal(4);
-            collection.dispose();
         });
 
         it('should generate an adding event', function(done) {
-            var collection = new TestCollection();
-            utility.validateEvent(collection, 'adding', function() { collection.splice(1, 0, 2); },  function() {
-                collection.dispose();
+            var collection = createCollection();
+            helpers.validateEvent(collection, 'adding', function() { collection.splice(1, 0, 2); },  function() {
                 done();
             });
         });
 
         it('should generate an added event', function(done) {
-            var collection = new TestCollection();
-            utility.validateEvent(collection, 'added', function() { collection.splice(1, 0, 2); },  function() {
-                collection.dispose();
+            var collection = createCollection();
+            helpers.validateEvent(collection, 'added', function() { collection.splice(1, 0, 2); },  function() {
                 done();
             });
         });
 
         it('should generate an removing event', function(done) {
-            var collection = new TestCollection();
+            var collection = createCollection();
             collection.add(1);
-            utility.validateEvent(collection, 'removing', function() { collection.remove(1); },  function() {
-                collection.dispose();
+            helpers.validateEvent(collection, 'removing', function() { collection.remove(1); },  function() {
                 done();
             });
         });
 
         it('should generate an removed event', function(done) {
-            var collection = new TestCollection();
+            var collection = createCollection();
             collection.add(1);
-            utility.validateEvent(collection, 'removed', function() { collection.remove(1); },  function() {
-                collection.dispose();
+            helpers.validateEvent(collection, 'removed', function() { collection.remove(1); },  function() {
                 done();
             });
         });

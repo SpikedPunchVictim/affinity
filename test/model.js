@@ -1,6 +1,6 @@
 var expect = require('chai').expect;
 var gaia = require('../lib/index.js');
-var utility = require('../lib/utility.js');
+var helpers = require('../lib/helpers.js');
 var Model = gaia.Model;
 var types = gaia.types;
 
@@ -56,7 +56,7 @@ describe('Model', function() {
         var model = proj.root.models.add('test');
 
         // (emitter, event, triggerEvent, callback)
-        utility.validateEvent(model, Model.events.adding, function() { model.members.add('model1', types.string.create()); }, done);
+        helpers.validateEvent(model, Model.events.adding, function() { model.members.add('model1', types.string.create()); }, done);
     });
 
     it('should raise an event on member change: added', function(done) {
@@ -64,7 +64,7 @@ describe('Model', function() {
         var model = proj.root.models.add('test');
 
         // (emitter, event, triggerEvent, callback)
-        utility.validateEvent(model, Model.events.added, function() { model.members.add('member', types.string.create()); }, done);
+        helpers.validateEvent(model, Model.events.added, function() { model.members.add('member', types.string.create()); }, done);
     });
 
     it('should raise an event on member change: removing', function(done) {
@@ -73,7 +73,7 @@ describe('Model', function() {
         var member = model.members.add('test', types.string.create());
 
         // (emitter, event, triggerEvent, callback)
-        utility.validateEvent(model, Model.events.removing, function() {model.members.remove(member); }, done);
+        helpers.validateEvent(model, Model.events.removing, function() {model.members.remove(member); }, done);
     });
 
     it('should raise an event on member change: removed', function(done) {
@@ -82,7 +82,7 @@ describe('Model', function() {
         var member = model.members.add('test', types.string.create());
 
         // (emitter, event, triggerEvent, callback)
-        utility.validateEvent(model, Model.events.removed, function() { model.members.remove(member); }, done);
+        helpers.validateEvent(model, Model.events.removed, function() { model.members.remove(member); }, done);
     });
 
     it('should raise an event on member change: valueChanging', function(done) {
@@ -92,7 +92,7 @@ describe('Model', function() {
         member.value.value = 'testme';
 
         // (emitter, event, triggerEvent, callback)
-        utility.validateEvent(model, Model.events.valueChanging, function() { member.value.value = 'work-it-testme'; }, done);
+        helpers.validateEvent(model, Model.events.valueChanging, function() { member.value.value = 'work-it-testme'; }, done);
     });
 
     it('should raise an event on member change: valueChanged', function(done) {
@@ -102,7 +102,7 @@ describe('Model', function() {
         member.value.value = 'testme';
 
         // (emitter, event, triggerEvent, callback)
-        utility.validateEvent(model, Model.events.valueChanged, function() { member.value.value = 'work-it-testme'; }, done);
+        helpers.validateEvent(model, Model.events.valueChanged, function() { member.value.value = 'work-it-testme'; }, done);
     });
 
 

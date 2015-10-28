@@ -1,6 +1,6 @@
 var expect = require('chai').expect;
 var gaia = require('../../lib/index.js');
-var utility = require('../../lib/utility.js');
+var helpers = require('../../lib/helpers.js');
 
 function validateTypeInterface(type) {
     expect(type).to.include.keys(['equals']);
@@ -43,12 +43,12 @@ describe('Types:', function() {
 
         it('should raise the value-changing event', function(done) {
             var value = gaia.types.string.create();
-            utility.validateEvent(value, 'value-changing', function() { value.value = 'new'; }, done);
+            helpers.validateEvent(value, 'value-changing', function() { value.value = 'new'; }, done);
         });
 
         it('should raise the value-changed event', function(done) {
             var value = gaia.types.string.create();
-            utility.validateEvent(value, 'value-changed', function() { value.value = 'new'; }, done);
+            helpers.validateEvent(value, 'value-changed', function() { value.value = 'new'; }, done);
         });
     });
 });

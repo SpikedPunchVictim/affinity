@@ -1,19 +1,6 @@
 var ObservableCollection = require('./lib/collections/observableCollection.js');
 var gaia = require('./lib/index.js');
 
-var o = new ObservableCollection();
-o.splice(0, 0, 1);
-o.splice(0, 0, 2);
-o.splice(2, 0, 3, 4, 5)
-o.splice(1, 0, 3);
-o.splice(2, 0, 4);
-o.splice(1, 1);
-o.splice(0, 2);
-
-o.addMany([1, 2, 3, 4, 5]);
-o.removeMany([1, 2, 3, 4]);
-
-
 //-----------------------------------------------------------------------------------
 var expect = require('chai').expect;
 var util = require('util');
@@ -23,29 +10,18 @@ var Model = gaia.Model;
 var CommonCollection = require('./lib/collections/commonCollection.js');
 var types = gaia.types;
 
-var str = types.string.create();
-var str2 = types.string.create();
-str.equals(str2)
-console.log("str: %j", str);
-
 var proj = gaia.create();
 var model = proj.root.models.add('test');
+var instance = proj.root.instances.add('test-instance', model)
+var name = 'test-member-name';
+var value = types.bool.create();
 
-model.on(Model.events.valueChanging, function(change) {
-    console.log('changing');
-});
+var member = model.members.add(name, value);
+var n = member.name;
+var memberType = member.type;
+var instanceMember = instance.members.get(name);
 
-model.on(Model.events.valueChanged, function(change) {
-    console.log('changed');
-});
-
-var tt = types.string.type();
-console.log("name: %s  %j", tt.name, tt);
-var member = model.members.add('test', types.string.create());
-var member2 = model.members.add('test2', types.string.create())
-member.value.value = 'testme';
-member.value.value = 'work-it-testme';
-member2.value.value = "lols"
+console.log(member.type);
 
 // (emitter, event, triggerEvent, callback)
 //utility.validateEvent(proj, Model.events.adding, function() { model.members.add('model1', types.string.create()); }, done);
@@ -72,6 +48,9 @@ forwarding(b, {
                  .build()
     });
 */
+
+var str = types.string.create("alive?");
+
 
 
 //----------------------------------------------------------------------------------

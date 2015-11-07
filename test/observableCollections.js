@@ -7,12 +7,6 @@ var ObservableCollection = require('../lib/collections/observableCollection.js')
 
 describe('ObservableCollection', function() {
 
-    it('should have the correct type information', function() {
-        var o = ObservableCollection.create();
-        expect(o).to.be.instanceof(ObservableCollection);
-        expect(o).to.be.instanceof(EventEmitter);
-    });
-
     it('should have 0 length when created', function() {
         var o = ObservableCollection.create();
         expect(o).to.have.property('length');
@@ -26,19 +20,19 @@ describe('ObservableCollection', function() {
         expect(o.length).to.equal(1);
         o.add(2);
         expect(o.length).to.equal(2);
-        o.addMany([3, 4, 5]);
+        o.add(3, 4, 5);
         expect(o.length).to.equal(5);
     });
 
     it('should have the correct length when items are removed', function() {
         var o = ObservableCollection.create();
-        o.add([1, 2, 3, 4, 5]);
+        o.add(1, 2, 3, 4, 5);
         expect(o.length).to.equal(5);
         o.remove(1);
         expect(o.length).to.equal(4);
         o.remove(2);
         expect(o.length).to.equal(3);
-        o.removeMany([3, 4, 5]);
+        o.remove(3, 4, 5);
         expect(o.length).to.equal(0);
     });
 

@@ -24,6 +24,36 @@ describe('ObservableCollection', function() {
         expect(o.length).to.equal(5);
     });
 
+    it('supports remove()', () => {
+        var o = ObservableCollection.create();
+        o.add(5, 3, 3, 4, 2, 6);
+        expect(o.length).to.be.equal(6);
+        o.remove(4);
+        expect(o.length).to.be.equal(5);
+        expect(o).to.be.eql([5, 3, 3, 2, 6]);
+        o.remove(3, 6);
+        expect(o.length).to.be.equal(3);
+        expect(o).to.be.eql([5, 3, 2]);
+    });
+
+    it('supports fill()', () => {
+        var o = ObservableCollection.create();
+        o.fill(5, 0, 3);
+        expect(o.length).to.be.equal(0);
+        o.push(1, 2, 3, 4);
+        o.fill(5, 0, 3);
+        expect(o).to.be.eql([5, 5, 5, 5]);
+        o.fill(2, 1, 2);
+        expect(o.length).to.be.equal(6);
+        expect(o).to.be.eql([5, 1, 1, 5, 5, 5]);
+    });
+
+    describe('#Events', () => {
+
+
+
+    });
+
     it('should have the correct length when items are removed', function() {
         var o = ObservableCollection.create();
         o.add(1, 2, 3, 4, 5);

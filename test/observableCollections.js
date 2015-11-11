@@ -48,6 +48,108 @@ describe('ObservableCollection', function() {
         expect(o).to.be.eql([5, 1, 1, 5, 5, 5]);
     });
 
+    it('supports copyWithin()', () => {
+        var o = ObservableCollection.create();
+        o.add(1, 2, 3, 4, 5, 6);
+        expect(o).to.be.eql([1, 2, 3, 4, 5, 6]);
+        o.copyWithin(1, 2, 4);
+        expect(o).to.be.eql([ 1, 3, 4, 4, 5, 6 ]);
+        o.copyWithin(0, -3, 5);
+        expect(o).to.be.eql([ 5, 5, 4, 5, 5, 6 ]);
+        o.copyWithin(0, 2, -1);
+        expect(o).to.be.eql([ 4, 5, 5, 5, 5, 6 ]);
+    });
+
+    it('supports pop()', () => {
+        var o = ObservableCollection.create();
+        o.add(1, 2, 3, 4, 5, 6);
+        expect(o).to.be.eql([1, 2, 3, 4, 5, 6]);
+        expect(o.pop()).to.be.equal(6)
+        expect(o).to.be.eql([1, 2, 3, 4, 5])
+    });
+
+    it('supports push()', () => {
+        var o = ObservableCollection.create();
+        expect(o.push(1, 2, 3, 4, 5, 6)).to.be.equal(6);
+        expect(o).to.be.eql([1, 2, 3, 4, 5, 6]);
+        expect(o.push(7, 8)).to.be.equal(8);
+        expect(o).to.be.eql([1, 2, 3, 4, 5, 6, 7, 8]);
+    });
+
+    it('supports push()', () => {
+        var o = ObservableCollection.create();
+        expect(o.push(1, 2, 3, 4, 5, 6)).to.be.equal(6);
+        o.reverse();
+        expect(o).to.be.eql([6, 5, 4, 3, 2, 1]);
+    });
+
+    it('supports shift()', () => {
+        var o = ObservableCollection.create();
+        expect(o.push(1, 2, 3, 4, 5, 6)).to.be.equal(6);
+        expect(o.shift()).to.be.eql(1);
+        expect(o).to.be.eql([2, 3, 4, 5, 6]);
+        o.clear();
+        expect(o.shift()).to.be.undefined;
+    });
+
+    it('supports slice()', () => {
+        var o = ObservableCollection.create();
+        expect(o.push(1, 2, 3, 4, 5, 6)).to.be.equal(6);
+        expect(o.slice(2)).to.be.eql([3, 4, 5, 6]);
+        expect(o).to.be.eql([1, 2, 3, 4, 5, 6]);
+        expect(o.slice(-3)).to.be.eql([4, 5, 6])
+        o.clear();
+        o.push(1, 2, 3, 4, 5, 6);
+        expect(o.slive(-4, 5)).to.be.eql(3, 4, 5);
+        expect(o).to.be.eql([1, 2, 3, 4, 5, 6])
+    });
+
+    it('supports splice()', () => {
+        var o = ObservableCollection.create();
+
+        // Posivitve start
+        o.push(1, 2, 3, 4, 5, 6);
+        expect(o.splice(1, 2)).to.be.eql([2, 3]);
+        expect(o).to.be.eql([1, 4, 5, 6]);
+        
+        // Negative start
+        o.clear();
+        o.push(1, 2, 3, 4, 5, 6);
+        expect(o.splice(-3, 3)).to.be.eql([4, 5, 6]);
+        expect(o).to.be.eql([1, 2, 3]);
+
+        // Adding items
+        o.clear();
+        o.push(1, 2, 3, 4, 5, 6);
+        expect(o.splice(1, 0, 7, 8, 9)).to.be.eql([]);
+        expect(o).to.be.eql([ 1, 7, 8, 9, 2, 3, 4, 5, 6 ]);
+
+        // Delete count higher than array.length
+        o.clear();
+        o.push(1, 2, 3, 4, 5, 6);
+        expect(o.splice(2, 16)).to.be.eql([3, 4, 5, 6]);
+        expect(o).to.be.eql([1, 2]);
+
+        // No delete count specified
+        o.clear();
+        o.push(1, 2, 3, 4, 5, 6);
+        expect(o.splice(2)).to.be.eql([3, 4, 5, 6]);
+        expect(o).to.be.eql([1, 2]);
+
+        // 0 delete count
+        o.clear();
+        o.push(1, 2, 3, 4, 5, 6);
+        expect(o.splice(2, 0)).to.be.eql([]);
+        expect(o).to.be.eql([1, 2, 3, 4, 5, 6]);
+    });
+
+    it('supports unshift()', () => {
+        var o = ObservableCollection.create();
+        expect(o.unshift(1, 2, 3, 4, 5, 6)).to.be.equal(6);
+        expect(o.unshift(0, 0)).to.be.eql(9);
+        expect(o).to.be.eql([0, 0, 1, 2, 3, 4, 5, 6]);
+    });
+
     describe('#Events', () => {
 
 

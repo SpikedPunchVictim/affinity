@@ -1,8 +1,11 @@
 var expect = require('chai').expect;
+var spies = require('chai-spies');
 var gaia = require('../lib/index.js');
 var helpers = require('../lib/helpers.js');
 var Model = gaia.Model;
 var types = gaia.types;
+
+chai.use(spies);
 
 function testCreatedType(createValue) {
     var proj = gaia.create();

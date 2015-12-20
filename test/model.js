@@ -1,4 +1,5 @@
-var expect = require('chai').expect;
+var chai = require('chai');
+var expect = chai.expect;
 var spies = require('chai-spies');
 var gaia = require('../lib/index.js');
 var helpers = require('../lib/helpers.js');

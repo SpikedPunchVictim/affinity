@@ -3,13 +3,13 @@ var ObservableCollection = require('./lib/collections/observableCollection.js');
 var gaia = require('./lib/index.js');
 
 //-----------------------------------------------------------------------------------
-var expect = require('chai').expect;
-var util = require('util');
-var EventEmitter = require('events').EventEmitter;
-var Emitter = require('./lib/eventEmitter.js');
-var Model = gaia.Model;
-var CommonCollection = require('./lib/collections/commonCollection.js');
-var types = gaia.types;
+// var expect = require('chai').expect;
+// var util = require('util');
+// var EventEmitter = require('events').EventEmitter;
+// var Emitter = require('./lib/eventEmitter.js');
+// var Model = gaia.Model;
+// var CommonCollection = require('./lib/collections/commonCollection.js');
+// var types = gaia.types;
 
 
 var o = ObservableCollection.create();
@@ -92,7 +92,7 @@ item.on()
 var iceSword = root.instances.add('Ice Sword', item);
 console.log('Types: %j', gaia.types);
 
-item.members.add('name', gaia.types.string.create('default'));
+item.members.add('name', types.string.create('default'));
 item.members.add('cost', types.decimal.create(0.0));
 item.members.add('canSell', types.bool.create(true));
 

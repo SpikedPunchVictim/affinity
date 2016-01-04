@@ -1,6 +1,10 @@
 'use strict';
 var ObservableCollection = require('./lib/collections/observableCollection.js');
 var gaia = require('./lib/index.js');
+var defaultCore = require('./lib/cores/root/index.js');
+
+var project = gaia.create();
+project.cores.push(defaultCore);
 
 //-----------------------------------------------------------------------------------
 // var expect = require('chai').expect;

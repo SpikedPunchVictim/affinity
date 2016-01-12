@@ -4,6 +4,8 @@
   "description": "Dynamic data modeling",
   "main": ".lib/index.js",
   "dependencies": {
+    "async": "^1.5.2",
+    "deferred": "^0.7.4",
     "event-emitter": "^0.3.3",
     "lodash": "^3.9.3",
     "undo.js": "^0.2.0"

@@ -25,7 +25,7 @@
 			"type": "node",
 			// Notice, we bypass the launcher and start the test runner directly
 			"program": "node_modules/mocha/bin/_mocha",
-			"stopOnEntry": true,
+			"stopOnEntry": false,
 			// run the tests in the tests folder
 			"args": ["--recursive", "--reporter", "spec"],
 			"cwd": ".",

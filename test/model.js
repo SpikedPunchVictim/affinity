@@ -25,8 +25,8 @@ describe('Model', function() {
     it('should be able to create a new Model', function() {
         // Test mutliple depths
         var proj = gaia.create();
-        var model1 = proj.root.models.add('test');
-        var model2 = proj.root.children.add('child').models.add('test2');
+        var model1 = proj.root.models.new('test');
+        var model2 = proj.root.children.new('child').models.new('test2');
         expect(model1).to.be.instanceof(Model);
         expect(model2).to.be.instanceof(Model);
     });
@@ -57,15 +57,15 @@ describe('Model', function() {
 
     it('should raise an event on member change: adding', function(done) {
         var proj = gaia.create();
-        var model = proj.root.models.add('test');
+        var model = proj.root.models.new('test');
 
         // (emitter, event, triggerEvent, callback)
-        helpers.validateEvent(model, Model.events.adding, function() { model.members.add('model1', types.string.create()); }, done);
+        helpers.validateEvent(model, Model.events.adding, function() { model.members.new('model1', types.string.create()); }, done);
     });
 
     it('should raise an event on member change: added', function(done) {
         var proj = gaia.create();
-        var model = proj.root.models.add('test');
+        var model = proj.root.models.new('test');
 
         // (emitter, event, triggerEvent, callback)
         helpers.validateEvent(model, Model.events.added, function() { model.members.add('member', types.string.create()); }, done);
@@ -73,8 +73,8 @@ describe('Model', function() {
 
     it('should raise an event on member change: removing', function(done) {
         var proj = gaia.create();
-        var model = proj.root.models.add('test');
-        var member = model.members.add('test', types.string.create());
+        var model = proj.root.models.new('test');
+        var member = model.members.new('test', types.string.create());
 
         // (emitter, event, triggerEvent, callback)
         helpers.validateEvent(model, Model.events.removing, function() {model.members.remove(member); }, done);
@@ -82,8 +82,8 @@ describe('Model', function() {
 
     it('should raise an event on member change: removed', function(done) {
         var proj = gaia.create();
-        var model = proj.root.models.add('test');
-        var member = model.members.add('test', types.string.create());
+        var model = proj.root.models.new('test');
+        var member = model.members.new('test', types.string.create());
 
         // (emitter, event, triggerEvent, callback)
         helpers.validateEvent(model, Model.events.removed, function() { model.members.remove(member); }, done);
@@ -91,8 +91,8 @@ describe('Model', function() {
 
     it('should raise an event on member change: valueChanging', function(done) {
         var proj = gaia.create();
-        var model = proj.root.models.add('test');
-        var member = model.members.add('test', types.string.create());
+        var model = proj.root.models.new('test');
+        var member = model.members.new('test', types.string.create());
         member.value.value = 'testme';
 
         // (emitter, event, triggerEvent, callback)
@@ -101,8 +101,8 @@ describe('Model', function() {
 
     it('should raise an event on member change: valueChanged', function(done) {
         var proj = gaia.create();
-        var model = proj.root.models.add('test');
-        var member = model.members.add('test', types.string.create());
+        var model = proj.root.models.new('test');
+        var member = model.members.new('test', types.string.create());
         member.value.value = 'testme';
 
         // (emitter, event, triggerEvent, callback)

@@ -27,19 +27,19 @@ describe('Instance', function() {
     it('should be able to create a new Instance', function() {
         // Test mutliple depths
         var proj = gaia.create();
-        var model = proj.root.models.add('test');
-        var instance = proj.root.instances.add('test-instance', model)
+        var model = proj.root.models.new('test');
+        var instance = proj.root.instances.new('test-instance', model)
         expect(instance).to.be.instanceof(Instance);
     });
 
     it('should remove a member when the Model\'s member is removed', function() {
         var proj = gaia.create();
-        var model = proj.root.models.add('test');
-        var instance = proj.root.instances.add('test-instance', model);
+        var model = proj.root.models.new('test');
+        var instance = proj.root.instances.new('test-instance', model);
 
-        var stringMember = model.members.add('stringMember', types.string.create());
-        var intMember = model.members.add('intMember', types.int.create());
-        var decimalMember = model.members.add('decimalMember', types.decimal.create());
+        var stringMember = model.members.new('stringMember', types.string.create());
+        var intMember = model.members.new('intMember', types.int.create());
+        var decimalMember = model.members.new('decimalMember', types.decimal.create());
 
         expect(instance.members.at(0).modelMember).to.equal(stringMember);
         expect(instance.members.at(1).modelMember).to.equal(intMember);
@@ -53,31 +53,31 @@ describe('Instance', function() {
 
     it('should add a member when member is added to the Model', function() {
         var proj = gaia.create();
-        var model = proj.root.models.add('test');
-        var instance = proj.root.instances.add('test-instance', model);
+        var model = proj.root.models.new('test');
+        var instance = proj.root.instances.new('test-instance', model);
 
-        var stringMember = model.members.add('stringMember', types.string.create());
+        var stringMember = model.members.new('stringMember', types.string.create());
         expect(instance.members.at(0).modelMember).to.equal(stringMember);
 
-        var intMember = model.members.add('intMember', types.int.create());
+        var intMember = model.members.new('intMember', types.int.create());
         expect(instance.members.at(1).modelMember).to.equal(intMember);
 
-        var decimalMember = model.members.add('decimalMember', types.decimal.create());        
+        var decimalMember = model.members.new('decimalMember', types.decimal.create());        
         expect(instance.members.at(2).modelMember).to.equal(decimalMember);
     });
 
     it('InstanceMember indexes should match their model member\'s counterpart', function() {
         var proj = gaia.create();
-        var model = proj.root.models.add('test');
-        var instance = proj.root.instances.add('test-instance', model);
+        var model = proj.root.models.new('test');
+        var instance = proj.root.instances.new('test-instance', model);
 
-        var stringMember = model.members.add('stringMember', types.string.create());
+        var stringMember = model.members.new('stringMember', types.string.create());
         expect(instance.members.at(0).modelMember).to.equal(stringMember);
 
-        var intMember = model.members.add('intMember', types.int.create());
+        var intMember = model.members.new('intMember', types.int.create());
         expect(instance.members.at(1).modelMember).to.equal(intMember);
 
-        var decimalMember = model.members.add('decimalMember', types.decimal.create());        
+        var decimalMember = model.members.new('decimalMember', types.decimal.create());        
         expect(instance.members.at(2).modelMember).to.equal(decimalMember);
     });
 

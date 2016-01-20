@@ -30,6 +30,13 @@ describe('Model', function() {
         expect(model1).to.be.instanceof(Model);
         expect(model2).to.be.instanceof(Model);
     });
+    
+    it('should be tested', () => {
+        var proj = gaia.create();
+        var model = proj.root.models.new('test'); 
+        
+        //model.members.new('string')
+    });
 
     it('should be able to create member: bool', function() {
         testCreatedType(function() { return types.bool.create(); });

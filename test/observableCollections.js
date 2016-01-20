@@ -1,11 +1,26 @@
-var chai = require('chai')
+'use strict';
+
+var chai = require('chai');
 var expect = require('chai').expect;
 var assert = require('chai').assert;
 var spies = require('chai-spies');
-var helpers = require('../lib/helpers.js');
 var ObservableCollection = require('../lib/collections/observableCollection.js');
+var EventEmitter = require('../lib/eventEmitter.js');
 
 chai.use(spies);
+
+class TestObject {
+    constructor(property1, property2, property3) {
+        EventEmitter.mixin(this);
+        this.property1 = property1;
+        this.property2 = property2;
+        this.property3 = property3;
+    }
+    
+    raiseEvent() {
+        this.emit('event');
+    }
+}
 
 describe('ObservableCollection', function() {
 
@@ -15,7 +30,7 @@ describe('ObservableCollection', function() {
         expect(o.length).to.equal(0);
     });
 
-    it('should have the correct length when items are added to it', function() {
+    it('should have the correct length when items are added or removed', function() {
         var o = new ObservableCollection();
         expect(o.length).to.equal(0);
         o.add(1);
@@ -24,238 +39,358 @@ describe('ObservableCollection', function() {
         expect(o.length).to.equal(2);
         o.add(3, 4, 5);
         expect(o.length).to.equal(5);
+        o.remove(2);
+        expect(o.length).to.equal(4);
+        o.remove(3, 1, 4);
+        expect(o.length).to.equal(1);
     });
 
-    it('supports remove()', () => {
+    it('indexOf() should report the correct index', () => {
         var o = new ObservableCollection();
-        o.add(5, 3, 3, 4, 2, 6);
-        expect(o.length).to.be.equal(6);
-        o.remove(4);
-        expect(o.length).to.be.equal(5);
-        expect(o).to.be.eql([5, 3, 3, 2, 6]);
-        o.remove(3, 6);
-        expect(o.length).to.be.equal(3);
-        expect(o).to.be.eql([5, 3, 2]);
+        o.add(1);
+        expect(o.indexOf(1)).to.be.eql(0);
+        o.add(2);
+        o.add(3);
+        expect(o.indexOf(2)).to.be.eql(1);
+        expect(o.indexOf(3)).to.be.eql(2);
+        o.add(1);
+        expect(o.indexOf(1)).to.be.eql(0);        
     });
-
-    // it('supports fill()', () => {
-    //     var o = new ObservableCollection();
-    //     o.fill(5, 0, 3);
-    //     expect(o.length).to.be.equal(0);
-    //     o.push(1, 2, 3, 4);
-    //     o.fill(5, 0, 3);
-    //     expect(o).to.be.eql([5, 5, 5, 4]);
-    //     o.fill(2, 1, 2);
-    //     expect(o.length).to.be.equal(4);
-    //     expect(o).to.be.eql([5, 2, 5, 4]);
-    // });
-
-    // it('supports copyWithin()', () => {
-    //     var o = new ObservableCollection();
-    //     o.add(1, 2, 3, 4, 5, 6);
-    //     expect(o).to.be.eql([1, 2, 3, 4, 5, 6]);
-    //     o.copyWithin(1, 2, 4);
-    //     expect(o).to.be.eql([ 1, 3, 4, 4, 5, 6 ]);
-    //     o.copyWithin(0, -3, 5);
-    //     expect(o).to.be.eql([  4, 5, 4, 4, 5, 6 ]);
-    //     o.copyWithin(0, 2, -1);
-    //     expect(o).to.be.eql([ 4, 4, 5, 4, 5, 6 ]);
-    // });
-
-    // it('supports pop()', () => {
-    //     var o = new ObservableCollection();
-    //     o.add(1, 2, 3, 4, 5, 6);
-    //     expect(o).to.be.eql([1, 2, 3, 4, 5, 6]);
-    //     expect(o.pop()).to.be.equal(6)
-    //     expect(o).to.be.eql([1, 2, 3, 4, 5])
-    // });
-
-    // it('supports push()', () => {
-    //     var o = new ObservableCollection();
-    //     expect(o.push(1, 2, 3, 4, 5, 6)).to.be.equal(6);
-    //     expect(o).to.be.eql([1, 2, 3, 4, 5, 6]);
-    //     expect(o.push(7, 8)).to.be.equal(8);
-    //     expect(o).to.be.eql([1, 2, 3, 4, 5, 6, 7, 8]);
-    // });
-
-    // it('supports push()', () => {
-    //     var o = new ObservableCollection();
-    //     expect(o.push(1, 2, 3, 4, 5, 6)).to.be.equal(6);
-    //     o.reverse();
-    //     expect(o).to.be.eql([6, 5, 4, 3, 2, 1]);
-    // });
-
-    // it('supports shift()', () => {
-    //     var o = new ObservableCollection();
-    //     expect(o.push(1, 2, 3, 4, 5, 6)).to.be.equal(6);
-    //     expect(o.shift()).to.be.eql(1);
-    //     expect(o).to.be.eql([2, 3, 4, 5, 6]);
-    //     o.clear();
-    //     expect(o.shift()).to.be.undefined;
-    // });
-
-    // it('supports splice()', () => {
-    //     var o = new ObservableCollection();
-
-    //     // Posivitve start
-    //     o.push(1, 2, 3, 4, 5, 6);
-    //     expect(o.splice(1, 2)).to.be.eql([2, 3]);
-    //     expect(o).to.be.eql([1, 4, 5, 6]);
+    
+    it('contains() should return true or false if the item exists in the collection', () => {
+         var o = new ObservableCollection();
+         o.add(1);
+         o.add(2);
+         o.add(3);
+         expect(o.contains(1)).to.be.true;
+         expect(o.contains(3)).to.be.true;
+         expect(o.contains(4)).to.be.false;
+    });
+    
+    it('find() should correctly find the first item', () => {
+        var obj1 = new TestObject(1, 1, 1);
+        var obj2 = new TestObject(2, 2, 2);
+        var obj3 = new TestObject(3, 3, 3);
         
-    //     // Negative start
-    //     o.clear();
-    //     o.push(1, 2, 3, 4, 5, 6);
-    //     expect(o.splice(-3, 3)).to.be.eql([4, 5, 6]);
-    //     expect(o).to.be.eql([1, 2, 3]);
-
-    //     // Adding items
-    //     o.clear();
-    //     o.splice(0, 0, 1, 2, 3, 4, 5, 6);
-    //     expect(o).to.be.eql([1, 2, 3, 4, 5, 6]);
-    //     o.clear()
-    //     o.push(1, 2, 3, 4, 5, 6);
-    //     expect(o.splice(1, 0, 7, 8, 9)).to.be.eql([]);
-    //     expect(o).to.be.eql([ 1, 7, 8, 9, 2, 3, 4, 5, 6 ]);
-
-    //     // Delete count higher than array.length
-    //     o.clear();
-    //     o.push(1, 2, 3, 4, 5, 6);
-    //     expect(o.splice(2, 16)).to.be.eql([3, 4, 5, 6]);
-    //     expect(o).to.be.eql([1, 2]);
-
-    //     // No delete count specified
-    //     o.clear();
-    //     o.push(1, 2, 3, 4, 5, 6);
-    //     expect(o.splice(2)).to.be.eql([3, 4, 5, 6]);
-    //     expect(o).to.be.eql([1, 2]);
-
-    //     // 0 delete count
-    //     o.clear();
-    //     o.push(1, 2, 3, 4, 5, 6);
-    //     expect(o.splice(2, 0)).to.be.eql([]);
-    //     expect(o).to.be.eql([1, 2, 3, 4, 5, 6]);
-    // });
-
-    // it('supports unshift()', () => {
-    //     var o = new ObservableCollection();
-    //     expect(o.unshift(1, 2, 3, 4, 5, 6)).to.be.equal(6);
-    //     expect(o.unshift(0, 0)).to.be.eql(8);
-    //     expect(o).to.be.eql([0, 0, 1, 2, 3, 4, 5, 6]);
-    // });
-
+        var o = new ObservableCollection();
+        o.add(obj1);
+        o.add(obj2);
+        o.add(obj3);
+        
+        var found = o.find((item, index, collection) => item.property1 === 2);
+        expect(found).to.be.equal(obj2);
+        found = o.find((item, index, collection) => item.property1 === 6);
+        expect(found).not.to.exist;
+    });
+    
+    it('filter() should correctly filter the contents', () => {
+        var obj1 = new TestObject(1, 1, 1);
+        var obj2 = new TestObject(2, 2, 2);
+        var obj3 = new TestObject(3, 3, 3);
+        
+        var o = new ObservableCollection();
+        o.add(obj1);
+        o.add(obj2);
+        o.add(obj3);
+        
+        var found = o.filter((item, index, collection) => item.property1 < 3);
+        expect(found.indexOf(obj1)).to.be.at.least(0);
+        expect(found.indexOf(obj2)).to.be.at.least(0);
+        expect(found.indexOf(obj3)).to.be.below(0);
+    });
+  
+    it('insert() should add the imtem at the correct index', () => {
+        var obj1 = new TestObject(1, 1, 1);
+        var obj2 = new TestObject(2, 2, 2);
+        var obj3 = new TestObject(3, 3, 3);
+        
+        var o = new ObservableCollection();
+        o.insert(0, obj1);
+        expect(o.indexOf(obj1)).to.be.eql(0);
+        o.insert(1, obj2);
+        expect(o.indexOf(obj2)).to.be.eql(1);
+        
+        o.insert(0, obj3);
+        expect(o.indexOf(obj3)).to.be.eql(0);
+        expect(o.indexOf(obj1)).to.be.eql(1);
+        expect(o.indexOf(obj2)).to.be.eql(2);
+    });
+    
+    it('add() should correctly add items to the end', () => {
+        var obj1 = new TestObject(1, 1, 1);
+        var obj2 = new TestObject(2, 2, 2);
+        var obj3 = new TestObject(3, 3, 3);
+        
+        var o = new ObservableCollection();
+        o.add(obj1);
+        expect(o.indexOf(obj1)).to.be.eql(0);
+        o.add(obj2, obj3);
+        expect(o.indexOf(obj2)).to.be.eql(1);
+        expect(o.indexOf(obj3)).to.be.eql(2);
+    });
+    
+    it('move() should correctly move items in the collection', () => {
+        var obj1 = new TestObject(1, 1, 1);
+        var obj2 = new TestObject(2, 2, 2);
+        var obj3 = new TestObject(3, 3, 3);
+        
+        var o = new ObservableCollection();
+        o.add(obj1);
+        o.add(obj2);
+        o.add(obj3);
+        
+        expect(o.indexOf(obj1)).to.be.eql(0);
+        expect(o.indexOf(obj2)).to.be.eql(1);
+        expect(o.indexOf(obj3)).to.be.eql(2);
+        
+        o.move(1, 2);
+        expect(o.indexOf(obj1)).to.be.eql(0);
+        expect(o.indexOf(obj3)).to.be.eql(1);
+        expect(o.indexOf(obj2)).to.be.eql(2);
+        
+        var fn = () => o.move(4, 0);
+        expect(fn).to.throw(Error);
+        fn = () => o.move(0, 4);
+        expect(fn).to.throw(Error);
+    });
+    
+    it('clear() remove all items', () => {
+        var obj1 = new TestObject(1, 1, 1);
+        var obj2 = new TestObject(2, 2, 2);
+        var obj3 = new TestObject(3, 3, 3);
+        
+        var o = new ObservableCollection();
+        o.add(obj1);
+        o.add(obj2);
+        o.add(obj3);
+        expect(o.length).to.be.eql(3);
+        o.clear();
+        expect(o.length).to.be.eql(0);
+    });
+    
+    it('remove() should remove items', () => {
+        var o = new ObservableCollection();
+        o.add(1);
+        o.add(2);
+        o.add(3);
+        o.add(4);
+        o.add(5);
+        expect(o.length).to.be.eql(5);
+        o.remove(1);
+        expect(o.indexOf(1)).to.be.below(0);
+        o.remove(3, 5);
+        expect(o.indexOf(2)).to.be.eql(0);
+        expect(o.indexOf(4)).to.be.eql(1);
+    }); 
+    
+    it('removeAt() should remove items correctly', () => {
+        var o = new ObservableCollection();
+        o.add(1);
+        o.add(2);
+        o.add(3);
+        o.add(4);
+        o.add(5);
+        expect(o.length).to.be.eql(5);
+        o.removeAt(3);
+        expect(o.indexOf(4)).to.be.below(0);
+        expect(o.indexOf(1)).to.be.eql(0);
+        expect(o.indexOf(2)).to.be.eql(1);
+        expect(o.indexOf(3)).to.be.eql(2);
+        expect(o.indexOf(5)).to.be.eql(3);
+        
+        var fn = () => o.removeAt(6);
+        expect(fn).to.throw(Error);
+    });
+    
+    it('removeAll() should remove items correctly', () => {
+        var o = new ObservableCollection();
+        o.add(1);
+        o.add(2);
+        o.add(3);
+        o.add(4);
+        o.add(5);
+        expect(o.length).to.be.eql(5);
+        o.removeAll((item, index, collection) => item <=3 );
+        expect(o.length).to.be.eql(2);
+        expect(o.indexOf(4)).to.be.eql(0);
+        expect(o.indexOf(5)).to.be.eql(1);
+    });
+    
+    it('sub() should correctly subscribe to events', () => {
+        var obj1 = new TestObject(1, 1, 1);
+        var obj2 = new TestObject(2, 2, 2);
+        var obj3 = new TestObject(3, 3, 3);
+        
+        var watcher = {
+            adding: 0,
+            added: 0,
+            moving: 0,
+            moved: 0,
+            removing: 0,
+            removed: 0
+        };
+        
+        var o = new ObservableCollection();
+        
+        var sub = o.sub([
+            { event: ObservableCollection.events.adding, handler: () => watcher.adding++  },
+            { event: ObservableCollection.events.added, handler: () => watcher.added++  },
+            { event: ObservableCollection.events.moving, handler: () => watcher.moving++  },
+            { event: ObservableCollection.events.moved, handler: () => watcher.moved++  },
+            { event: ObservableCollection.events.removing, handler: () => watcher.removing++  },
+            { event: ObservableCollection.events.removed, handler: () => watcher.removed++  }            
+        ]);
+        
+        o.add(obj1);
+        expect(watcher.adding).to.be.eql(1);
+        expect(watcher.added).to.be.eql(1);
+        
+        o.add(obj2);
+        o.add(obj3);
+        expect(watcher.adding).to.be.eql(3);
+        expect(watcher.added).to.be.eql(3);
+        
+        o.move(1, 0);
+        expect(watcher.moving).to.be.eql(1);
+        expect(watcher.moved).to.be.eql(1);
+        
+        o.removeAt(0);
+        expect(watcher.removing).to.be.eql(1);
+        expect(watcher.removed).to.be.eql(1);
+        
+        // Validate the state
+        expect(watcher.adding).to.be.eql(3);
+        expect(watcher.added).to.be.eql(3);
+        expect(watcher.moving).to.be.eql(1);
+        expect(watcher.moved).to.be.eql(1);
+        
+        sub.off();
+        
+        o.add(new TestObject(4, 4, 4));
+        o.move(2, 0);
+        o.removeAt(0);
+        
+        expect(watcher.adding).to.be.eql(3);
+        expect(watcher.added).to.be.eql(3);
+        expect(watcher.moving).to.be.eql(1);
+        expect(watcher.moved).to.be.eql(1);
+        expect(watcher.removing).to.be.eql(1);
+        expect(watcher.removed).to.be.eql(1);
+    });
+    
+    it('subItems() should correctly subscribe to events', () => {
+        var obj1 = new TestObject(1, 1, 1);
+        var obj2 = new TestObject(2, 2, 2);
+        var obj3 = new TestObject(3, 3, 3);
+        
+        var watcher = {
+            adding: 0,
+            added: 0,
+            moving: 0,
+            moved: 0,
+            removing: 0,
+            removed: 0
+        };
+        
+        var o = new ObservableCollection();
+        o.add(obj1);
+        
+        var count = 0;
+        var sub = o.subItems([
+            { event: 'event', handler: () => count++  }          
+        ]);
+        
+        obj1.raiseEvent();        
+        expect(count).to.be.eql(1);
+        
+        o.add(obj2);
+        obj2.raiseEvent();        
+        expect(count).to.be.eql(2);
+        
+        o.remove(obj1);
+        obj1.raiseEvent();        
+        expect(count).to.be.eql(2);
+        
+        sub.off();
+        obj2.raiseEvent();
+        expect(count).to.be.eql(2);        
+    });
+    
+    
+    
+    
     describe('#Events', () => {
         var tests = [
             {
-                'desc': 'adding on add()',
-                'sub': (o, cb) => o.on('adding', cb),
+                'desc': ObservableCollection.events.adding + ' on add()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.adding, cb),
                 'act': o => o.add(1, 2, 3)
             },
             {
-                'desc': 'added on add()',
-                'sub': (o, cb) => o.on('added', cb),
+                'desc': ObservableCollection.events.added + ' on add()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.added, cb),
                 'act': o => o.add(1, 2, 3)
             },
             {
-                'desc': 'removing on remove()',
-                'sub': (o, cb) => o.on('removing', cb),
+                'desc': ObservableCollection.events.moving + ' on move()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.moving, cb),
+                'act': o => { o.add(1, 2, 3); o.move(1, 2); }
+            },
+            {
+                'desc': ObservableCollection.events.moved + ' on move()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.moved, cb),
+                'act': o => { o.add(1, 2, 3); o.move(1, 2); }
+            },
+            {
+                'desc': ObservableCollection.events.removing + ' on remove()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.removing, cb),
                 'act': o => { o.add(1, 2, 3); o.remove(1); }
             },
             {
-                'desc': 'removed on remove()',
-                'sub': (o, cb) => o.on('removed', cb),
+                'desc': ObservableCollection.events.removed + ' on remove()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.removed, cb),
                 'act': o => { o.add(1, 2, 3); o.remove(1); }
             },
             {
-                'desc': 'removing on clear()',
-                'sub': (o, cb) => o.on('removing', cb),
+                'desc': ObservableCollection.events.adding + ' on insert()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.adding, cb),
+                'act': o => o.insert(0, 2)
+            },
+            {
+                'desc': ObservableCollection.events.added + ' on insert()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.added, cb),
+                'act': o => o.insert(0, 2)
+            },
+            {
+                'desc': ObservableCollection.events.removing + ' on clear()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.removing, cb),
                 'act': o => { o.add(1, 2, 3); o.clear(); }
             },
             {
-                'desc': 'removed on clear()',
-                'sub': (o, cb) => o.on('removed', cb),
+                'desc': ObservableCollection.events.removed + ' on clear()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.removed, cb),
                 'act': o => { o.add(1, 2, 3); o.clear(); }
+            },
+            {
+                'desc': ObservableCollection.events.removing + ' on removeAt()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.removing, cb),
+                'act': o => { o.add(1, 2, 3); o.removeAt(0); }
+            },
+            {
+                'desc': ObservableCollection.events.removed + ' on removeAt()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.removed, cb),
+                'act': o => { o.add(1, 2, 3); o.removeAt(0); }
+            },
+            {
+                'desc': ObservableCollection.events.removing + ' on removeAll()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.removing, cb),
+                'act': o => { o.add(1, 2, 3); o.removeAll(item => item == 1); }
+            },
+            {
+                'desc': ObservableCollection.events.removed + ' on removeAll()',
+                'sub': (o, cb) => o.on(ObservableCollection.events.removed, cb),
+                'act': o => { o.add(1, 2, 3); o.removeAll(item => item == 1); }
             }
-            // {
-            //     'desc': 'replacing on fill()',
-            //     'sub': (o, cb) => o.on('replacing', cb),
-            //     'act': o => { o.add(1, 2, 3); o.fill(4, 0, 2); }
-            // },
-            // {
-            //     'desc': 'replaced on fill()',
-            //     'sub': (o, cb) => o.on('replaced', cb),
-            //     'act': o => { o.add(1, 2, 3); o.fill(1, 3); }
-            // },
-            // {
-            //     'desc': 'removing on pop()',
-            //     'sub': (o, cb) => o.on('removing', cb),
-            //     'act': o => { o.add(1, 2, 3); o.pop(); }
-            // },
-            // {
-            //     'desc': 'removed on pop()',
-            //     'sub': (o, cb) => o.on('removed', cb),
-            //     'act': o => { o.add(1, 2, 3); o.pop(); }
-            // },
-            // {
-            //     'desc': 'adding on push()',
-            //     'sub': (o, cb) => o.on('adding', cb),
-            //     'act': o => { o.push(1, 2, 3); }
-            // },
-            // {
-            //     'desc': 'added on push()',
-            //     'sub': (o, cb) => o.on('added', cb),
-            //     'act': o => { o.push(1, 2, 3); }
-            // },
-            // {
-            //     'desc': 'moving on reverse()',
-            //     'sub': (o, cb) => o.on('moving', cb),
-            //     'act': o => { o.add(1, 2, 3); o.reverse(); }
-            // },
-            // {
-            //     'desc': 'moved on reverse()',
-            //     'sub': (o, cb) => o.on('moved', cb),
-            //     'act': o => { o.add(1, 2, 3); o.reverse(); }
-            // },
-            // {
-            //     'desc': 'removing on shift()',
-            //     'sub': (o, cb) => o.on('removing', cb),
-            //     'act': o => { o.add(1, 2, 3); o.shift(); }
-            // },
-            // {
-            //     'desc': 'removed on shift()',
-            //     'sub': (o, cb) => o.on('removed', cb),
-            //     'act': o => { o.add(1, 2, 3); o.shift(); }
-            // },
-            // {
-            //     'desc': 'adding on splice()',
-            //     'sub': (o, cb) => o.on('adding', cb),
-            //     'act': o => o.splice(0, 0, 1, 2, 3)
-            // },
-            // {
-            //     'desc': 'added on splice()',
-            //     'sub': (o, cb) => o.on('added', cb),
-            //     'act': o => o.splice(0, 0, 1, 2, 3)
-            // },
-            // {
-            //     'desc': 'removing on splice()',
-            //     'sub': (o, cb) => o.on('removing', cb),
-            //     'act': o => o.splice(0, 2)
-            // },
-            // {
-            //     'desc': 'removed on splice()',
-            //     'sub': (o, cb) => o.on('removed', cb),
-            //     'act': o => o.splice(0, 2)
-            // },
-            // {
-            //     'desc': 'adding on unshift()',
-            //     'sub': (o, cb) => o.on('adding', cb),
-            //     'act': o => o.unshift(0, 2)
-            // },
-            // {
-            //     'desc': 'added on unshift()',
-            //     'sub': (o, cb) => o.on('added', cb),
-            //     'act': o => o.unshift(0, 2)
-            // }
-
         ];
 
         tests.forEach(test => {
@@ -268,56 +403,5 @@ describe('ObservableCollection', function() {
                 expect(spy).to.have.been.called();
             });
         });
-    });
-
-    it('should have the correct length when items are removed', function() {
-        var o = new ObservableCollection();
-        o.add(1, 2, 3, 4, 5);
-        expect(o.length).to.equal(5);
-        o.remove(1);
-        expect(o.length).to.equal(4);
-        o.remove(2);
-        expect(o.length).to.equal(3);
-        o.remove(3, 4, 5);
-        expect(o.length).to.equal(0);
-    });
-
-    it('should be able to use splice to add items', function() {
-        // TODO
-        //  - Test splice
-        //  - Test events
-        var o = new ObservableCollection();
-        o.splice(0, 0, 1);        
-        expect(o.length).to.equal(1);
-        expect(o[0]).to.equal(1);
-
-        o.splice(1, 0, 2);
-        expect(o.length).to.equal(2);
-        expect(o[1]).to.equal(2);
-    });
-
-    it('should be able to use splice to remove items', function() {
-        // TODO
-        //  - Test splice
-        //  - Test events
-        var o = new ObservableCollection();
-        o.splice(0, 0, 1);
-        expect(o.length).to.equal(1);
-        expect(o[0]).to.equal(1);
-
-        o.splice(1, 0, 2);
-        expect(o.length).to.equal(2);
-        expect(o[1]).to.equal(2);
-    });
-
-    it('the splice method should raise events when adding items', function(done) {
-        var o = new ObservableCollection();
-        helpers.validateEvent(o, 'added', function() { o.splice(0, 0, 1); }, done);
-    });
-
-    it('the splice method should raise events when removing items', function(done) {
-        var o = new ObservableCollection();
-        o.splice(0, 0, 1);
-        helpers.validateEvent(o, 'removed', function() { o.splice(0, 1); }, done);
     });
 });

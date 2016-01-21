@@ -54,7 +54,7 @@ function createTypeTest(typeName, createType, createValue1, createValue2, change
             var value = createValue1();
             
             var spy = chai.spy();
-            value.on(Events.valuechanging, spy);
+            value.on(Events.valueChanging, spy);
             changeValue(value);
             expect(spy).to.have.been.called();
         });
@@ -63,7 +63,7 @@ function createTypeTest(typeName, createType, createValue1, createValue2, change
             var value = createValue1();
             
             var spy = chai.spy();
-            value.on(Events.valuechanged, spy);
+            value.on(Events.valueChanged, spy);
             changeValue(value);
             expect(spy).to.have.been.called();
         });        
@@ -110,4 +110,12 @@ describe('Types:', function() {
         () => types.uint.create(1080),
         value => value.value = value.value + 1
     );
+    
+    createTypeTest(
+        'collection',
+        () => types.collection.type(types.string.type()),
+        () => types.collection.create(types.string.type()),
+        () => types.collection.create(types.int.type()),
+        col => col.add('added...')
+    )
 });

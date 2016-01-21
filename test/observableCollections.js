@@ -133,24 +133,40 @@ describe('ObservableCollection', function() {
         var obj1 = new TestObject(1, 1, 1);
         var obj2 = new TestObject(2, 2, 2);
         var obj3 = new TestObject(3, 3, 3);
+        var obj4 = new TestObject(4, 4, 4);
+        var obj5 = new TestObject(5, 5, 5);
         
         var o = new ObservableCollection();
         o.add(obj1);
         o.add(obj2);
         o.add(obj3);
+        o.add(obj4);
+        o.add(obj5);
         
         expect(o.indexOf(obj1)).to.be.eql(0);
         expect(o.indexOf(obj2)).to.be.eql(1);
         expect(o.indexOf(obj3)).to.be.eql(2);
+        expect(o.indexOf(obj4)).to.be.eql(3);
+        expect(o.indexOf(obj5)).to.be.eql(4);
         
-        o.move(1, 2);
+        o.move(1, 3);
         expect(o.indexOf(obj1)).to.be.eql(0);
         expect(o.indexOf(obj3)).to.be.eql(1);
-        expect(o.indexOf(obj2)).to.be.eql(2);
+        expect(o.indexOf(obj4)).to.be.eql(2);
+        expect(o.indexOf(obj2)).to.be.eql(3);
+        expect(o.indexOf(obj5)).to.be.eql(4);
         
-        var fn = () => o.move(4, 0);
+        // delete, then add
+        o.move(3, 1);
+        expect(o.indexOf(obj1)).to.be.eql(0);
+        expect(o.indexOf(obj2)).to.be.eql(1);
+        expect(o.indexOf(obj3)).to.be.eql(2);
+        expect(o.indexOf(obj4)).to.be.eql(3);
+        expect(o.indexOf(obj5)).to.be.eql(4);        
+        
+        var fn = () => o.move(7, 0);
         expect(fn).to.throw(Error);
-        fn = () => o.move(0, 4);
+        fn = () => o.move(0, 7);
         expect(fn).to.throw(Error);
     });
     

@@ -2,7 +2,7 @@ var chai = require('chai');
 var expect = chai.expect;
 var spies = require('chai-spies');
 var gaia = require('../lib/index.js');
-var helpers = require('../lib/helpers.js');
+var Events = require('../lib/events.js');
 var Model = gaia.Model;
 var types = gaia.types;
 
@@ -31,89 +31,80 @@ describe('Model', function() {
         expect(model2).to.be.instanceof(Model);
     });
     
-    it('should be tested', () => {
-        var proj = gaia.create();
-        var model = proj.root.models.new('test'); 
-        
-        //model.members.new('string')
-    });
-
-    it('should be able to create member: bool', function() {
-        testCreatedType(function() { return types.bool.create(); });
-    });
-
-    it('should be able to create member: collection', function() {
-        testCreatedType(function() { return types.collection.create(types.string.type()); });
-    });
-
-    it('should be able to create member: decimal', function() {
-        testCreatedType(function() { return types.decimal.create(); });
-    });
-
-    it('should be able to create member: string', function() {
-        testCreatedType(function() { return types.string.create(); });
-    });
-
-    it('should be able to create member: int', function() {
-        testCreatedType(function() { return types.int.create(); });
-    });
-
-    it('should be able to create member: uint', function() {
-        testCreatedType(function() { return types.uint.create(); });
-    });
-
-    it('should raise an event on member change: adding', function(done) {
-        var proj = gaia.create();
-        var model = proj.root.models.new('test');
-
-        // (emitter, event, triggerEvent, callback)
-        helpers.validateEvent(model, Model.events.adding, function() { model.members.new('model1', types.string.create()); }, done);
-    });
-
-    it('should raise an event on member change: added', function(done) {
-        var proj = gaia.create();
-        var model = proj.root.models.new('test');
-
-        // (emitter, event, triggerEvent, callback)
-        helpers.validateEvent(model, Model.events.added, function() { model.members.add('member', types.string.create()); }, done);
-    });
-
-    it('should raise an event on member change: removing', function(done) {
-        var proj = gaia.create();
-        var model = proj.root.models.new('test');
-        var member = model.members.new('test', types.string.create());
-
-        // (emitter, event, triggerEvent, callback)
-        helpers.validateEvent(model, Model.events.removing, function() {model.members.remove(member); }, done);
-    });
-
-    it('should raise an event on member change: removed', function(done) {
-        var proj = gaia.create();
-        var model = proj.root.models.new('test');
-        var member = model.members.new('test', types.string.create());
-
-        // (emitter, event, triggerEvent, callback)
-        helpers.validateEvent(model, Model.events.removed, function() { model.members.remove(member); }, done);
-    });
-
-    it('should raise an event on member change: valueChanging', function(done) {
-        var proj = gaia.create();
-        var model = proj.root.models.new('test');
-        var member = model.members.new('test', types.string.create());
-        member.value.value = 'testme';
-
-        // (emitter, event, triggerEvent, callback)
-        helpers.validateEvent(model, Model.events.valueChanging, function() { member.value.value = 'work-it-testme'; }, done);
-    });
-
-    it('should raise an event on member change: valueChanged', function(done) {
-        var proj = gaia.create();
-        var model = proj.root.models.new('test');
-        var member = model.members.new('test', types.string.create());
-        member.value.value = 'testme';
-
-        // (emitter, event, triggerEvent, callback)
-        helpers.validateEvent(model, Model.events.valueChanged, function() { member.value.value = 'work-it-testme'; }, done);
+    describe('# Events', () => {
+        var tests = [
+          {
+              event: Events.model.adding,
+              sub: (model, spy) => model.on(Events.model.adding, spy),
+              act: model => model.members.new('member1', types.string.create('test-me'))
+          },
+          {
+              event: Events.model.added,
+              sub: (model, spy) => model.on(Events.model.added, spy),
+              act: model => model.members.new('member1', types.string.create('test-me'))
+          },
+          {
+              event: Events.model.moving,
+              sub: (model, spy) => model.on(Events.model.moving, spy),
+              act: model => {
+                  model.members.new('member1', types.string.create('test-me'));
+                  model.members.new('member2', types.int.create(12));
+                  model.members.move(0, 1);
+              }
+          },
+          {
+              event: Events.model.moved,
+              sub: (model, spy) => model.on(Events.model.moved, spy),
+              act: model => {
+                  model.members.new('member1', types.string.create('test-me'));
+                  model.members.new('member2', types.int.create(12));
+                  model.members.move(0, 1);
+              }
+          },
+          {
+              event: Events.model.removing,
+              sub: (model, spy) => model.on(Events.model.removing, spy),
+              act: model => {
+                  model.members.new('member1', types.string.create('test-me'));
+                  model.members.removeAt(0);
+              }
+          },
+          {
+              event: Events.model.removed,
+              sub: (model, spy) => model.on(Events.model.removed, spy),
+              act: model => {
+                  model.members.new('member1', types.string.create('test-me'));
+                  model.members.removeAt(0);
+              }
+          },
+          {
+              event: Events.model.valueChanging,
+              sub: (model, spy) => model.on(Events.model.valueChanging, spy),
+              act: model => {
+                  var mem = model.members.new('member1', types.string.create('test-me'));
+                  mem.value.value = '2';
+              }
+          },
+          {
+              event: Events.model.valueChanged,
+              sub: (model, spy) => model.on(Events.model.valueChanging, spy),
+              act: model => {
+                  var mem = model.members.new('member1', types.string.create('test-me'));
+                  mem.value.value = '2';
+              }
+          }
+        ];
+                    
+        tests.forEach(test => {
+            it('should emit event ' + test.event, () => {
+                var spy = chai.spy();
+                var proj = gaia.create();
+                var model = proj.root.models.new(test.event);
+                test.sub(model, spy);
+                test.act(model);
+                setTimeout(() => { expect(spy).to.have.been.called(); done(); }, 10);
+            });
+        });
     });
 
 

@@ -24,12 +24,21 @@ function testMemberCreation(createValue) {
 
 describe('Instance', function() {
 
-    it('should be able to create a new Instance', function() {
+    it('should be able to create a new Instance', () => {
         // Test mutliple depths
         var proj = gaia.create();
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model)
         expect(instance).to.be.instanceof(Instance);
+    });
+    
+    it('should add a field when a member is added', () => {
+        var proj = gaia.create();
+        var model = proj.root.models.new('test');
+        var instance = proj.root.instances.new('test-instance', model);
+        expect(instance.fields.length).to.be.eql(0);
+        model.members.new('test-me', types.string.create('new-string'));
+        expect(instance.fields.length).to.be.eql(1);
     });
 
     it('should remove a member when the Model\'s member is removed', function() {
@@ -37,9 +46,9 @@ describe('Instance', function() {
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model);
 
-        var stringMember = model.members.new('string', 'string_name', {value: 'some_string'});
-        var intMember = model.members.new('int', 'int_name', {value: 12});
-        var decimalMember = model.members.new('decimal','decimal_name', {value: 12.3});
+        var stringMember = model.members.new('string_name', types.string.create('new_string'));
+        var intMember = model.members.new('int_name', types.int.create(12));
+        var decimalMember = model.members.new('decimal_name', types.decimal.create(32.1));
 
         expect(instance.members.at(0).modelMember).to.equal(stringMember);
         expect(instance.members.at(1).modelMember).to.equal(intMember);

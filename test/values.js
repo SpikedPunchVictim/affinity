@@ -50,22 +50,22 @@ function createTypeTest(typeName, createType, createValue1, createValue2, change
             expect(clone.equals(value)).to.be.true;
         });
         
-        it('should raise valueChanging', () => {
+        it('should raise valueChanging', done => {
             var value = createValue1();
             
             var spy = chai.spy();
             value.on(Events.valueChanging, spy);
             changeValue(value);
-            expect(spy).to.have.been.called();
+            setTimeout(() => { expect(spy).to.have.been.called(); done(); }, 25);
         });
         
-        it('should raise valueChanged', () => {
+        it('should raise valueChanged', done => {
             var value = createValue1();
             
             var spy = chai.spy();
             value.on(Events.valueChanged, spy);
             changeValue(value);
-            expect(spy).to.have.been.called();
+            setTimeout(() => { expect(spy).to.have.been.called(); done(); }, 25);
         });        
     });
 }
@@ -116,6 +116,6 @@ describe('Types:', function() {
         () => types.collection.type(types.string.type()),
         () => types.collection.create(types.string.type()),
         () => types.collection.create(types.int.type()),
-        col => col.add('added...')
-    )
+        col => col.add(types.string.create('added...'))
+    );
 });

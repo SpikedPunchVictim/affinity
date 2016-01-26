@@ -331,10 +331,7 @@ describe('ObservableCollection', function() {
         obj2.raiseEvent();
         expect(count).to.be.eql(2);        
     });
-    
-    
-    
-    
+       
     describe('#Events', () => {
         var tests = [
             {

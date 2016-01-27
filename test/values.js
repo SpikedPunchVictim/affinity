@@ -4,15 +4,6 @@ var gaia = require('../lib/index.js');
 var types = gaia.types;
 var Events = require('../lib/events.js');
 
-function validateTypeInterface(type) {
-    expect(type).to.include.keys(['equals']);
-}
-
-function validateValueInterface(value) {
-    expect(value.clone).to.exist;
-    expect(value.equals).to.exist;
-}
-
 function createTypeTest(typeName, createType, createValue1, createValue2, changeValue) {
     describe('# ' + typeName, () => {
         

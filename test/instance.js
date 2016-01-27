@@ -50,14 +50,14 @@ describe('Instance', function() {
         var intMember = model.members.new('int_name', types.int.create(12));
         var decimalMember = model.members.new('decimal_name', types.decimal.create(32.1));
 
-        expect(instance.members.at(0).modelMember).to.equal(stringMember);
-        expect(instance.members.at(1).modelMember).to.equal(intMember);
-        expect(instance.members.at(2).modelMember).to.equal(decimalMember);
+        expect(instance.fields.at(0).member).to.equal(stringMember);
+        expect(instance.fields.at(1).member).to.equal(intMember);
+        expect(instance.fields.at(2).member).to.equal(decimalMember);
 
         model.members.remove(intMember);
-        expect(instance.members.at(0).modelMember).to.equal(stringMember);
-        expect(instance.members.at(1).modelMember).to.equal(decimalMember);
-        expect(instance.members.length).to.equal(2);
+        expect(instance.fields.at(0).member).to.equal(stringMember);
+        expect(instance.fields.at(1).member).to.equal(decimalMember);
+        expect(instance.fields.length).to.equal(2);
     });
 
     it('should add a member when member is added to the Model', function() {
@@ -66,13 +66,13 @@ describe('Instance', function() {
         var instance = proj.root.instances.new('test-instance', model);
 
         var stringMember = model.members.new('string', types.string.create());
-        expect(instance.members.at(0).modelMember).to.equal(stringMember);
+        expect(instance.fields.at(0).member).to.equal(stringMember);
 
         var intMember = model.members.new('int', types.int.create());
-        expect(instance.members.at(1).modelMember).to.equal(intMember);
+        expect(instance.fields.at(1).member).to.equal(intMember);
 
         var decimalMember = model.members.new('decimal', types.decimal.create());        
-        expect(instance.members.at(2).modelMember).to.equal(decimalMember);
+        expect(instance.fields.at(2).member).to.equal(decimalMember);
     });
 
     it('InstanceMember indexes should match their model member\'s counterpart', function() {
@@ -81,13 +81,13 @@ describe('Instance', function() {
         var instance = proj.root.instances.new('test-instance', model);
 
         var stringMember = model.members.new('string', types.string.create());
-        expect(instance.members.at(0).modelMember).to.equal(stringMember);
+        expect(instance.fields.at(0).modelMember).to.equal(stringMember);
 
         var intMember = model.members.new('int', types.int.create());
-        expect(instance.members.at(1).modelMember).to.equal(intMember);
+        expect(instance.fields.at(1).modelMember).to.equal(intMember);
 
         var decimalMember = model.members.new('decimal', types.decimal.create());        
-        expect(instance.members.at(2).modelMember).to.equal(decimalMember);
+        expect(instance.fields.at(2).modelMember).to.equal(decimalMember);
     });
 
     it('changing a value model member should also update the inheriting instances', function() {

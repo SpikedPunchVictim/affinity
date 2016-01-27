@@ -34,18 +34,18 @@ describe('Model', function() {
     describe('# Events', () => {
         var tests = [
           {
-              event: Events.model.adding,
-              sub: (model, spy) => model.on(Events.model.adding, spy),
+              event: Events.model.memberAdding,
+              sub: (model, spy) => model.on(Events.model.memberAdding, spy),
               act: model => model.members.new('member1', types.string.create('test-me'))
           },
           {
-              event: Events.model.added,
-              sub: (model, spy) => model.on(Events.model.added, spy),
+              event: Events.model.memberAdded,
+              sub: (model, spy) => model.on(Events.model.memberAdded, spy),
               act: model => model.members.new('member1', types.string.create('test-me'))
           },
           {
-              event: Events.model.moving,
-              sub: (model, spy) => model.on(Events.model.moving, spy),
+              event: Events.model.memberMoving,
+              sub: (model, spy) => model.on(Events.model.memberMoving, spy),
               act: model => {
                   model.members.new('member1', types.string.create('test-me'));
                   model.members.new('member2', types.int.create(12));
@@ -53,8 +53,8 @@ describe('Model', function() {
               }
           },
           {
-              event: Events.model.moved,
-              sub: (model, spy) => model.on(Events.model.moved, spy),
+              event: Events.model.memberMoved,
+              sub: (model, spy) => model.on(Events.model.memberMoved, spy),
               act: model => {
                   model.members.new('member1', types.string.create('test-me'));
                   model.members.new('member2', types.int.create(12));
@@ -62,16 +62,16 @@ describe('Model', function() {
               }
           },
           {
-              event: Events.model.removing,
-              sub: (model, spy) => model.on(Events.model.removing, spy),
+              event: Events.model.memberRemoving,
+              sub: (model, spy) => model.on(Events.model.memberRemoving, spy),
               act: model => {
                   model.members.new('member1', types.string.create('test-me'));
                   model.members.removeAt(0);
               }
           },
           {
-              event: Events.model.removed,
-              sub: (model, spy) => model.on(Events.model.removed, spy),
+              event: Events.model.memberRemoved,
+              sub: (model, spy) => model.on(Events.model.memberRemoved, spy),
               act: model => {
                   model.members.new('member1', types.string.create('test-me'));
                   model.members.removeAt(0);

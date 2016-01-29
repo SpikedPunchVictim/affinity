@@ -3,26 +3,15 @@ var gaia = require('../lib/index.js');
 var Instance = gaia.Instance;
 var types = gaia.types;
 
-function testMemberCreation(createValue) {
-    var proj = gaia.create();
-    var model = proj.root.models.new('test');
-    var instance = proj.root.instances.new('test-instance', model)
-    var name = 'test-member-name';
-    var value = createValue();
-
-    var modelMember = model.members.new(name, value);
-    var instanceMember = instance.members.get(name);
-
-    expect(modelMember.type.equals(value.type)).to.be.true;
-    expect(modelMember.name).to.equal(name);
-    expect(modelMember.value.equals(value)).to.be.true;
-
-    expect(instanceMember.type.equals(value.type)).to.be.true; 
-    expect(instanceMember.name).to.equal(name);   
-    expect(instanceMember.value.equals(value)).to.be.true;
-}
-
 describe('Instance', function() {
+    /*
+        Test:
+            - Removing mutliple members at the same time
+            - Adding multiple members at the same time
+            
+        Field:
+            - valueChanging/ed   
+    */
 
     it('should be able to create a new Instance', () => {
         // Test mutliple depths
@@ -30,15 +19,6 @@ describe('Instance', function() {
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model)
         expect(instance).to.be.instanceof(Instance);
-    });
-    
-    it('should add a field when a member is added', () => {
-        var proj = gaia.create();
-        var model = proj.root.models.new('test');
-        var instance = proj.root.instances.new('test-instance', model);
-        expect(instance.fields.length).to.be.eql(0);
-        model.members.new('test-me', types.string.create('new-string'));
-        expect(instance.fields.length).to.be.eql(1);
     });
 
     it('should remove a member when the Model\'s member is removed', function() {
@@ -58,9 +38,9 @@ describe('Instance', function() {
         expect(instance.fields.at(0).member).to.equal(stringMember);
         expect(instance.fields.at(1).member).to.equal(decimalMember);
         expect(instance.fields.length).to.equal(2);
-    });
+    });    
 
-    it('should add a member when member is added to the Model', function() {
+    it('field indexes should match their model member\'s counterpart', function() {
         var proj = gaia.create();
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model);
@@ -74,45 +54,42 @@ describe('Instance', function() {
         var decimalMember = model.members.new('decimal', types.decimal.create());        
         expect(instance.fields.at(2).member).to.equal(decimalMember);
     });
-
-    it('InstanceMember indexes should match their model member\'s counterpart', function() {
+    
+    it('moving members should move fields', function() {
         var proj = gaia.create();
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model);
 
         var stringMember = model.members.new('string', types.string.create());
-        expect(instance.fields.at(0).modelMember).to.equal(stringMember);
+        expect(instance.fields.at(0).member).to.equal(stringMember);
 
         var intMember = model.members.new('int', types.int.create());
-        expect(instance.fields.at(1).modelMember).to.equal(intMember);
+        expect(instance.fields.at(1).member).to.equal(intMember);
 
         var decimalMember = model.members.new('decimal', types.decimal.create());        
-        expect(instance.fields.at(2).modelMember).to.equal(decimalMember);
+        expect(instance.fields.at(2).member).to.equal(decimalMember);
+        
+        model.members.move(0, 2);
+        expect(instance.fields.at(0).member).to.equal(intMember);
+        expect(instance.fields.at(1).member).to.equal(decimalMember);
+        expect(instance.fields.at(2).member).to.equal(stringMember);
     });
+    
+    it('should have isInheriting set correctly', function() {
+        var proj = gaia.create();
+        var model = proj.root.models.new('test');
+        var instance = proj.root.instances.new('test-instance', model);
 
-    it('changing a value model member should also update the inheriting instances', function() {
-        // Test both inheriting and non-inheriting instances
-    });
+        var stringMember = model.members.new('string', types.string.create());
+        var stringField = instance.fields.get('string');
+        expect(stringField.isInheriting).to.be.true;
+        expect(stringField.value.equals(stringMember.value)).to.be.true;        
 
-    it('should no longer inherit when setting an instance member\'s value', function() {
+        var intMember = model.members.new('int', types.int.create());
+        var intField = instance.fields.get('int');
+        expect(intField.member).to.equal(intMember);
 
-    });
-
-    describe('#Types', function() {
-        it('should be able to inherit member: bool', function() {
-            testMemberCreation(function() { return gaia.types.bool.create(); });
-        });
-
-        it('should be able to create member: collection', function() {
-            testMemberCreation(function() { return gaia.types.collection.create(gaia.types.string.type()); });
-        });
-
-        it('should be able to create member: decimal', function() {
-            testMemberCreation(function() { return gaia.types.decimal.create(); });
-        });
-
-        it('should be able to create member: string', function() {
-            testMemberCreation(function() { return gaia.types.string.create(); });
-        });
+        var decimalMember = model.members.new('decimal', types.decimal.create());        
+        expect(instance.fields.at(2).member).to.equal(decimalMember);
     });
 });

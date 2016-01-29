@@ -102,7 +102,11 @@ describe('Model', function() {
                 var model = proj.root.models.new(test.event);
                 test.sub(model, spy);
                 test.act(model);
-                setTimeout(() => { expect(spy).to.have.been.called(); done(); }, 10);
+                setTimeout(() => {
+                    expect(spy).to.have.been.called();
+                    expect(spy).to.have.been.called.once;
+                    done();
+                }, 10);
             });
         });
     });

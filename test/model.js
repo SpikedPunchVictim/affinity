@@ -92,6 +92,16 @@ describe('Model', function() {
                   var mem = model.members.new('member1', types.string.create('test-me'));
                   mem.value.value = '2';
               }
+          },
+          {
+              event: Events.disposing,
+              sub: (model, spy) => model.on(Events.disposing, spy),
+              act: model => model.dispose()
+          },
+          {
+              event: Events.disposed,
+              sub: (model, spy) => model.on(Events.disposed, spy),
+              act: model => model.dispose()
           }
         ];
                     

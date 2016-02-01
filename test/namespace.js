@@ -137,28 +137,7 @@ describe('Namespace', function() {
     });
     
     describe('#Events', () => {
-        
-        /*
-        childAdding: 'namespace-child-adding',
-        childAdded: 'namespace-child-added',
-        childMoving: 'namespace-child-moving',
-        childMoved: 'namespace-child-moved',
-        childRemoving: 'namespace-child-removing',
-        childRemoved: 'namespace-child-removed',
-        modelAdding: 'namespace-model-adding',
-        modelAdded: 'namespace-model-added',
-        modelMoving: 'namespace-model-moving',
-        modelMoved: 'namespace-model-moved',
-        modelRemoving: 'namespace-model-removing',
-        modelRemoved: 'namespace-model-removed',
-        instanceAdding: 'namespace-instance-adding',
-        instanceAdded: 'namespace-instance-added',
-        instanceMoving: 'namespace-instance-moving',
-        instanceMoved: 'namespace-instance-moved',
-        instanceRemoving: 'namespace-instance-removing',
-        instanceRemoved: 'namespace-instance-removed'  
-        */
-        
+       
         var tests = [
             {
                 'desc': Events.namespace.childAdding + ' on new()',
@@ -209,7 +188,17 @@ describe('Namespace', function() {
                     var child = n.children.new('test');
                     n.children.remove(child);
                 }
-            },            
+            },
+            {
+                'desc': Events.disposing + ' on new()',
+                'event': Events.disposing,
+                'act': n => n.dispose()
+            },
+            {
+                'desc': Events.disposed + ' on new()',
+                'event': Events.disposed,
+                'act': n => n.dispose()
+            },       
             //-- Models
             {
                 'desc': Events.namespace.modelAdding + ' on new()',

@@ -92,4 +92,6 @@ describe('Instance', function() {
         var decimalMember = model.members.new('decimal', types.decimal.create());        
         expect(instance.fields.at(2).member).to.equal(decimalMember);
     });
+    
+    // TODO: Add events (disposed/ing)
 });

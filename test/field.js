@@ -88,5 +88,7 @@ describe('Fields', () => {
         stringField.value.value = 'and now for something completely different';
         setTimeout(() => expect(stringField.isInheriting).to.be.false, 10);
         setTimeout(() => expect(stringField.value.equals(stringMember.value)).to.be.false, 10);
-    });    
+    });
+    
+    // TODO: Add events (ie disposed/ing)
 });

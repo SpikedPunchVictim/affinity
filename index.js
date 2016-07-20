@@ -18,9 +18,11 @@ module.exports.Member = Member;
 module.exports.Namespace = Namespace;
 module.exports.NamespaceCollection = NamespaceCollection;
 module.exports.ModelCollection = ModelCollection;
+module.exports.Project = Project.Project;
 module.exports.types = types;
 module.exports.create = Project.create;
 module.exports.Events = Events;
+module.exports.qpath = require('./lib/qpath.js');
 
 var gaia = {};
 

@@ -9,7 +9,7 @@ describe('Fields', () => {
        var proj = gaia.create();
        var model = proj.root.models.new('test_me');
        var instance = proj.root.instances.new('test_instance', model);
-       model.members.new('test_member', types.uint.create(9));
+       model.members.new('test_member', types.uint.value(9));
        var field = instance.fields.at(0);
        expect(field).to.exist;
     });
@@ -18,7 +18,7 @@ describe('Fields', () => {
        var proj = gaia.create();
        var model = proj.root.models.new('test_me');
        var instance = proj.root.instances.new('test_instance', model);
-       var member = model.members.new('test_member', types.string.create('42 is the answer'));
+       var member = model.members.new('test_member', types.string.value('42 is the answer'));
        var field = instance.fields.at(0);
        expect(field.value.equals(member.value)).to.be.true;
        
@@ -30,7 +30,7 @@ describe('Fields', () => {
        var proj = gaia.create();
        var model = proj.root.models.new('test_me');
        var instance = proj.root.instances.new('test_instance', model);
-       var member = model.members.new('test_member', types.string.create('42 is the answer'));
+       var member = model.members.new('test_member', types.string.value('42 is the answer'));
        var field = instance.fields.at(0);
        expect(field.value.equals(member.value)).to.be.true;
        
@@ -42,7 +42,7 @@ describe('Fields', () => {
        var proj = gaia.create();
        var model = proj.root.models.new('test_me');
        var instance = proj.root.instances.new('test_instance', model);
-       var member = model.members.new('test_member', types.string.create('42 is the answer'));
+       var member = model.members.new('test_member', types.string.value('42 is the answer'));
        var field = instance.fields.at(0);
        expect(field.isInheriting).to.be.true;
        
@@ -54,7 +54,7 @@ describe('Fields', () => {
        var proj = gaia.create();
        var model = proj.root.models.new('test_me');
        var instance = proj.root.instances.new('test_instance', model);
-       model.members.new('test_member', types.string.create('flesh wound'));
+       model.members.new('test_member', types.string.value('flesh wound'));
        var field = instance.fields.at(0);
 
        expect(field.isInheriting).to.be.true;
@@ -67,12 +67,12 @@ describe('Fields', () => {
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model);
 
-        var stringMember = model.members.new('string', types.string.create());
+        var stringMember = model.members.new('string', types.string.value());
         var stringField = instance.fields.get('string');
         expect(stringField.isInheriting).to.be.true;
         expect(stringField.value.equals(stringMember.value)).to.be.true;        
 
-        var intMember = model.members.new('int', types.int.create());
+        var intMember = model.members.new('int', types.int.value());
         var intField = instance.fields.get('int');
         expect(intField.member).to.equal(intMember);
         expect(intField.value.equals(intMember.value)).to.be.true;
@@ -83,7 +83,7 @@ describe('Fields', () => {
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model);
 
-        var stringMember = model.members.new('string', types.string.create());
+        var stringMember = model.members.new('string', types.string.value());
         var stringField = instance.fields.get('string');
         stringField.value.value = 'and now for something completely different';
         setTimeout(() => expect(stringField.isInheriting).to.be.false, 10);

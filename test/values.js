@@ -65,48 +65,48 @@ describe('Types:', function() {
     createTypeTest(
         'bool',
         () => types.bool.type(),
-        () => types.bool.create(false),
-        () => types.bool.create(true),
+        () => types.bool.value(false),
+        () => types.bool.value(true),
         value => value.value = !value.value
     );
     
     createTypeTest(
         'decimal',
         () => types.decimal.type(),
-        () => types.decimal.create(12.3),
-        () => types.decimal.create(47.6),
+        () => types.decimal.value(12.3),
+        () => types.decimal.value(47.6),
         value => value.value = value.value + 1
     );
     
     createTypeTest(
         'int',
         () => types.int.type(),
-        () => types.int.create(42),
-        () => types.int.create(-42),
+        () => types.int.value(42),
+        () => types.int.value(-42),
         value => value.value = value.value + 1
     );
     
     createTypeTest(
         'string',
         () => types.string.type(),
-        () => types.string.create('Have you found the string?'),
-        () => types.string.create('Have you seen the string?'),
+        () => types.string.value('Have you found the string?'),
+        () => types.string.value('Have you seen the string?'),
         value => value.value = value.value + '...' 
     );
     
     createTypeTest(
         'uint',
         () => types.uint.type(),
-        () => types.uint.create(18),
-        () => types.uint.create(1080),
+        () => types.uint.value(18),
+        () => types.uint.value(1080),
         value => value.value = value.value + 1
     );
     
     createTypeTest(
         'collection',
         () => types.collection.type(types.string.type()),
-        () => types.collection.create(types.string.type()),
-        () => types.collection.create(types.int.type()),
-        col => col.add(types.string.create('added...'))
+        () => types.collection.value(types.string.type()),
+        () => types.collection.value(types.int.type()),
+        col => col.add(types.string.value('added...'))
     );
 });

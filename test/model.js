@@ -36,19 +36,19 @@ describe('Model', function() {
           {
               event: Events.model.memberAdding,
               sub: (model, spy) => model.on(Events.model.memberAdding, spy),
-              act: model => model.members.new('member1', types.string.create('test-me'))
+              act: model => model.members.new('member1', types.string.value('test-me'))
           },
           {
               event: Events.model.memberAdded,
               sub: (model, spy) => model.on(Events.model.memberAdded, spy),
-              act: model => model.members.new('member1', types.string.create('test-me'))
+              act: model => model.members.new('member1', types.string.value('test-me'))
           },
           {
               event: Events.model.memberMoving,
               sub: (model, spy) => model.on(Events.model.memberMoving, spy),
               act: model => {
-                  model.members.new('member1', types.string.create('test-me'));
-                  model.members.new('member2', types.int.create(12));
+                  model.members.new('member1', types.string.value('test-me'));
+                  model.members.new('member2', types.int.value(12));
                   model.members.move(0, 1);
               }
           },
@@ -56,8 +56,8 @@ describe('Model', function() {
               event: Events.model.memberMoved,
               sub: (model, spy) => model.on(Events.model.memberMoved, spy),
               act: model => {
-                  model.members.new('member1', types.string.create('test-me'));
-                  model.members.new('member2', types.int.create(12));
+                  model.members.new('member1', types.string.value('test-me'));
+                  model.members.new('member2', types.int.value(12));
                   model.members.move(0, 1);
               }
           },
@@ -65,7 +65,7 @@ describe('Model', function() {
               event: Events.model.memberRemoving,
               sub: (model, spy) => model.on(Events.model.memberRemoving, spy),
               act: model => {
-                  model.members.new('member1', types.string.create('test-me'));
+                  model.members.new('member1', types.string.value('test-me'));
                   model.members.removeAt(0);
               }
           },
@@ -73,7 +73,7 @@ describe('Model', function() {
               event: Events.model.memberRemoved,
               sub: (model, spy) => model.on(Events.model.memberRemoved, spy),
               act: model => {
-                  model.members.new('member1', types.string.create('test-me'));
+                  model.members.new('member1', types.string.value('test-me'));
                   model.members.removeAt(0);
               }
           },
@@ -81,7 +81,7 @@ describe('Model', function() {
               event: Events.model.valueChanging,
               sub: (model, spy) => model.on(Events.model.valueChanging, spy),
               act: model => {
-                  var mem = model.members.new('member1', types.string.create('test-me'));
+                  var mem = model.members.new('member1', types.string.value('test-me'));
                   mem.value.value = '2';
               }
           },
@@ -89,7 +89,7 @@ describe('Model', function() {
               event: Events.model.valueChanged,
               sub: (model, spy) => model.on(Events.model.valueChanging, spy),
               act: model => {
-                  var mem = model.members.new('member1', types.string.create('test-me'));
+                  var mem = model.members.new('member1', types.string.value('test-me'));
                   mem.value.value = '2';
               }
           },

@@ -104,7 +104,10 @@ describe('Instance', function() {
         var stringMember = model.members.new('string', types.string.value());
         var stringField = instance.fields.get('string');
         expect(stringField.isInheriting).to.be.true;
-        expect(stringField.value.equals(stringMember.value)).to.be.true;        
+        expect(stringField.value.equals(stringMember.value)).to.be.true;
+
+        stringField.value = types.string.value('changed value');
+        expect(stringField.isInheriting).to.be.false;
 
         var intMember = model.members.new('int', types.int.value());
         var intField = instance.fields.get('int');

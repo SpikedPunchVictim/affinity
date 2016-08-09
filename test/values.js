@@ -4,6 +4,8 @@ var gaia = require('../lib/index.js');
 var types = gaia.types;
 var Events = require('../lib/events.js');
 
+// TODO: Create a test for each type of value a SimpleValue can be created with (ie string for DecimalValue)
+
 function createTypeTest(typeName, createType, createValue1, createValue2, changeValue) {
     describe('# ' + typeName, () => {
         

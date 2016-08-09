@@ -6,7 +6,7 @@
   "dependencies": {
     "async": "^1.5.2",
     "event-emitter": "^0.3.3",
-    "lodash": "^3.9.3",
+    "lodash": "^4.14.1",
     "undo.js": "^0.2.0",
     "when": "^3.7.7"
   },

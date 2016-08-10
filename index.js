@@ -1,35 +1,32 @@
 'use strict';
-var Instance = require('./lib/instance.js');
-var Field = require('./lib/field.js');
-var Model = require('./lib/model.js');
-var Member = require('./lib/member.js');
-var Namespace = require('./lib/namespace.js');
-var NamespaceCollection = require('./lib/collections/namespaceCollection.js');
-var ModelCollection = require('./lib/collections/modelCollection.js');
+
 var types = require('./lib/types/index.js');
 types.collection = require('./lib/types/collection.js');
-var Project = require('./lib/project.js');
-var Events = require('./lib/events.js');
 
-module.exports.Instance = Instance;
-module.exports.Field = Field;
-module.exports.Model = Model;
-module.exports.Member = Member;
-module.exports.Namespace = Namespace;
-module.exports.NamespaceCollection = NamespaceCollection;
-module.exports.ModelCollection = ModelCollection;
-module.exports.Project = Project.Project;
-module.exports.types = types;
-module.exports.create = Project.create;
-module.exports.Events = Events;
-module.exports.qpath = require('./lib/qpath.js');
+var Project = require('./lib/project.js');
+
+module.exports = {
+   Instance: require('./lib/instance.js'),
+   Field: require('./lib/field.js'),
+   Model: require('./lib/model.js'),
+   Member: require('./lib/member.js'),
+   Namespace: require('./lib/namespace.js'),
+   NamespaceCollection: require('./lib/collections/namespaceCollection.js'),
+   ModelCollection: require('./lib/collections/modelCollection.js'),
+   Project: Project,
+   Events: require('./lib/events.js'),
+	types: types,
+   create: Project.create,
+   qpath: require('./lib/qpath.js'),
+   test: require('./lib/testing.js')
+}
 
 var gaia = {};
 
-for(var exp in module.exports) {
-    gaia[exp] = module.exports[exp];
+for (var exp in module.exports) {
+   gaia[exp] = module.exports[exp];
 }
 
 module.exports.use = function use(plugin) {
-    plugin.register(gaia);
+   plugin.register(gaia);
 }

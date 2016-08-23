@@ -20,14 +20,14 @@ describe('Namespace', function() {
         expect(proj.root.children.at(0).name).to.be.equal(name);
     });
 
-    it('should support unique namespace names', () => {
+    it('should support unique namespace names', function() {
         let proj = gaia.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         expect(() => proj.root.children.new(name)).to.throw(Error);
     });
 
-    it('should expand the Namespace when given a qualified path', () => {
+    it('should expand the Namespace when given a qualified path', function() {
         let proj = gaia.create();
         let name = 'test.me.please';
         
@@ -40,7 +40,7 @@ describe('Namespace', function() {
         expect(grandParent.parent).to.be.eql(proj.root);
     });
 
-    it('should support getOrAdd', () => {
+    it('should support getOrAdd', function() {
         let proj = gaia.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
@@ -49,28 +49,28 @@ describe('Namespace', function() {
         expect(proj.root.children.length).to.be.equal(2);
     });
 
-    it('should have a children property', () => {
+    it('should have a children property', function() {
         let proj = gaia.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         expect(nspace).to.have.property('children');
     });
 
-    it('should have the parent property', () => {
+    it('should have the parent property', function() {
         let proj = gaia.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         expect(nspace).to.have.property('parent');
     });
 
-    it('should have the proper parent', () => {
+    it('should have the proper parent', function() {
         let proj = gaia.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);    
         expect(nspace.parent).to.eql(proj.root);
     });
 
-    it('new child should also have the proper parent', () => {
+    it('new child should also have the proper parent', function() {
         let proj = gaia.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
@@ -80,7 +80,7 @@ describe('Namespace', function() {
         expect(nspace.children.indexOf(child)).to.be.equal(-1);
     });
 
-    it('should be able to find a namespace by name', () => {
+    it('should be able to find a namespace by name', function() {
         let proj = gaia.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
@@ -94,7 +94,7 @@ describe('Namespace', function() {
         expect(proj.search.namespace.find('test.child.grand_child')).to.be.eql(grandChild);
     });
 
-    it('should be able to find a namespace by instance', () => {
+    it('should be able to find a namespace by instance', function() {
         let proj = gaia.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
@@ -104,7 +104,7 @@ describe('Namespace', function() {
         expect(nspace.children.indexOf(child)).to.be.equal(-1);
     });
 
-    it('child can be deleted', () => {
+    it('child can be deleted', function() {
         let proj = gaia.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
@@ -114,7 +114,7 @@ describe('Namespace', function() {
         expect(nspace.children.indexOf(child)).to.be.equal(-1);
     });
     
-    it('child can be moved', () => {
+    it('child can be moved', function() {
         let proj = gaia.create();
 
         let zero = proj.root.children.new('zero');
@@ -132,7 +132,7 @@ describe('Namespace', function() {
         expect(proj.root.children.at(4)).to.be.equal(four);
     });
     
-    it('model can be moved', () => {
+    it('model can be moved', function() {
         let proj = gaia.create();
 
         let zero = proj.root.models.new('zero');
@@ -149,8 +149,40 @@ describe('Namespace', function() {
         expect(proj.root.models.at(3)).to.be.equal(two);
         expect(proj.root.models.at(4)).to.be.equal(four);
     });
+
+    it('should raise a parent changing', function(done) {
+        let proj = gaia.create();
+        let one = proj.root.children.new('one');
+        let two = proj.root.children.new('two');
+        let three = one.children.new('three');
+        let spy = chai.spy();
+
+        expect(three.parent).to.eql(one);
+
+        three.on(Events.parentChanging, spy);        
+        three.parent = two;
+
+        expect(three.parent).to.be.eql(two);
+        setTimeout(() => { expect(spy).to.have.been.called(); done(); }, 25);
+    });
+
+    it('should raise a parent changed', function(done) {
+        let proj = gaia.create();
+        let one = proj.root.children.new('one');
+        let two = proj.root.children.new('two');
+        let three = one.children.new('three');
+        let spy = chai.spy();
+
+        expect(three.parent).to.eql(one);
+
+        three.on(Events.parentChanged, spy);        
+        three.parent = two;
+        
+        expect(three.parent).to.be.eql(two);
+        setTimeout(() => { expect(spy).to.have.been.called(); done(); }, 25);
+    });
     
-    it('instances can be moved', () => {
+    it('instances can be moved', function() {
         let proj = gaia.create();
 
         let model = proj.root.models.new('model1');
@@ -169,7 +201,7 @@ describe('Namespace', function() {
         expect(proj.root.instances.at(4)).to.be.equal(four);
     });
     
-    describe('#Events', () => {
+    describe('#Events', function() {
        
         let tests = [
             {
@@ -231,7 +263,7 @@ describe('Namespace', function() {
                 'desc': Events.disposed + ' on new()',
                 'event': Events.disposed,
                 'act': n => n.dispose()
-            },       
+            },
             //-- Models
             {
                 'desc': Events.namespace.modelAdding + ' on new()',

@@ -8,6 +8,8 @@ describe('Instance', function() {
         Test:
             - Removing mutliple members at the same time
             - Adding multiple members at the same time
+            - Cannot add more fields than the model has
+            - Field names must be unique
             
         Field:
             - valueChanging/ed   

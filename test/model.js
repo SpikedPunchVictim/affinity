@@ -105,8 +105,8 @@ describe('Model', function() {
           }
         ];
                     
-        tests.forEach(test => {
-            it('should emit event ' + test.event, () => {
+        tests.forEach((test, index) => {
+            it('should emit event ' + test.event, function(done) {
                 var spy = chai.spy();
                 var proj = gaia.create();
                 var model = proj.root.models.new(test.event);

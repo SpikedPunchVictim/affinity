@@ -90,7 +90,7 @@ describe('Model', function() {
               sub: (model, spy) => model.on(Events.model.valueChanging, spy),
               act: model => {
                   var mem = model.members.new('member1', types.string.value('test-me'));
-                  mem.value.value = '2';
+                  mem.value = '2';
               }
           },
           {

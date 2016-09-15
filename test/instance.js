@@ -1,5 +1,10 @@
-var expect = require('chai').expect;
+'use strict';
+
+var chai = require('chai');
+var expect = chai.expect;
+var spies = require('chai-spies');
 var gaia = require('../lib/index.js');
+var Events = require('../lib/events.js');
 var Instance = gaia.Instance;
 var types = gaia.types;
 
@@ -119,5 +124,150 @@ describe('Instance', function() {
         expect(instance.fields.at(2).member).to.equal(decimalMember);
     });
     
-    // TODO: Add events (disposed/ing)
+    describe('# Events', () => {
+        var tests = [
+          {
+              event: Events.instance.fieldAdding,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldAdding, spy),
+              act: (model, inst) => model.members.new('member1', types.string.value('test-me'))
+          },
+          {
+              event: Events.instance.fieldAdded,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldAdded, spy),
+              act: (model, inst) => model.members.new('member1', types.string.value('test-me'))
+          },
+          {
+              event: Events.instance.fieldInheritedChanging,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldInheritedChanging, spy),
+              act: (model, inst) => {
+                  model.members.new('member1', types.string.value('test-me'));
+                  let field = inst.fields.get('member1');
+                  field.value = 'another-value';
+              }
+          },
+          {
+              event: Events.instance.fieldInheritedChanged,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldInheritedChanged, spy),
+              act: (model, inst) => {
+                  model.members.new('member1', types.string.value('test-me'));
+                  let field = inst.fields.get('member1');
+                  field.value = 'another-value';
+              }
+          },
+          {
+              event: Events.instance.fieldMoving,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldMoving, spy),
+              act: (model, inst) => {
+                  model.members.new('member1', types.string.value('test-me'));
+                  model.members.new('member2', types.string.value('test-me'));
+                  model.members.move(0, 1);
+              }
+          },
+          {
+              event: Events.instance.fieldMoved,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldMoved, spy),
+              act: (model, inst) => {
+                  model.members.new('member1', types.string.value('test-me'));
+                  model.members.new('member2', types.string.value('test-me'));
+                  model.members.move(0, 1);
+              }
+          },
+          {
+              event: Events.instance.fieldNameChanged,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldNameChanged, spy),
+              act: (model, inst) => {
+                  var mem = model.members.new('member1', types.string.value('test-me'));
+                  mem.name = 'another-name';
+              }
+          },
+          {
+              event: Events.instance.fieldRemoving,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldRemoving, spy),
+              act: (model, inst) => {
+                  var mem = model.members.new('member1', types.string.value('test-me'));
+                  model.members.remove(mem);
+              }
+          },
+          {
+              event: Events.instance.fieldRemoved,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldRemoved, spy),
+              act: (model, inst) => {
+                  var mem = model.members.new('member1', types.string.value('test-me'));
+                  model.members.remove(mem);
+              }
+          },
+          {
+              event: Events.instance.fieldResetStart,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldResetStart, spy),
+              act: (model, inst) => {
+                  let mem = model.members.new('member1', types.string.value('test-me'));
+                  let field = inst.fields.get('member1');
+                  field.value = 'another-value';
+                  field.reset();
+              }
+          },
+          {
+              event: Events.instance.fieldResetEnd,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldResetEnd, spy),
+              act: (model, inst) => {
+                  let mem = model.members.new('member1', types.string.value('test-me'));
+                  let field = inst.fields.get('member1');
+                  field.value = 'another-value';
+                  field.reset();
+              }
+          },
+          {
+              event: Events.instance.fieldValueChanging,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldValueChanging, spy),
+              act: (model, inst) => {
+                  let mem = model.members.new('member1', types.string.value('test-me'));
+                  let field = inst.fields.get('member1');
+                  field.value = 'another-value';
+              }
+          },
+          {
+              event: Events.instance.fieldValueChanged,
+              sub: (model, inst, spy) => inst.on(Events.instance.fieldValueChanged, spy),
+              act: (model, inst) => {
+                  let mem = model.members.new('member1', types.string.value('test-me'));
+                  let field = inst.fields.get('member1');
+                  field.value = 'another-value';
+              }
+          },
+          {
+              event: Events.disposing,
+              sub: (model, inst, spy) => inst.on(Events.disposing, spy),
+              act: (model, inst) => {
+                  // Note: dispose with a field
+                  let mem = model.members.new('member1', types.string.value('test-me'));
+                  inst.dispose();
+              }
+          },
+          {
+              event: Events.disposed,
+              sub: (model, inst, spy) => inst.on(Events.disposed, spy),
+              act: (model, inst) => {
+                  // Note: dispose with a field
+                  let mem = model.members.new('member1', types.string.value('test-me'));
+                  inst.dispose();
+              }
+          }
+        ];
+                    
+        tests.forEach((test, index) => {
+            it('should emit event ' + test.event, function(done) {
+                let spy = chai.spy();
+                let proj = gaia.create();
+                let model = proj.root.models.new(test.event);
+                let inst = proj.root.instances.new(test.event, model);
+                test.sub(model, inst, spy);
+                test.act(model, inst);
+                setTimeout(() => {
+                    expect(spy).to.have.been.called();
+                    expect(spy).to.have.been.called.once;
+                    done();
+                }, 10);
+            });
+        });
+    });
 });

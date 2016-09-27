@@ -129,7 +129,9 @@ describe('Instance', function() {
           {
               event: Events.instance.fieldAdding,
               sub: (model, inst, spy) => inst.on(Events.instance.fieldAdding, spy),
-              act: (model, inst) => model.members.new('member1', types.string.value('test-me'))
+              act: (model, inst) => {
+                model.members.new('member1', types.string.value('test-me'));
+              }
           },
           {
               event: Events.instance.fieldAdded,
@@ -231,7 +233,7 @@ describe('Instance', function() {
               act: (model, inst) => {
                   let mem = model.members.new('member1', types.string.value('test-me'));
                   let field = inst.fields.get('member1');
-                  field.value = 'another-value';
+                  field.value.value = 'another-value';
               }
           },
           {

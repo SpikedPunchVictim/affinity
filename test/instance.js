@@ -113,15 +113,17 @@ describe('Instance', function() {
         expect(stringField.isInheriting).to.be.true;
         expect(stringField.value.equals(stringMember.value)).to.be.true;
 
-        stringField.value = types.string.value('changed value');
-        expect(stringField.isInheriting).to.be.false;
+        stringField.value.update(types.string.value('changed value'))
+            .then(_ => {
+                expect(stringField.isInheriting).to.be.false;
 
-        var intMember = model.members.new('int', types.int.value());
-        var intField = instance.fields.get('int');
-        expect(intField.member).to.equal(intMember);
+                var intMember = model.members.new('int', types.int.value());
+                var intField = instance.fields.get('int');
+                expect(intField.member).to.equal(intMember);
 
-        var decimalMember = model.members.new('decimal', types.decimal.value());        
-        expect(instance.fields.at(2).member).to.equal(decimalMember);
+                var decimalMember = model.members.new('decimal', types.decimal.value());        
+                expect(instance.fields.at(2).member).to.equal(decimalMember);
+            });
     });
     
     describe('# Events', () => {
@@ -144,7 +146,7 @@ describe('Instance', function() {
               act: (model, inst) => {
                   model.members.new('member1', types.string.value('test-me'));
                   let field = inst.fields.get('member1');
-                  field.value = 'another-value';
+                  field.value.update('another-value');
               }
           },
           {
@@ -153,7 +155,7 @@ describe('Instance', function() {
               act: (model, inst) => {
                   model.members.new('member1', types.string.value('test-me'));
                   let field = inst.fields.get('member1');
-                  field.value = 'another-value';
+                  field.value.update('another-value');
               }
           },
           {
@@ -204,7 +206,7 @@ describe('Instance', function() {
               act: (model, inst) => {
                   let mem = model.members.new('member1', types.string.value('test-me'));
                   let field = inst.fields.get('member1');
-                  field.value = 'another-value';
+                  field.value.update('another-value');
                   field.reset();
               }
           },
@@ -214,7 +216,7 @@ describe('Instance', function() {
               act: (model, inst) => {
                   let mem = model.members.new('member1', types.string.value('test-me'));
                   let field = inst.fields.get('member1');
-                  field.value = 'another-value';
+                  field.value.update('another-value');
                   field.reset();
               }
           },
@@ -224,7 +226,7 @@ describe('Instance', function() {
               act: (model, inst) => {
                   let mem = model.members.new('member1', types.string.value('test-me'));
                   let field = inst.fields.get('member1');
-                  field.value = 'another-value';
+                  field.value.update('another-value');
               }
           },
           {
@@ -233,7 +235,7 @@ describe('Instance', function() {
               act: (model, inst) => {
                   let mem = model.members.new('member1', types.string.value('test-me'));
                   let field = inst.fields.get('member1');
-                  field.value.value = 'another-value';
+                  field.value.update('another-value');
               }
           },
           {

@@ -85,7 +85,7 @@ describe('Fields', () => {
 
         var stringMember = model.members.new('string', types.string.value());
         var stringField = instance.fields.get('string');
-        stringField.value.value = 'and now for something completely different';
+        stringField.value.update('and now for something completely different');
         setTimeout(() => expect(stringField.isInheriting).to.be.false, 10);
         setTimeout(() => expect(stringField.value.equals(stringMember.value)).to.be.false, 10);
     });

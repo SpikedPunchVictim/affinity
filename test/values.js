@@ -12,7 +12,11 @@ chai.use(spies);
 
 let Fill = testing.fill;
 
-// TODO: Create a test for each type of value a SimpleValue can be created with (ie string for DecimalValue)
+/*
+TODO:
+   - Create a test for each type of value a SimpleValue can be created with (ie string for DecimalValue)
+   - CollectionValue needs event tests
+*/
 
 function sharedBehaviorTest(proxy) {
    it('should be able to create a type', () => {

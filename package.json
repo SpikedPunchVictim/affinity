@@ -2,7 +2,7 @@
   "name": "gaia",
   "version": "0.0.3",
   "description": "Dynamic data modeling",
-  "main": ".lib/index.js",
+  "main": "./index.js",
   "dependencies": {
     "async": "^1.5.2",
     "event-emitter": "^0.3.3",

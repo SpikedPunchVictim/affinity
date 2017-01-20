@@ -3,8 +3,8 @@
 var chai = require('chai');
 var expect = chai.expect;
 var spies = require('chai-spies');
-var gaia = require('../lib/index.js');
-var Namespace = gaia.Namespace;
+var affinity = require('../lib/index.js');
+var Namespace = affinity.Namespace;
 var Events = require('../lib/events.js');
 
 chai.use(spies);
@@ -12,7 +12,7 @@ chai.use(spies);
 describe('Namespace', function() {
 
     it('should create a new namespace on new()', () => {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         expect(nspace).to.be.instanceof(Namespace);
@@ -21,14 +21,14 @@ describe('Namespace', function() {
     });
 
     it('should support unique namespace names', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         expect(() => proj.root.children.new(name)).to.throw(Error);
     });
 
     it('should expand the Namespace when given a qualified path', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let name = 'test.me.please';
         
         let nspace = proj.root.expand(name);
@@ -41,7 +41,7 @@ describe('Namespace', function() {
     });
 
     it('should support getOrAdd', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         expect(proj.root.children.getOrAdd(name)).to.be.eql(nspace);
@@ -50,28 +50,28 @@ describe('Namespace', function() {
     });
 
     it('should have a children property', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         expect(nspace).to.have.property('children');
     });
 
     it('should have the parent property', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         expect(nspace).to.have.property('parent');
     });
 
     it('should have the proper parent', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);    
         expect(nspace.parent).to.eql(proj.root);
     });
 
     it('new child should also have the proper parent', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         let child = nspace.children.new('child');
@@ -81,7 +81,7 @@ describe('Namespace', function() {
     });
 
     it('should be able to find a namespace by name', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         let child = nspace.children.new('child');
@@ -95,7 +95,7 @@ describe('Namespace', function() {
     });
 
     it('should be able to find a namespace by instance', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         let child = nspace.children.new('child');
@@ -105,7 +105,7 @@ describe('Namespace', function() {
     });
 
     it('child can be deleted', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let name = 'test';
         let nspace = proj.root.children.new(name);
         let child = nspace.children.new('child');
@@ -115,7 +115,7 @@ describe('Namespace', function() {
     });
     
     it('child can be moved', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
 
         let zero = proj.root.children.new('zero');
         let one = proj.root.children.new('one');
@@ -133,7 +133,7 @@ describe('Namespace', function() {
     });
     
     it('model can be moved', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
 
         let zero = proj.root.models.new('zero');
         let one = proj.root.models.new('one');
@@ -151,7 +151,7 @@ describe('Namespace', function() {
     });
 
     it('should raise a parent changing', function(done) {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let one = proj.root.children.new('one');
         let two = proj.root.children.new('two');
         let three = one.children.new('three');
@@ -167,7 +167,7 @@ describe('Namespace', function() {
     });
 
     it('should raise a parent changed', function(done) {
-        let proj = gaia.create();
+        let proj = affinity.create();
         let one = proj.root.children.new('one');
         let two = proj.root.children.new('two');
         let three = one.children.new('three');
@@ -183,7 +183,7 @@ describe('Namespace', function() {
     });
     
     it('instances can be moved', function() {
-        let proj = gaia.create();
+        let proj = affinity.create();
 
         let model = proj.root.models.new('model1');
         let zero = proj.root.instances.new('zero', model);
@@ -381,7 +381,7 @@ describe('Namespace', function() {
         tests.forEach(test => {
             it('should emit event ' + test.desc, () => {
                 let spy = chai.spy();
-                let proj = gaia.create();
+                let proj = affinity.create();
                 proj.root.on(test.event, spy);
                 test.act(proj.root);
                 expect(spy).to.have.been.called();

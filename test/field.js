@@ -1,14 +1,14 @@
 'use strict';
 
 let expect = require('chai').expect;
-let gaia = require('../lib/index.js');
-let Instance = gaia.Instance;
-let types = gaia.types;
+let affinity = require('../lib/index.js');
+let Instance = affinity.Instance;
+let types = affinity.types;
 
 describe('Fields', () => {
 
    it('should be created when a member is created', () => {
-      let proj = gaia.create();
+      let proj = affinity.create();
       let model = proj.root.models.new('test_me');
       let instance = proj.root.instances.new('test_instance', model);
       model.members.new('test_member', types.uint.value(9));
@@ -17,7 +17,7 @@ describe('Fields', () => {
    });
 
    it('should have equal value with it\'s member when created', () => {
-      let proj = gaia.create();
+      let proj = affinity.create();
       let model = proj.root.models.new('test_me');
       let instance = proj.root.instances.new('test_instance', model);
       let member = model.members.new('test_member', types.string.value('42 is the answer'));
@@ -29,7 +29,7 @@ describe('Fields', () => {
    });
 
    it('should have equal value with it\'s member when the member\'s value changes', () => {
-      let proj = gaia.create();
+      let proj = affinity.create();
       let model = proj.root.models.new('test_me');
       let instance = proj.root.instances.new('test_instance', model);
       let member = model.members.new('test_member', types.string.value('42 is the answer'));
@@ -41,7 +41,7 @@ describe('Fields', () => {
    });
 
    it('should have isInheriting set to true when changes are made to the member', () => {
-      let proj = gaia.create();
+      let proj = affinity.create();
       let model = proj.root.models.new('test_me');
       let instance = proj.root.instances.new('test_instance', model);
       let member = model.members.new('test_member', types.string.value('42 is the answer'));
@@ -53,7 +53,7 @@ describe('Fields', () => {
    });
 
    it('should have isInheriting set to false when changes to the field are made', () => {
-      let proj = gaia.create();
+      let proj = affinity.create();
       let model = proj.root.models.new('test_me');
       let instance = proj.root.instances.new('test_instance', model);
       model.members.new('test_member', types.string.value('flesh wound'));
@@ -65,7 +65,7 @@ describe('Fields', () => {
    });
 
    it('should have a value equal to the member\'s when inheriting', function() {
-      let proj = gaia.create();
+      let proj = affinity.create();
       let model = proj.root.models.new('test');
       let instance = proj.root.instances.new('test-instance', model);
 
@@ -81,7 +81,7 @@ describe('Fields', () => {
    });
 
    it('should have a value not equal to the member\'s when not inheriting', function() {
-      let proj = gaia.create();
+      let proj = affinity.create();
       let model = proj.root.models.new('test');
       let instance = proj.root.instances.new('test-instance', model);
 
@@ -94,7 +94,7 @@ describe('Fields', () => {
 
    describe('# Types', function() {
       it('collection', function(done) {
-         let proj = gaia.create();
+         let proj = affinity.create();
          let model = proj.root.models.new('test');
          let instance = proj.root.instances.new('test-instance', model);
 
@@ -115,7 +115,7 @@ describe('Fields', () => {
             })
             .catch(err => done(err));
 
-         collectionField.once(gaia.events.field.valueChanged, () => {
+         collectionField.once(affinity.events.field.valueChanged, () => {
             expect(collectionField.value).to.have.lengthOf(5);
 
             expect(collectionField.value.at(0).value).to.equal(0);

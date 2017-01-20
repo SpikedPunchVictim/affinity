@@ -1,15 +1,15 @@
 var chai = require('chai');
 var expect = chai.expect;
 var spies = require('chai-spies');
-var gaia = require('../lib/index.js');
+var affinity = require('../lib/index.js');
 var Events = require('../lib/events.js');
-var Model = gaia.Model;
-var types = gaia.types;
+var Model = affinity.Model;
+var types = affinity.types;
 
 chai.use(spies);
 
 function testCreatedType(createValue) {
-    var proj = gaia.create();
+    var proj = affinity.create();
     var model = proj.root.models.add('test');
     var name = 'name';
     var value = createValue();
@@ -24,7 +24,7 @@ describe('Model', function() {
 
     it('should be able to create a new Model', function() {
         // Test mutliple depths
-        var proj = gaia.create();
+        var proj = affinity.create();
         var model1 = proj.root.models.new('test');
         var model2 = proj.root.children.new('child').models.new('test2');
         expect(model1).to.be.instanceof(Model);
@@ -108,7 +108,7 @@ describe('Model', function() {
         tests.forEach((test, index) => {
             it('should emit event ' + test.event, function(done) {
                 var spy = chai.spy();
-                var proj = gaia.create();
+                var proj = affinity.create();
                 var model = proj.root.models.new(test.event);
                 test.sub(model, spy);
                 test.act(model);

@@ -3,8 +3,8 @@
 var chai = require('chai'),
    spies = require('chai-spies'),
    expect = chai.expect,
-   gaia = require('../lib/index.js'),
-   types = gaia.types,
+   affinity = require('../lib/index.js'),
+   types = affinity.types,
    Events = require('../lib/events.js'),
    testing = require('../lib/testing.js');
 

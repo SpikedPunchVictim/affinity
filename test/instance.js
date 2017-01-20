@@ -3,10 +3,10 @@
 var chai = require('chai');
 var expect = chai.expect;
 var spies = require('chai-spies');
-var gaia = require('../lib/index.js');
+var affinity = require('../lib/index.js');
 var Events = require('../lib/events.js');
-var Instance = gaia.Instance;
-var types = gaia.types;
+var Instance = affinity.Instance;
+var types = affinity.types;
 
 describe('Instance', function() {
     /*
@@ -22,14 +22,14 @@ describe('Instance', function() {
 
     it('should be able to create a new Instance', () => {
         // Test mutliple depths
-        var proj = gaia.create();
+        var proj = affinity.create();
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model)
         expect(instance).to.be.instanceof(Instance);
     });
 
     it('should have matching fields for each model member (model created before)', () => {
-        var proj = gaia.create();
+        var proj = affinity.create();
         
         var model = proj.root.models.new('test');
         model.members.new('one', types.string.value());
@@ -50,7 +50,7 @@ describe('Instance', function() {
     });
 
     it('should remove a member when the Model\'s member is removed', function() {
-        var proj = gaia.create();
+        var proj = affinity.create();
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model);
 
@@ -69,7 +69,7 @@ describe('Instance', function() {
     });    
 
     it('field indexes should match their model member\'s counterpart', function() {
-        var proj = gaia.create();
+        var proj = affinity.create();
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model);
 
@@ -84,7 +84,7 @@ describe('Instance', function() {
     });
     
     it('moving members should move fields', function() {
-        var proj = gaia.create();
+        var proj = affinity.create();
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model);
 
@@ -104,7 +104,7 @@ describe('Instance', function() {
     });
     
     it('should have isInheriting set correctly', function() {
-        var proj = gaia.create();
+        var proj = affinity.create();
         var model = proj.root.models.new('test');
         var instance = proj.root.instances.new('test-instance', model);
 
@@ -261,7 +261,7 @@ describe('Instance', function() {
         tests.forEach((test, index) => {
             it('should emit event ' + test.event, function(done) {
                 let spy = chai.spy();
-                let proj = gaia.create();
+                let proj = affinity.create();
                 let model = proj.root.models.new(test.event);
                 let inst = proj.root.instances.new(test.event, model);
                 test.sub(model, inst, spy);

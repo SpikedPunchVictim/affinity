@@ -21,12 +21,12 @@ module.exports = {
    test: require('./lib/testing.js')
 }
 
-var gaia = {};
+var affinity = {};
 
 for (var exp in module.exports) {
-   gaia[exp] = module.exports[exp];
+   affinity[exp] = module.exports[exp];
 }
 
 module.exports.use = function use(plugin) {
-   plugin.register(gaia);
+   plugin.register(affinity);
 }

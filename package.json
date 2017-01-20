@@ -1,5 +1,5 @@
 {
-  "name": "gaia",
+  "name": "affinity",
   "version": "0.0.3",
   "description": "Dynamic data modeling",
   "main": "./index.js",
@@ -26,6 +26,7 @@
     "build": "rm -rf dist && babel lib --out-dir dist"
   },
   "keywords": [
+    "affinity",
     "dynamic",
     "data",
     "modeling"

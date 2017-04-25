@@ -17,7 +17,7 @@ module.exports = {
    Events: require('./lib/events.js'),
 	types: types,
    create: Project.create,
-   qpath: require('./lib/qpath.js'),
+   utils: require('./lib/utils.js'),
    test: require('./lib/testing.js')
 }
 

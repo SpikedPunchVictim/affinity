@@ -1,7 +1,7 @@
 'use strict';
 
 var expect = require('chai').expect;
-var qpath = require('../lib/qpath.js');
+var qpath = require('../lib/utils.js').qpath;
 
 describe('qpath', function() {
 

@@ -9,9 +9,10 @@ describe("Project", function() {
         expect(proj).to.have.property('root');
     });
 
-    it('should fill correctly', function() {
+    it('should fill correctly', function(done) {
         let proj = affinity.create();
         fill.project(proj)
+        done()
     })
     // Test:
     //  - Model events when adding members

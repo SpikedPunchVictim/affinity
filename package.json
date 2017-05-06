@@ -1,6 +1,6 @@
 {
   "name": "affinity",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Dynamic data modeling",
   "main": "./index.js",
   "dependencies": {

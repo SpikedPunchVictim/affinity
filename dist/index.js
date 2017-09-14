@@ -1,3 +1,5 @@
+'use strict';
+
 var types = require('./types/index.js');
 types.collection = require('./types/collection.js');
 
@@ -13,12 +15,12 @@ module.exports = {
    ModelCollection: require('./collections/modelCollection.js'),
    Project: Project,
    Events: require('./events.js'),
-	types: types,
+   types: types,
    create: Project.create,
    utils: require('./utils.js'),
    test: require('./testing.js'),
    use: use
-}
+};
 
 var affinity = {};
 
@@ -29,15 +31,6 @@ for (var exp in module.exports) {
 function use(plugin) {
    plugin.register(module.exports);
 }
-
-
-
-
-
-
-
-
-
 
 // module.exports.Instance = require('./instance.js');
 // module.exports.Field = require('./field.js');

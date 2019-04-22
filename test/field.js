@@ -115,7 +115,7 @@ describe('Fields', () => {
             })
             .catch(err => done(err));
 
-         collectionField.once(affinity.events.field.valueChanged, () => {
+         collectionField.once(affinity.Events.field.valueChanged, () => {
             expect(collectionField.value).to.have.lengthOf(5);
 
             expect(collectionField.value.at(0).value).to.equal(0);

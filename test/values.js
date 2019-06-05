@@ -252,9 +252,17 @@ function collectionTests(proxy) {
          .catch(err => done(err));
    })
 
+   it('isCollection() : Type', function(done) {
+      let coll = collection.value(types.string.type());
+      expect(collection.isCollection(coll.type)).to.be.true;
+      done()
+   })
 
-
-
+   it('isCollection() : Value', function(done) {
+      let coll = collection.value(types.string.type());
+      expect(collection.isCollection(coll)).to.be.true;
+      done()
+   })
 
    describe('#events', function() {
 

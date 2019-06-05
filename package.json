@@ -1,6 +1,6 @@
 {
   "name": "affinity",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Dynamic data modeling",
   "main": "./lib/index.js",
   "dependencies": {
@@ -30,7 +30,7 @@
     "test": "mocha --recursive --reporter spec",
     "test:watch": "mocha --recursive --watch --bail --reporter spec",
     "debug": "node-debug ./node_modules/mocha/bin/_mocha",
-    "build": "babel lib --out-dir dist",
+    "build-old": "babel lib --out-dir dist",
     "rollup": "rollup --config"
   },
   "keywords": [

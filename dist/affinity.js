@@ -98,7 +98,7 @@ var lodash = createCommonjsModule(function (module, exports) {
 /**
  * @license
  * Lodash <https://lodash.com/>
- * Copyright JS Foundation and other contributors <https://js.foundation/>
+ * Copyright OpenJS Foundation and other contributors <https://openjsf.org/>
  * Released under MIT license <https://lodash.com/license>
  * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
  * Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -109,7 +109,7 @@ var lodash = createCommonjsModule(function (module, exports) {
   var undefined;
 
   /** Used as the semantic version number. */
-  var VERSION = '4.17.11';
+  var VERSION = '4.17.15';
 
   /** Used as the size to enable large array optimizations. */
   var LARGE_ARRAY_SIZE = 200;
@@ -2768,16 +2768,10 @@ var lodash = createCommonjsModule(function (module, exports) {
         value.forEach(function(subValue) {
           result.add(baseClone(subValue, bitmask, customizer, subValue, value, stack));
         });
-
-        return result;
-      }
-
-      if (isMap(value)) {
+      } else if (isMap(value)) {
         value.forEach(function(subValue, key) {
           result.set(key, baseClone(subValue, bitmask, customizer, key, value, stack));
         });
-
-        return result;
       }
 
       var keysFunc = isFull
@@ -3701,8 +3695,8 @@ var lodash = createCommonjsModule(function (module, exports) {
         return;
       }
       baseFor(source, function(srcValue, key) {
+        stack || (stack = new Stack);
         if (isObject(srcValue)) {
-          stack || (stack = new Stack);
           baseMergeDeep(object, source, key, srcIndex, baseMerge, customizer, stack);
         }
         else {
@@ -5519,7 +5513,7 @@ var lodash = createCommonjsModule(function (module, exports) {
       return function(number, precision) {
         number = toNumber(number);
         precision = precision == null ? 0 : nativeMin(toInteger(precision), 292);
-        if (precision) {
+        if (precision && nativeIsFinite(number)) {
           // Shift with exponential notation to avoid floating-point issues.
           // See [MDN](https://mdn.io/round#Examples) for more details.
           var pair = (toString(number) + 'e').split('e'),
@@ -6702,7 +6696,7 @@ var lodash = createCommonjsModule(function (module, exports) {
     }
 
     /**
-     * Gets the value at `key`, unless `key` is "__proto__".
+     * Gets the value at `key`, unless `key` is "__proto__" or "constructor".
      *
      * @private
      * @param {Object} object The object to query.
@@ -6710,6 +6704,10 @@ var lodash = createCommonjsModule(function (module, exports) {
      * @returns {*} Returns the property value.
      */
     function safeGet(object, key) {
+      if (key === 'constructor' && typeof object[key] === 'function') {
+        return;
+      }
+
       if (key == '__proto__') {
         return;
       }
@@ -10510,6 +10508,7 @@ var lodash = createCommonjsModule(function (module, exports) {
           }
           if (maxing) {
             // Handle invocations in a tight loop.
+            clearTimeout(timerId);
             timerId = setTimeout(timerExpired, wait);
             return invokeFunc(lastCallTime);
           }
@@ -14896,9 +14895,12 @@ var lodash = createCommonjsModule(function (module, exports) {
       , 'g');
 
       // Use a sourceURL for easier debugging.
+      // The sourceURL gets injected into the source that's eval-ed, so be careful
+      // with lookup (in case of e.g. prototype pollution), and strip newlines if any.
+      // A newline wouldn't be a valid sourceURL anyway, and it'd enable code injection.
       var sourceURL = '//# sourceURL=' +
-        ('sourceURL' in options
-          ? options.sourceURL
+        (hasOwnProperty.call(options, 'sourceURL')
+          ? (options.sourceURL + '').replace(/[\r\n]/g, ' ')
           : ('lodash.templateSources[' + (++templateCounter) + ']')
         ) + '\n';
 
@@ -14931,7 +14933,9 @@ var lodash = createCommonjsModule(function (module, exports) {
 
       // If `variable` is not specified wrap a with-statement around the generated
       // code to add the data object to the top of the scope chain.
-      var variable = options.variable;
+      // Like with sourceURL, we take care to not check the option's prototype,
+      // as this configuration is a code injection vector.
+      var variable = hasOwnProperty.call(options, 'variable') && options.variable;
       if (!variable) {
         source = 'with (obj) {\n' + source + '\n}\n';
       }
@@ -17136,10 +17140,11 @@ var lodash = createCommonjsModule(function (module, exports) {
     baseForOwn(LazyWrapper.prototype, function(func, methodName) {
       var lodashFunc = lodash[methodName];
       if (lodashFunc) {
-        var key = (lodashFunc.name + ''),
-            names = realNames[key] || (realNames[key] = []);
-
-        names.push({ 'name': methodName, 'func': lodashFunc });
+        var key = lodashFunc.name + '';
+        if (!hasOwnProperty.call(realNames, key)) {
+          realNames[key] = [];
+        }
+        realNames[key].push({ 'name': methodName, 'func': lodashFunc });
       }
     });
 
@@ -17434,855 +17439,450 @@ var when = createCommonjsModule(function (module) {
 })(typeof undefined === 'function' && undefined.amd ? undefined : function (factory) { module.exports = factory(commonjsRequire); });
 });
 
-var isImplemented = function () {
-	var assign = Object.assign, obj;
-	if (typeof assign !== "function") return false;
-	obj = { foo: "raz" };
-	assign(obj, { bar: "dwa" }, { trzy: "trzy" });
-	return (obj.foo + obj.bar + obj.trzy) === "razdwatrzy";
-};
+var eventemitter3 = createCommonjsModule(function (module) {
+var has = Object.prototype.hasOwnProperty
+  , prefix = '~';
 
-var isImplemented$2 = function () {
-	try {
-		return true;
-	} catch (e) {
- return false;
-}
-};
+/**
+ * Constructor to create a storage for our `EE` objects.
+ * An `Events` instance is a plain object whose properties are event names.
+ *
+ * @constructor
+ * @private
+ */
+function Events() {}
 
-// eslint-disable-next-line no-empty-function
-var noop = function () {};
+//
+// We try to not inherit from `Object.prototype`. In some engines creating an
+// instance in this way is faster than calling `Object.create(null)` directly.
+// If `Object.create(null)` is not supported we prefix the event names with a
+// character to make sure that the built-in object properties are not
+// overridden or used as an attack vector.
+//
+if (Object.create) {
+  Events.prototype = Object.create(null);
 
-var _undefined = noop(); // Support ES3 engines
-
-var isValue = function (val) {
- return (val !== _undefined) && (val !== null);
-};
-
-var keys$2 = Object.keys;
-
-var shim$2 = function (object) {
-	return keys$2(isValue(object) ? Object(object) : object);
-};
-
-var keys = isImplemented$2()
-	? Object.keys
-	: shim$2;
-
-var validValue = function (value) {
-	if (!isValue(value)) throw new TypeError("Cannot use null or undefined");
-	return value;
-};
-
-var max   = Math.max;
-
-var shim = function (dest, src /*, …srcn*/) {
-	var error, i, length = max(arguments.length, 2), assign;
-	dest = Object(validValue(dest));
-	assign = function (key) {
-		try {
-			dest[key] = src[key];
-		} catch (e) {
-			if (!error) error = e;
-		}
-	};
-	for (i = 1; i < length; ++i) {
-		src = arguments[i];
-		keys(src).forEach(assign);
-	}
-	if (error !== undefined) throw error;
-	return dest;
-};
-
-var assign = isImplemented()
-	? Object.assign
-	: shim;
-
-var forEach = Array.prototype.forEach;
-var create = Object.create;
-
-var process = function (src, obj) {
-	var key;
-	for (key in src) obj[key] = src[key];
-};
-
-// eslint-disable-next-line no-unused-vars
-var normalizeOptions = function (opts1 /*, …options*/) {
-	var result = create(null);
-	forEach.call(arguments, function (options) {
-		if (!isValue(options)) return;
-		process(Object(options), result);
-	});
-	return result;
-};
-
-// Deprecated
-
-var isCallable = function (obj) {
- return typeof obj === "function";
-};
-
-var str = "razdwatrzy";
-
-var isImplemented$4 = function () {
-	if (typeof str.contains !== "function") return false;
-	return (str.contains("dwa") === true) && (str.contains("foo") === false);
-};
-
-var indexOf = String.prototype.indexOf;
-
-var shim$4 = function (searchString/*, position*/) {
-	return indexOf.call(this, searchString, arguments[1]) > -1;
-};
-
-var contains = isImplemented$4()
-	? String.prototype.contains
-	: shim$4;
-
-var d_1 = createCommonjsModule(function (module) {
-var d;
-
-d = module.exports = function (dscr, value/*, options*/) {
-	var c, e, w, options, desc;
-	if ((arguments.length < 2) || (typeof dscr !== 'string')) {
-		options = value;
-		value = dscr;
-		dscr = null;
-	} else {
-		options = arguments[2];
-	}
-	if (dscr == null) {
-		c = w = true;
-		e = false;
-	} else {
-		c = contains.call(dscr, 'c');
-		e = contains.call(dscr, 'e');
-		w = contains.call(dscr, 'w');
-	}
-
-	desc = { value: value, configurable: c, enumerable: e, writable: w };
-	return !options ? desc : assign(normalizeOptions(options), desc);
-};
-
-d.gs = function (dscr, get, set/*, options*/) {
-	var c, e, options, desc;
-	if (typeof dscr !== 'string') {
-		options = set;
-		set = get;
-		get = dscr;
-		dscr = null;
-	} else {
-		options = arguments[3];
-	}
-	if (get == null) {
-		get = undefined;
-	} else if (!isCallable(get)) {
-		options = get;
-		get = set = undefined;
-	} else if (set == null) {
-		set = undefined;
-	} else if (!isCallable(set)) {
-		options = set;
-		set = undefined;
-	}
-	if (dscr == null) {
-		c = true;
-		e = false;
-	} else {
-		c = contains.call(dscr, 'c');
-		e = contains.call(dscr, 'e');
-	}
-
-	desc = { get: get, set: set, configurable: c, enumerable: e };
-	return !options ? desc : assign(normalizeOptions(options), desc);
-};
-});
-
-var validCallable = function (fn) {
-	if (typeof fn !== "function") throw new TypeError(fn + " is not a function");
-	return fn;
-};
-
-var eventEmitter$2 = createCommonjsModule(function (module, exports) {
-var apply = Function.prototype.apply, call = Function.prototype.call
-  , create = Object.create, defineProperty = Object.defineProperty
-  , defineProperties = Object.defineProperties
-  , hasOwnProperty = Object.prototype.hasOwnProperty
-  , descriptor = { configurable: true, enumerable: false, writable: true }
-
-  , on, once, off, emit, methods, descriptors, base;
-
-on = function (type, listener) {
-	var data;
-
-	validCallable(listener);
-
-	if (!hasOwnProperty.call(this, '__ee__')) {
-		data = descriptor.value = create(null);
-		defineProperty(this, '__ee__', descriptor);
-		descriptor.value = null;
-	} else {
-		data = this.__ee__;
-	}
-	if (!data[type]) data[type] = listener;
-	else if (typeof data[type] === 'object') data[type].push(listener);
-	else data[type] = [data[type], listener];
-
-	return this;
-};
-
-once = function (type, listener) {
-	var once, self;
-
-	validCallable(listener);
-	self = this;
-	on.call(this, type, once = function () {
-		off.call(self, type, once);
-		apply.call(listener, this, arguments);
-	});
-
-	once.__eeOnceListener__ = listener;
-	return this;
-};
-
-off = function (type, listener) {
-	var data, listeners, candidate, i;
-
-	validCallable(listener);
-
-	if (!hasOwnProperty.call(this, '__ee__')) return this;
-	data = this.__ee__;
-	if (!data[type]) return this;
-	listeners = data[type];
-
-	if (typeof listeners === 'object') {
-		for (i = 0; (candidate = listeners[i]); ++i) {
-			if ((candidate === listener) ||
-					(candidate.__eeOnceListener__ === listener)) {
-				if (listeners.length === 2) data[type] = listeners[i ? 0 : 1];
-				else listeners.splice(i, 1);
-			}
-		}
-	} else {
-		if ((listeners === listener) ||
-				(listeners.__eeOnceListener__ === listener)) {
-			delete data[type];
-		}
-	}
-
-	return this;
-};
-
-emit = function (type) {
-	var i, l, listener, listeners, args;
-
-	if (!hasOwnProperty.call(this, '__ee__')) return;
-	listeners = this.__ee__[type];
-	if (!listeners) return;
-
-	if (typeof listeners === 'object') {
-		l = arguments.length;
-		args = new Array(l - 1);
-		for (i = 1; i < l; ++i) args[i - 1] = arguments[i];
-
-		listeners = listeners.slice();
-		for (i = 0; (listener = listeners[i]); ++i) {
-			apply.call(listener, this, args);
-		}
-	} else {
-		switch (arguments.length) {
-		case 1:
-			call.call(listeners, this);
-			break;
-		case 2:
-			call.call(listeners, this, arguments[1]);
-			break;
-		case 3:
-			call.call(listeners, this, arguments[1], arguments[2]);
-			break;
-		default:
-			l = arguments.length;
-			args = new Array(l - 1);
-			for (i = 1; i < l; ++i) {
-				args[i - 1] = arguments[i];
-			}
-			apply.call(listeners, this, args);
-		}
-	}
-};
-
-methods = {
-	on: on,
-	once: once,
-	off: off,
-	emit: emit
-};
-
-descriptors = {
-	on: d_1(on),
-	once: d_1(once),
-	off: d_1(off),
-	emit: d_1(emit)
-};
-
-base = defineProperties({}, descriptors);
-
-module.exports = exports = function (o) {
-	return (o == null) ? create(base) : defineProperties(Object(o), descriptors);
-};
-exports.methods = methods;
-});
-
-var eventEmitter_1 = eventEmitter$2.methods;
-
-var isImplemented$6 = function () {
-	var from = Array.from, arr, result;
-	if (typeof from !== "function") return false;
-	arr = ["raz", "dwa"];
-	result = from(arr);
-	return Boolean(result && (result !== arr) && (result[1] === "dwa"));
-};
-
-var validTypes = { object: true, symbol: true };
-
-var isImplemented$8 = function () {
-	if (typeof Symbol !== 'function') return false;
-	try {  } catch (e) { return false; }
-
-	// Return 'true' also for polyfills
-	if (!validTypes[typeof Symbol.iterator]) return false;
-	if (!validTypes[typeof Symbol.toPrimitive]) return false;
-	if (!validTypes[typeof Symbol.toStringTag]) return false;
-
-	return true;
-};
-
-var isSymbol = function (x) {
-	if (!x) return false;
-	if (typeof x === 'symbol') return true;
-	if (!x.constructor) return false;
-	if (x.constructor.name !== 'Symbol') return false;
-	return (x[x.constructor.toStringTag] === 'Symbol');
-};
-
-var validateSymbol = function (value) {
-	if (!isSymbol(value)) throw new TypeError(value + " is not a symbol");
-	return value;
-};
-
-var create$1 = Object.create;
-var defineProperties = Object.defineProperties;
-var defineProperty$2 = Object.defineProperty;
-var objPrototype = Object.prototype;
-var NativeSymbol;
-var SymbolPolyfill;
-var HiddenSymbol;
-var globalSymbols = create$1(null);
-var isNativeSafe;
-
-if (typeof Symbol === 'function') {
-	NativeSymbol = Symbol;
-	try {
-		String(NativeSymbol());
-		isNativeSafe = true;
-	} catch (ignore) {}
+  //
+  // This hack is needed because the `__proto__` property is still inherited in
+  // some old browsers like Android 4, iPhone 5.1, Opera 11 and Safari 5.
+  //
+  if (!new Events().__proto__) prefix = false;
 }
 
-var generateName = (function () {
-	var created = create$1(null);
-	return function (desc) {
-		var postfix = 0, name, ie11BugWorkaround;
-		while (created[desc + (postfix || '')]) ++postfix;
-		desc += (postfix || '');
-		created[desc] = true;
-		name = '@@' + desc;
-		defineProperty$2(objPrototype, name, d_1.gs(null, function (value) {
-			// For IE11 issue see:
-			// https://connect.microsoft.com/IE/feedbackdetail/view/1928508/
-			//    ie11-broken-getters-on-dom-objects
-			// https://github.com/medikoo/es6-symbol/issues/12
-			if (ie11BugWorkaround) return;
-			ie11BugWorkaround = true;
-			defineProperty$2(this, name, d_1(value));
-			ie11BugWorkaround = false;
-		}));
-		return name;
-	};
-}());
+/**
+ * Representation of a single event listener.
+ *
+ * @param {Function} fn The listener function.
+ * @param {*} context The context to invoke the listener with.
+ * @param {Boolean} [once=false] Specify if the listener is a one-time listener.
+ * @constructor
+ * @private
+ */
+function EE(fn, context, once) {
+  this.fn = fn;
+  this.context = context;
+  this.once = once || false;
+}
 
-// Internal constructor (not one exposed) for creating Symbol instances.
-// This one is used to ensure that `someSymbol instanceof Symbol` always return false
-HiddenSymbol = function Symbol(description) {
-	if (this instanceof HiddenSymbol) throw new TypeError('Symbol is not a constructor');
-	return SymbolPolyfill(description);
+/**
+ * Add a listener for a given event.
+ *
+ * @param {EventEmitter} emitter Reference to the `EventEmitter` instance.
+ * @param {(String|Symbol)} event The event name.
+ * @param {Function} fn The listener function.
+ * @param {*} context The context to invoke the listener with.
+ * @param {Boolean} once Specify if the listener is a one-time listener.
+ * @returns {EventEmitter}
+ * @private
+ */
+function addListener(emitter, event, fn, context, once) {
+  if (typeof fn !== 'function') {
+    throw new TypeError('The listener must be a function');
+  }
+
+  var listener = new EE(fn, context || emitter, once)
+    , evt = prefix ? prefix + event : event;
+
+  if (!emitter._events[evt]) emitter._events[evt] = listener, emitter._eventsCount++;
+  else if (!emitter._events[evt].fn) emitter._events[evt].push(listener);
+  else emitter._events[evt] = [emitter._events[evt], listener];
+
+  return emitter;
+}
+
+/**
+ * Clear event by name.
+ *
+ * @param {EventEmitter} emitter Reference to the `EventEmitter` instance.
+ * @param {(String|Symbol)} evt The Event name.
+ * @private
+ */
+function clearEvent(emitter, evt) {
+  if (--emitter._eventsCount === 0) emitter._events = new Events();
+  else delete emitter._events[evt];
+}
+
+/**
+ * Minimal `EventEmitter` interface that is molded against the Node.js
+ * `EventEmitter` interface.
+ *
+ * @constructor
+ * @public
+ */
+function EventEmitter() {
+  this._events = new Events();
+  this._eventsCount = 0;
+}
+
+/**
+ * Return an array listing the events for which the emitter has registered
+ * listeners.
+ *
+ * @returns {Array}
+ * @public
+ */
+EventEmitter.prototype.eventNames = function eventNames() {
+  var names = []
+    , events
+    , name;
+
+  if (this._eventsCount === 0) return names;
+
+  for (name in (events = this._events)) {
+    if (has.call(events, name)) names.push(prefix ? name.slice(1) : name);
+  }
+
+  if (Object.getOwnPropertySymbols) {
+    return names.concat(Object.getOwnPropertySymbols(events));
+  }
+
+  return names;
 };
 
-// Exposed `Symbol` constructor
-// (returns instances of HiddenSymbol)
-var polyfill = SymbolPolyfill = function Symbol(description) {
-	var symbol;
-	if (this instanceof Symbol) throw new TypeError('Symbol is not a constructor');
-	if (isNativeSafe) return NativeSymbol(description);
-	symbol = create$1(HiddenSymbol.prototype);
-	description = (description === undefined ? '' : String(description));
-	return defineProperties(symbol, {
-		__description__: d_1('', description),
-		__name__: d_1('', generateName(description))
-	});
-};
-defineProperties(SymbolPolyfill, {
-	for: d_1(function (key) {
-		if (globalSymbols[key]) return globalSymbols[key];
-		return (globalSymbols[key] = SymbolPolyfill(String(key)));
-	}),
-	keyFor: d_1(function (s) {
-		var key;
-		validateSymbol(s);
-		for (key in globalSymbols) if (globalSymbols[key] === s) return key;
-	}),
+/**
+ * Return the listeners registered for a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @returns {Array} The registered listeners.
+ * @public
+ */
+EventEmitter.prototype.listeners = function listeners(event) {
+  var evt = prefix ? prefix + event : event
+    , handlers = this._events[evt];
 
-	// To ensure proper interoperability with other native functions (e.g. Array.from)
-	// fallback to eventual native implementation of given symbol
-	hasInstance: d_1('', (NativeSymbol && NativeSymbol.hasInstance) || SymbolPolyfill('hasInstance')),
-	isConcatSpreadable: d_1('', (NativeSymbol && NativeSymbol.isConcatSpreadable) ||
-		SymbolPolyfill('isConcatSpreadable')),
-	iterator: d_1('', (NativeSymbol && NativeSymbol.iterator) || SymbolPolyfill('iterator')),
-	match: d_1('', (NativeSymbol && NativeSymbol.match) || SymbolPolyfill('match')),
-	replace: d_1('', (NativeSymbol && NativeSymbol.replace) || SymbolPolyfill('replace')),
-	search: d_1('', (NativeSymbol && NativeSymbol.search) || SymbolPolyfill('search')),
-	species: d_1('', (NativeSymbol && NativeSymbol.species) || SymbolPolyfill('species')),
-	split: d_1('', (NativeSymbol && NativeSymbol.split) || SymbolPolyfill('split')),
-	toPrimitive: d_1('', (NativeSymbol && NativeSymbol.toPrimitive) || SymbolPolyfill('toPrimitive')),
-	toStringTag: d_1('', (NativeSymbol && NativeSymbol.toStringTag) || SymbolPolyfill('toStringTag')),
-	unscopables: d_1('', (NativeSymbol && NativeSymbol.unscopables) || SymbolPolyfill('unscopables'))
+  if (!handlers) return [];
+  if (handlers.fn) return [handlers.fn];
+
+  for (var i = 0, l = handlers.length, ee = new Array(l); i < l; i++) {
+    ee[i] = handlers[i].fn;
+  }
+
+  return ee;
+};
+
+/**
+ * Return the number of listeners listening to a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @returns {Number} The number of listeners.
+ * @public
+ */
+EventEmitter.prototype.listenerCount = function listenerCount(event) {
+  var evt = prefix ? prefix + event : event
+    , listeners = this._events[evt];
+
+  if (!listeners) return 0;
+  if (listeners.fn) return 1;
+  return listeners.length;
+};
+
+/**
+ * Calls each of the listeners registered for a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @returns {Boolean} `true` if the event had listeners, else `false`.
+ * @public
+ */
+EventEmitter.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
+  var evt = prefix ? prefix + event : event;
+
+  if (!this._events[evt]) return false;
+
+  var listeners = this._events[evt]
+    , len = arguments.length
+    , args
+    , i;
+
+  if (listeners.fn) {
+    if (listeners.once) this.removeListener(event, listeners.fn, undefined, true);
+
+    switch (len) {
+      case 1: return listeners.fn.call(listeners.context), true;
+      case 2: return listeners.fn.call(listeners.context, a1), true;
+      case 3: return listeners.fn.call(listeners.context, a1, a2), true;
+      case 4: return listeners.fn.call(listeners.context, a1, a2, a3), true;
+      case 5: return listeners.fn.call(listeners.context, a1, a2, a3, a4), true;
+      case 6: return listeners.fn.call(listeners.context, a1, a2, a3, a4, a5), true;
+    }
+
+    for (i = 1, args = new Array(len -1); i < len; i++) {
+      args[i - 1] = arguments[i];
+    }
+
+    listeners.fn.apply(listeners.context, args);
+  } else {
+    var length = listeners.length
+      , j;
+
+    for (i = 0; i < length; i++) {
+      if (listeners[i].once) this.removeListener(event, listeners[i].fn, undefined, true);
+
+      switch (len) {
+        case 1: listeners[i].fn.call(listeners[i].context); break;
+        case 2: listeners[i].fn.call(listeners[i].context, a1); break;
+        case 3: listeners[i].fn.call(listeners[i].context, a1, a2); break;
+        case 4: listeners[i].fn.call(listeners[i].context, a1, a2, a3); break;
+        default:
+          if (!args) for (j = 1, args = new Array(len -1); j < len; j++) {
+            args[j - 1] = arguments[j];
+          }
+
+          listeners[i].fn.apply(listeners[i].context, args);
+      }
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Add a listener for a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @param {Function} fn The listener function.
+ * @param {*} [context=this] The context to invoke the listener with.
+ * @returns {EventEmitter} `this`.
+ * @public
+ */
+EventEmitter.prototype.on = function on(event, fn, context) {
+  return addListener(this, event, fn, context, false);
+};
+
+/**
+ * Add a one-time listener for a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @param {Function} fn The listener function.
+ * @param {*} [context=this] The context to invoke the listener with.
+ * @returns {EventEmitter} `this`.
+ * @public
+ */
+EventEmitter.prototype.once = function once(event, fn, context) {
+  return addListener(this, event, fn, context, true);
+};
+
+/**
+ * Remove the listeners of a given event.
+ *
+ * @param {(String|Symbol)} event The event name.
+ * @param {Function} fn Only remove the listeners that match this function.
+ * @param {*} context Only remove the listeners that have this context.
+ * @param {Boolean} once Only remove one-time listeners.
+ * @returns {EventEmitter} `this`.
+ * @public
+ */
+EventEmitter.prototype.removeListener = function removeListener(event, fn, context, once) {
+  var evt = prefix ? prefix + event : event;
+
+  if (!this._events[evt]) return this;
+  if (!fn) {
+    clearEvent(this, evt);
+    return this;
+  }
+
+  var listeners = this._events[evt];
+
+  if (listeners.fn) {
+    if (
+      listeners.fn === fn &&
+      (!once || listeners.once) &&
+      (!context || listeners.context === context)
+    ) {
+      clearEvent(this, evt);
+    }
+  } else {
+    for (var i = 0, events = [], length = listeners.length; i < length; i++) {
+      if (
+        listeners[i].fn !== fn ||
+        (once && !listeners[i].once) ||
+        (context && listeners[i].context !== context)
+      ) {
+        events.push(listeners[i]);
+      }
+    }
+
+    //
+    // Reset the array, or remove it completely if we have no more listeners.
+    //
+    if (events.length) this._events[evt] = events.length === 1 ? events[0] : events;
+    else clearEvent(this, evt);
+  }
+
+  return this;
+};
+
+/**
+ * Remove all listeners, or those of the specified event.
+ *
+ * @param {(String|Symbol)} [event] The event name.
+ * @returns {EventEmitter} `this`.
+ * @public
+ */
+EventEmitter.prototype.removeAllListeners = function removeAllListeners(event) {
+  var evt;
+
+  if (event) {
+    evt = prefix ? prefix + event : event;
+    if (this._events[evt]) clearEvent(this, evt);
+  } else {
+    this._events = new Events();
+    this._eventsCount = 0;
+  }
+
+  return this;
+};
+
+//
+// Alias methods names because people roll like that.
+//
+EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
+EventEmitter.prototype.addListener = EventEmitter.prototype.on;
+
+//
+// Expose the prefix.
+//
+EventEmitter.prefixed = prefix;
+
+//
+// Allow `EventEmitter` to be imported as module namespace.
+//
+EventEmitter.EventEmitter = EventEmitter;
+
+//
+// Expose the module.
+//
+{
+  module.exports = EventEmitter;
+}
 });
-
-// Internal tweaks for real symbol producer
-defineProperties(HiddenSymbol.prototype, {
-	constructor: d_1(SymbolPolyfill),
-	toString: d_1('', function () { return this.__name__; })
-});
-
-// Proper implementation of methods exposed on Symbol.prototype
-// They won't be accessible on produced symbol instances as they derive from HiddenSymbol.prototype
-defineProperties(SymbolPolyfill.prototype, {
-	toString: d_1(function () { return 'Symbol (' + validateSymbol(this).__description__ + ')'; }),
-	valueOf: d_1(function () { return validateSymbol(this); })
-});
-defineProperty$2(SymbolPolyfill.prototype, SymbolPolyfill.toPrimitive, d_1('', function () {
-	var symbol = validateSymbol(this);
-	if (typeof symbol === 'symbol') return symbol;
-	return symbol.toString();
-}));
-defineProperty$2(SymbolPolyfill.prototype, SymbolPolyfill.toStringTag, d_1('c', 'Symbol'));
-
-// Proper implementaton of toPrimitive and toStringTag for returned symbol instances
-defineProperty$2(HiddenSymbol.prototype, SymbolPolyfill.toStringTag,
-	d_1('c', SymbolPolyfill.prototype[SymbolPolyfill.toStringTag]));
-
-// Note: It's important to define `toPrimitive` as last one, as some implementations
-// implement `toPrimitive` natively without implementing `toStringTag` (or other specified symbols)
-// And that may invoke error in definition flow:
-// See: https://github.com/medikoo/es6-symbol/issues/13#issuecomment-164146149
-defineProperty$2(HiddenSymbol.prototype, SymbolPolyfill.toPrimitive,
-	d_1('c', SymbolPolyfill.prototype[SymbolPolyfill.toPrimitive]));
-
-var es6Symbol = isImplemented$8() ? Symbol : polyfill;
-
-var objToString = Object.prototype.toString;
-var id = objToString.call(
-	(function () {
-		return arguments;
-	})()
-);
-
-var isArguments = function (value) {
-	return objToString.call(value) === id;
-};
-
-var objToString$1 = Object.prototype.toString;
-var id$1 = objToString$1.call(noop);
-
-var isFunction = function (value) {
-	return typeof value === "function" && objToString$1.call(value) === id$1;
-};
-
-var isImplemented$10 = function () {
-	var sign = Math.sign;
-	if (typeof sign !== "function") return false;
-	return (sign(10) === 1) && (sign(-20) === -1);
-};
-
-var shim$8 = function (value) {
-	value = Number(value);
-	if (isNaN(value) || (value === 0)) return value;
-	return value > 0 ? 1 : -1;
-};
-
-var sign = isImplemented$10()
-	? Math.sign
-	: shim$8;
-
-var abs = Math.abs;
-var floor = Math.floor;
-
-var toInteger = function (value) {
-	if (isNaN(value)) return 0;
-	value = Number(value);
-	if ((value === 0) || !isFinite(value)) return value;
-	return sign(value) * floor(abs(value));
-};
-
-var max$1 = Math.max;
-
-var toPosInteger = function (value) {
- return max$1(0, toInteger(value));
-};
-
-var objToString$2 = Object.prototype.toString;
-var id$2 = objToString$2.call("");
-
-var isString = function (value) {
-	return (
-		typeof value === "string" ||
-		(value &&
-			typeof value === "object" &&
-			(value instanceof String || objToString$2.call(value) === id$2)) ||
-		false
-	);
-};
-
-var iteratorSymbol = es6Symbol.iterator;
-var isArray        = Array.isArray;
-var call           = Function.prototype.call;
-var desc           = { configurable: true, enumerable: true, writable: true, value: null };
-var defineProperty$1 = Object.defineProperty;
-
-// eslint-disable-next-line complexity
-var shim$6 = function (arrayLike /*, mapFn, thisArg*/) {
-	var mapFn = arguments[1]
-	  , thisArg = arguments[2]
-	  , Context
-	  , i
-	  , j
-	  , arr
-	  , length
-	  , code
-	  , iterator
-	  , result
-	  , getIterator
-	  , value;
-
-	arrayLike = Object(validValue(arrayLike));
-
-	if (isValue(mapFn)) validCallable(mapFn);
-	if (!this || this === Array || !isFunction(this)) {
-		// Result: Plain array
-		if (!mapFn) {
-			if (isArguments(arrayLike)) {
-				// Source: Arguments
-				length = arrayLike.length;
-				if (length !== 1) return Array.apply(null, arrayLike);
-				arr = new Array(1);
-				arr[0] = arrayLike[0];
-				return arr;
-			}
-			if (isArray(arrayLike)) {
-				// Source: Array
-				arr = new Array(length = arrayLike.length);
-				for (i = 0; i < length; ++i) arr[i] = arrayLike[i];
-				return arr;
-			}
-		}
-		arr = [];
-	} else {
-		// Result: Non plain array
-		Context = this;
-	}
-
-	if (!isArray(arrayLike)) {
-		if ((getIterator = arrayLike[iteratorSymbol]) !== undefined) {
-			// Source: Iterator
-			iterator = validCallable(getIterator).call(arrayLike);
-			if (Context) arr = new Context();
-			result = iterator.next();
-			i = 0;
-			while (!result.done) {
-				value = mapFn ? call.call(mapFn, thisArg, result.value, i) : result.value;
-				if (Context) {
-					desc.value = value;
-					defineProperty$1(arr, i, desc);
-				} else {
-					arr[i] = value;
-				}
-				result = iterator.next();
-				++i;
-			}
-			length = i;
-		} else if (isString(arrayLike)) {
-			// Source: String
-			length = arrayLike.length;
-			if (Context) arr = new Context();
-			for (i = 0, j = 0; i < length; ++i) {
-				value = arrayLike[i];
-				if (i + 1 < length) {
-					code = value.charCodeAt(0);
-					// eslint-disable-next-line max-depth
-					if (code >= 0xd800 && code <= 0xdbff) value += arrayLike[++i];
-				}
-				value = mapFn ? call.call(mapFn, thisArg, value, j) : value;
-				if (Context) {
-					desc.value = value;
-					defineProperty$1(arr, j, desc);
-				} else {
-					arr[j] = value;
-				}
-				++j;
-			}
-			length = j;
-		}
-	}
-	if (length === undefined) {
-		// Source: array or array-like
-		length = toPosInteger(arrayLike.length);
-		if (Context) arr = new Context(length);
-		for (i = 0; i < length; ++i) {
-			value = mapFn ? call.call(mapFn, thisArg, arrayLike[i], i) : arrayLike[i];
-			if (Context) {
-				desc.value = value;
-				defineProperty$1(arr, i, desc);
-			} else {
-				arr[i] = value;
-			}
-		}
-	}
-	if (Context) {
-		desc.value = null;
-		arr.length = length;
-	}
-	return arr;
-};
-
-var from = isImplemented$6()
-	? Array.from
-	: shim$6;
-
-var isImplemented$12 = function () {
-	var numberIsNaN = Number.isNaN;
-	if (typeof numberIsNaN !== "function") return false;
-	return !numberIsNaN({}) && numberIsNaN(NaN) && !numberIsNaN(34);
-};
-
-var shim$10 = function (value) {
-	// eslint-disable-next-line no-self-compare
-	return value !== value;
-};
-
-var isNan = isImplemented$12()
-	? Number.isNaN
-	: shim$10;
-
-var indexOf$1           = Array.prototype.indexOf;
-var objHasOwnProperty = Object.prototype.hasOwnProperty;
-var abs$1               = Math.abs;
-var floor$1             = Math.floor;
-
-var eIndexOf = function (searchElement /*, fromIndex*/) {
-	var i, length, fromIndex, val;
-	if (!isNan(searchElement)) return indexOf$1.apply(this, arguments);
-
-	length = toPosInteger(validValue(this).length);
-	fromIndex = arguments[1];
-	if (isNaN(fromIndex)) fromIndex = 0;
-	else if (fromIndex >= 0) fromIndex = floor$1(fromIndex);
-	else fromIndex = toPosInteger(this.length) - floor$1(abs$1(fromIndex));
-
-	for (i = fromIndex; i < length; ++i) {
-		if (objHasOwnProperty.call(this, i)) {
-			val = this[i];
-			if (isNan(val)) return i; // Jslint: ignore
-		}
-	}
-	return -1;
-};
-
-var forEach$1 = Array.prototype.forEach;
-var splice  = Array.prototype.splice;
-
-// eslint-disable-next-line no-unused-vars
-var remove = function (itemToRemove /*, …item*/) {
-	forEach$1.call(
-		arguments,
-		function (item) {
-			var index = eIndexOf.call(this, item);
-			if (index !== -1) splice.call(this, index, 1);
-		},
-		this
-	);
-};
-
-var map = { function: true, object: true };
-
-var isObject = function (value) {
-	return (isValue(value) && map[typeof value]) || false;
-};
-
-var validObject = function (value) {
-	if (!isObject(value)) throw new TypeError(value + " is not an Object");
-	return value;
-};
-
-var emit           = eventEmitter$2.methods.emit;
-var defineProperty = Object.defineProperty;
-var hasOwnProperty = Object.prototype.hasOwnProperty;
-var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
-
-var pipe = function (e1, e2/*, name*/) {
-	var pipes, pipe, desc, name;
-
-	(validObject(e1) && validObject(e2));
-	name = arguments[2];
-	if (name === undefined) name = 'emit';
-
-	pipe = {
-		close: function () { remove.call(pipes, e2); }
-	};
-	if (hasOwnProperty.call(e1, '__eePipes__')) {
-		(pipes = e1.__eePipes__).push(e2);
-		return pipe;
-	}
-	defineProperty(e1, '__eePipes__', d_1('c', pipes = [e2]));
-	desc = getOwnPropertyDescriptor(e1, name);
-	if (!desc) {
-		desc = d_1('c', undefined);
-	} else {
-		delete desc.get;
-		delete desc.set;
-	}
-	desc.value = function () {
-		var i, emitter, data = from(pipes);
-		emit.apply(this, arguments);
-		for (i = 0; (emitter = data[i]); ++i) emit.apply(emitter, arguments);
-	};
-	defineProperty(e1, name, desc);
-	return pipe;
-};
-
-var objPropertyIsEnumerable = Object.prototype.propertyIsEnumerable;
-
-var isEmpty = function (obj) {
-	var i;
-	validValue(obj);
-	for (i in obj) {
-		// Jslint: ignore
-		if (objPropertyIsEnumerable.call(obj, i)) return false;
-	}
-	return true;
-};
-
-var hasOwnProperty$1 = Object.prototype.hasOwnProperty;
-
-var hasListeners = function (obj/*, type*/) {
-	var type;
-	validValue(obj);
-	type = arguments[1];
-	if (arguments.length > 1) {
-		return hasOwnProperty$1.call(obj, '__ee__') && Boolean(obj.__ee__[type]);
-	}
-	return obj.hasOwnProperty('__ee__') && !isEmpty(obj.__ee__);
-};
-
-eventEmitter$2.pipe = pipe;
-
 
 var mixin = function mixin(dest) {
-    if('emit' in dest) {
-        return;
-    } else {
-        eventEmitter$2(dest);
-        dest.hasListeners = function(event) {
-            return hasListeners(dest, event);
-        };
-    }
+   if ('emit' in dest) {
+      return;
+   } else {
+      Emitter(dest);
+      dest.hasListeners = function (event) {
+         return hasListeners(dest, event);
+      };
+   }
 };
 
-var chain = function chain(src, dest) {
-    return eventEmitter$2.pipe(src, dest);
-};
-
-var sub = function(source, subs) {
-    subs.forEach(item => {
-        source.on(item.event, item.handler); 
-    });
-    
-    return {
-        off: function off() {
-            subs.forEach(item => {
-                source.off(item.event, item.handler); 
-            });
-        }
-    }
-};
-
-
-
-//var EventEmitter = require('events').EventEmitter;
-
-// module.exports.mixin = function(dest) {
-//     _.extend(dest, {
-//         _emitter: new EventEmitter(),
-//         _forwards: [],
-//         addListener: function addListener() {
-//             this._emitter.addListener.apply(this._emitter, arguments);
-//         }.bind(dest),
-//         on: function on(event, listener) {
-//             this._emitter.on.apply(this._emitter, [event, listener]);
-//         }.bind(dest),
-//         once: function once() {
-//             this._emitter.once.apply(this._emitter, arguments);
-//         }.bind(dest),
-//         removeListener: function removeListener() {
-//             this._emitter.removeListener.apply(this._emitter, arguments);
-//         }.bind(dest),
-//         removeAllListeners: function removeAllListeners() {
-//             this._emitter.removeAllListeners.apply(this._emitter, arguments);
-//         }.bind(dest),
-//         setMaxListeners: function setMaxListeners() {
-//             this._emitter.setMaxListeners.apply(this._emitter, arguments);
-//         }.bind(dest),
-//         listeners: function listeners() {
-//             this._emitter.listeners.apply(this._emitter, arguments);
-//         }.bind(dest),
-//         emit: function emit() {
-//             this._emitter.emit.apply(this._emitter, arguments);
-
-//             _.each(this._forwards, function(it) {
-//                 if(it.event === arguments[0]) {
-//                     it.onEmit(this, arguments);
-//                 }
-//             });
-
-//         }.bind(dest),
-//         forward: function(emitter, event, xform) {
-//             this._forwards.push({
-//                 emitter: emitter,
-//                 event: event,
-//                 xform: xform || function(x) { return x; }
-//             });
-
-//         }.bind(dest),
-//         forward_unbind: function forward_unbind(emitter) {
-//             _.remove(this._forwards, function(item) {
-//                 return item.emitter === emitter;
-//             });
-//         }.bind(dest)
-//     });
+// module.exports.chain = function chain(src, dest) {
+//    return Emitter.pipe(src, dest);
 // }
+
+var sub = function (source, subs) {
+   subs.forEach(item => {
+      source.on(item.event, item.handler);
+   });
+
+   return {
+      off: function off() {
+         subs.forEach(item => {
+            source.off(item.event, item.handler);
+         });
+      }
+   }
+};
+
+const NoOpFunction = (_$$1 => _$$1);
+
+class EventBus extends eventemitter3 {
+   constructor() {
+      super();
+
+      this.map = new WeakMap();
+   }
+
+   /**
+    * Patches an object to communicate with the EventBus
+    * 
+    * @param {object} source The source object to make observable
+    * @param {object} options The options contain the following:
+    *    - beforeEmit {function(event, ...args)}
+    */
+   patch(source, options={}) {
+      if(this.map.has(source)){
+         return
+      }
+
+      options.beforeEmit = options.beforeEmit || NoOpFunction;
+
+      let self = this;
+   
+      source.emit = function(...args) {
+         if(args.length == 0) {
+            throw new Error('Not enough parameters to emit an event')
+         }
+
+         let event = args.shift();
+
+         self.emit('beforeEmit', { event, source, values: args });
+
+         let emitter = self.map.get(source);
+         emitter.emit(event, ...args);
+      };
+
+      let sameSignature = [
+         'addListener',
+         'off',
+         'on',
+         'once',
+         'prependListener',
+         'prependOnceListener',
+         'removeListener'
+      ];
+
+      for(let i = 0; i < sameSignature.length; ++i) {
+         let method = sameSignature[i];
+
+         source[method] = function(event, handler) {
+            let emitter = self.map.get(source);
+            return emitter[method](event, handler)
+         };
+      }
+
+      source.listeners = function(event) {
+         let emitter = self.map.get(source);
+         return emitter.listeners(event)
+      };
+
+      source.removeAllListeners = function(event) {
+         let emitter = self.map.get(source);
+         return emitter.removeAllListeners(event)
+      };
+   
+      this.map.set(source, new eventemitter3());
+   }
+}
+
+const eventBus = new EventBus();
+var EventBus_1 = eventBus;
 
 var eventEmitter = {
 	mixin: mixin,
-	chain: chain,
-	sub: sub
+	sub: sub,
+	EventBus: EventBus_1
 };
 
 var undo = createCommonjsModule(function (module) {
@@ -18917,6 +18517,13 @@ class RequestForChange {
 var requestForChange = RequestForChange;
 
 var simple = createCommonjsModule(function (module) {
+const { EventBus } = eventEmitter;
+
+
+
+
+
+
 function isPrimitiveNaN(val) {
    // Check for NaN:
    // https://tc39.github.io/ecma262/#sec-isnan-number
@@ -18932,7 +18539,7 @@ function isPrimitiveNaN(val) {
 //---------------------------------------------------------------------------------------
 class SimpleValue {
    constructor(type$$2) {
-      eventEmitter.mixin(this);
+      EventBus.patch(this);
       this._type = type$$2;
       this._value = null;
    }
@@ -19359,15 +18966,15 @@ var versions = {};
 var release = {};
 var config = {};
 
-function noop$2() {}
+function noop() {}
 
-var on = noop$2;
-var addListener = noop$2;
-var once = noop$2;
-var off = noop$2;
-var removeListener = noop$2;
-var removeAllListeners = noop$2;
-var emit$1 = noop$2;
+var on = noop;
+var addListener = noop;
+var once = noop;
+var off = noop;
+var removeListener = noop;
+var removeAllListeners = noop;
+var emit = noop;
 
 function binding(name) {
     throw new Error('process.binding is not supported');
@@ -19413,7 +19020,7 @@ function uptime() {
   return dif / 1000;
 }
 
-var process$1 = {
+var process = {
   nextTick: nextTick,
   title: title,
   browser: browser,
@@ -19427,7 +19034,7 @@ var process$1 = {
   off: off,
   removeListener: removeListener,
   removeAllListeners: removeAllListeners,
-  emit: emit$1,
+  emit: emit,
   binding: binding,
   cwd: cwd,
   chdir: chdir,
@@ -19486,7 +19093,7 @@ var inherits$1 = inherits;
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
 var formatRegExp = /%[sdj%]/g;
 function format(f) {
-  if (!isString$3(f)) {
+  if (!isString(f)) {
     var objects = [];
     for (var i = 0; i < arguments.length; i++) {
       objects.push(inspect(arguments[i]));
@@ -19514,7 +19121,7 @@ function format(f) {
     }
   });
   for (var x = args[i]; i < len; x = args[++i]) {
-    if (isNull(x) || !isObject$3(x)) {
+    if (isNull(x) || !isObject(x)) {
       str += ' ' + x;
     } else {
       str += ' ' + inspect(x);
@@ -19535,16 +19142,16 @@ function deprecate(fn, msg) {
     };
   }
 
-  if (process$1.noDeprecation === true) {
+  if (process.noDeprecation === true) {
     return fn;
   }
 
   var warned = false;
   function deprecated() {
     if (!warned) {
-      if (process$1.throwDeprecation) {
+      if (process.throwDeprecation) {
         throw new Error(msg);
-      } else if (process$1.traceDeprecation) {
+      } else if (process.traceDeprecation) {
         console.trace(msg);
       } else {
         console.error(msg);
@@ -19562,7 +19169,7 @@ var debugs = {};
 var debugEnviron;
 function debuglog(set) {
   if (isUndefined(debugEnviron))
-    debugEnviron = process$1.env.NODE_DEBUG || '';
+    debugEnviron = process.env.NODE_DEBUG || '';
   set = set.toUpperCase();
   if (!debugs[set]) {
     if (new RegExp('\\b' + set + '\\b', 'i').test(debugEnviron)) {
@@ -19676,13 +19283,13 @@ function formatValue(ctx, value, recurseTimes) {
   // Check that value is an object with an inspect function on it
   if (ctx.customInspect &&
       value &&
-      isFunction$3(value.inspect) &&
+      isFunction(value.inspect) &&
       // Filter out the util module, it's inspect function is special
       value.inspect !== inspect &&
       // Also filter out any prototype objects using the circular check.
       !(value.constructor && value.constructor.prototype === value)) {
     var ret = value.inspect(recurseTimes, ctx);
-    if (!isString$3(ret)) {
+    if (!isString(ret)) {
       ret = formatValue(ctx, ret, recurseTimes);
     }
     return ret;
@@ -19711,7 +19318,7 @@ function formatValue(ctx, value, recurseTimes) {
 
   // Some type of object without properties can be shortcutted.
   if (keys.length === 0) {
-    if (isFunction$3(value)) {
+    if (isFunction(value)) {
       var name = value.name ? ': ' + value.name : '';
       return ctx.stylize('[Function' + name + ']', 'special');
     }
@@ -19729,13 +19336,13 @@ function formatValue(ctx, value, recurseTimes) {
   var base = '', array = false, braces = ['{', '}'];
 
   // Make Array say that they are Array
-  if (isArray$1(value)) {
+  if (isArray(value)) {
     array = true;
     braces = ['[', ']'];
   }
 
   // Make functions say that they are functions
-  if (isFunction$3(value)) {
+  if (isFunction(value)) {
     var n = value.name ? ': ' + value.name : '';
     base = ' [Function' + n + ']';
   }
@@ -19787,7 +19394,7 @@ function formatValue(ctx, value, recurseTimes) {
 function formatPrimitive(ctx, value) {
   if (isUndefined(value))
     return ctx.stylize('undefined', 'undefined');
-  if (isString$3(value)) {
+  if (isString(value)) {
     var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
                                              .replace(/'/g, "\\'")
                                              .replace(/\\"/g, '"') + '\'';
@@ -19811,7 +19418,7 @@ function formatError(value) {
 function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
   var output = [];
   for (var i = 0, l = value.length; i < l; ++i) {
-    if (hasOwnProperty$2(value, String(i))) {
+    if (hasOwnProperty(value, String(i))) {
       output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
           String(i), true));
     } else {
@@ -19842,7 +19449,7 @@ function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
       str = ctx.stylize('[Setter]', 'special');
     }
   }
-  if (!hasOwnProperty$2(visibleKeys, key)) {
+  if (!hasOwnProperty(visibleKeys, key)) {
     name = '[' + key + ']';
   }
   if (!str) {
@@ -19910,7 +19517,7 @@ function reduceToSingleString(output, base, braces) {
 
 // NOTE: These type checking functions intentionally don't use `instanceof`
 // because it is fragile and can be easily faked with `Object.create()`.
-function isArray$1(ar) {
+function isArray(ar) {
   return Array.isArray(ar);
 }
 
@@ -19930,11 +19537,11 @@ function isNumber(arg) {
   return typeof arg === 'number';
 }
 
-function isString$3(arg) {
+function isString(arg) {
   return typeof arg === 'string';
 }
 
-function isSymbol$3(arg) {
+function isSymbol(arg) {
   return typeof arg === 'symbol';
 }
 
@@ -19943,23 +19550,23 @@ function isUndefined(arg) {
 }
 
 function isRegExp(re) {
-  return isObject$3(re) && objectToString(re) === '[object RegExp]';
+  return isObject(re) && objectToString(re) === '[object RegExp]';
 }
 
-function isObject$3(arg) {
+function isObject(arg) {
   return typeof arg === 'object' && arg !== null;
 }
 
 function isDate(d) {
-  return isObject$3(d) && objectToString(d) === '[object Date]';
+  return isObject(d) && objectToString(d) === '[object Date]';
 }
 
 function isError(e) {
-  return isObject$3(e) &&
+  return isObject(e) &&
       (objectToString(e) === '[object Error]' || e instanceof Error);
 }
 
-function isFunction$3(arg) {
+function isFunction(arg) {
   return typeof arg === 'function';
 }
 
@@ -20020,7 +19627,7 @@ function log() {
  */
 function _extend(origin, add) {
   // Don't do anything if add isn't an object
-  if (!add || !isObject$3(add)) return origin;
+  if (!add || !isObject(add)) return origin;
 
   var keys = Object.keys(add);
   var i = keys.length;
@@ -20030,7 +19637,7 @@ function _extend(origin, add) {
   return origin;
 }
 
-function hasOwnProperty$2(obj, prop) {
+function hasOwnProperty(obj, prop) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
@@ -20040,24 +19647,24 @@ var util = {
   log: log,
   isBuffer: isBuffer,
   isPrimitive: isPrimitive,
-  isFunction: isFunction$3,
+  isFunction: isFunction,
   isError: isError,
   isDate: isDate,
-  isObject: isObject$3,
+  isObject: isObject,
   isRegExp: isRegExp,
   isUndefined: isUndefined,
-  isSymbol: isSymbol$3,
-  isString: isString$3,
+  isSymbol: isSymbol,
+  isString: isString,
   isNumber: isNumber,
   isNullOrUndefined: isNullOrUndefined,
   isNull: isNull,
   isBoolean: isBoolean,
-  isArray: isArray$1,
+  isArray: isArray,
   inspect: inspect,
   deprecate: deprecate,
   format: format,
   debuglog: debuglog
-};
+}
 
 
 var util$1 = Object.freeze({
@@ -20065,19 +19672,19 @@ var util$1 = Object.freeze({
 	deprecate: deprecate,
 	debuglog: debuglog,
 	inspect: inspect,
-	isArray: isArray$1,
+	isArray: isArray,
 	isBoolean: isBoolean,
 	isNull: isNull,
 	isNullOrUndefined: isNullOrUndefined,
 	isNumber: isNumber,
-	isString: isString$3,
-	isSymbol: isSymbol$3,
+	isString: isString,
+	isSymbol: isSymbol,
 	isUndefined: isUndefined,
 	isRegExp: isRegExp,
-	isObject: isObject$3,
+	isObject: isObject,
 	isDate: isDate,
 	isError: isError,
-	isFunction: isFunction$3,
+	isFunction: isFunction,
 	isPrimitive: isPrimitive,
 	isBuffer: isBuffer,
 	log: log,
@@ -20165,10 +19772,11 @@ function sortByIndex$1(a, b) {
    return 0;
 }
 
-
+const { EventBus: EventBus$2 } = eventEmitter;
 class ObservableCollection {
    constructor() {
-      eventEmitter.mixin(this);
+      // EventEmitter.mixin(this);
+      EventBus$2.patch(this);
       this._items = [];
    }
 
@@ -20182,6 +19790,14 @@ class ObservableCollection {
 
    at(index) {
       return this._items[index];
+   }
+
+   forEach(visit) {
+      return this._items.forEach(visit)
+   }
+
+   map(visit) {
+      return this._items.map(visit)
    }
 
    indexOf(item) {
@@ -20429,16 +20045,6 @@ class ObservableCollection {
 // Expressing Symbol.iterator cannot be a lambda. It must be a 'function'.
 ObservableCollection.prototype[Symbol.iterator] = function* () {
    yield* this._items;
-   // var self = this;
-   // var index = 0;
-
-   // return {
-   //     next: function() {
-   //         return index < self._items.length ?
-   //             {value: self._items[index++], done: false} :
-   //             {value: undefined, done: true};
-   //     }
-   // }
 };
 
 //
@@ -20449,7 +20055,7 @@ ObservableCollection.prototype[Symbol.iterator] = function* () {
 class Listener {
    constructor(observableCollection) {
       this._source = observableCollection;
-      this._subs = new Map();
+      this._subscriptionMap = new Map();
       observableCollection.on(events$3.added, this._onAdded.bind(this));
       observableCollection.on(events$3.removed, this._onRemoved.bind(this));
    }
@@ -20462,11 +20068,11 @@ class Listener {
       var key = event.toLowerCase();
       var handlers = null;
 
-      handlers = this._subs.get(key);
+      handlers = this._subscriptionMap.get(key);
 
       if (!handlers) {
          handlers = [];
-         this._subs.set(key, handlers);
+         this._subscriptionMap.set(key, handlers);
       }
 
       handlers.push(handler);
@@ -20481,7 +20087,7 @@ class Listener {
       for (var i = 0; i < this._source.length; ++i) {
          let current = this._source.at(i);
 
-         this._subs.forEach((handlers, event) => {
+         this._subscriptionMap.forEach((handlers, event) => {
             handlers.forEach(h => current.off(event, h));
          });
       }
@@ -20491,7 +20097,7 @@ class Listener {
       for (var i = 0; i < items.length; ++i) {
          let current = items[i];
 
-         this._subs.forEach((handlers, event) => {
+         this._subscriptionMap.forEach((handlers, event) => {
             handlers.forEach(h => current.item.on(event, h));
          });
       }
@@ -20501,7 +20107,7 @@ class Listener {
       for (var i = 0; i < items.length; ++i) {
          let current = items[i];
 
-         this._subs.forEach((handlers, event) => {
+         this._subscriptionMap.forEach((handlers, event) => {
             handlers.forEach(h => current.item.off(event, h));
          });
       }
@@ -20511,1073 +20117,11 @@ class Listener {
 ObservableCollection.prototype.Listener = Listener;
 var observableCollection = ObservableCollection;
 
+const { EventBus: EventBus$1 } = eventEmitter;
 
-// var pop = Array.prototype.pop;
-// var push = Array.prototype.push;
-// var reverse = Array.prototype.reverse;
-// var shift = Array.prototype.shift;
-// var splice = Array.prototype.splice;
-// var unshift = Array.prototype.unshift;
 
-// class ObservableCollection2 extends Array {
-//     _onAdding(items) {
-//         this._onValidateAdding(items);
-//         this.emit('adding', items);
-//     }
-//     _onAdded(items) {
-//         this.emit('added', items);
-//     }
-//     _onRemoving(items) {
-//         this.emit('removing', items);
-//     }
-//     _onRemoved(items) {
-//         this.emit('removed', items);
-//     }
-//     _onReplacing(items) {
-//         this.emit('replacing', items);
-//     }
-//     _onReplaced(items) {
-//         this.emit('replaced', items);
-//     }
-//     _onMoving(items) {
-//         this.emit('moving', items);
-//     }
-//     _onMoved(items) {
-//         this.emit('moved', items);
-//     }
 
-//     _onValidateAdding(items) {
-//         // Blank
-//     }
 
-//     add() {
-//         var args = []
-//         for(var i = 0; i < arguments.length; ++i) {
-//             args.push(arguments[i]);
-//         }
-//         this.push.apply(this, args);
-//     }
-
-//     // Removes the first instance of the specified value.
-//     // Returns true if a value was removed, otherwise false.
-//     remove() {
-//         if(this.length == 0) {
-//             return false;
-//         }
-
-//         var toRemove = []
-//         for(var i = 0; i < arguments.length; ++i) {
-//             var index = this.indexOf(arguments[i]);
-//             if(index >= 0) {
-//                 toRemove.push(index);
-//             }            
-//         }
-
-//         if(toRemove.length == 0) {
-//             return false;
-//         }
-
-//         // Reverse sort for safe deletion
-//         toRemove.sort((a, b) => {
-//             if (a > b) return -1;
-//             if (b > a) return 1;
-//             return 0;
-//         });
-
-//         var change = toRemove.map((current, index, array) => ({ item: this[current], index: current }), this);
-//         this._onRemoving(change);
-
-//         for(var i = 0; i < toRemove.length; ++i) {
-//             splice.call(this, toRemove[i], 1);
-//         }
-
-//         this._onRemoved(change);
-//         return true;
-//     }
-
-//     insert(item, index) {
-//         this.splice(index, 1, item);
-//     }
-
-//     clear() {
-//         this.splice(0, this.length);
-//     }
-
-//     // Modified version of:
-//     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill
-//     fill(value) {
-//         // Steps 1-2.
-//         if (this == null) {
-//             throw new TypeError('this is null or not defined');
-//         }
-
-//         var O = Object(this);
-
-//         // Steps 3-5.
-//         var len = O.length >>> 0;
-
-//         // Steps 6-7.
-//         var start = arguments[1];
-//         var relativeStart = start >> 0;
-
-//         // Step 8.
-//         var k = relativeStart < 0 ?
-//           Math.max(len + relativeStart, 0) :
-//           Math.min(relativeStart, len);
-
-//         // Steps 9-10.
-//         var end = arguments[2];
-//         var relativeEnd = end === undefined ?
-//             len : end >> 0;
-
-//         // Step 11.
-//         var final = relativeEnd < 0 ?
-//             Math.max(len + relativeEnd, 0) :
-//             Math.min(relativeEnd, len);
-
-//         // Step 12.
-//         var index = k;
-//         var change = []
-//         while(index < final) {
-//             change.push({
-//                 item: value,
-//                 index: index
-//             });
-//             index++;
-//         }
-
-//         this._onReplacing(change);
-
-//         while (k < final) {
-//             O[k] = value;
-//             k++;
-//         }
-
-//         this._onReplaced(change);
-
-//         // Step 13.
-//         return O;
-//     }
-
-//     // Modified version of:
-//     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin
-//     // [TODO]: Revisit the eventing from this
-//     copyWithin(target, start/*, end*/) {
-//         // Steps 1-2.
-//         if (this == null) {
-//             throw new TypeError('this is null or not defined');
-//         }
-
-//         var O = Object(this);
-
-//         // Steps 3-5.
-//         var len = O.length >>> 0;
-
-//         // Steps 6-8.
-//         var relativeTarget = target >> 0;
-
-//         var to = relativeTarget < 0 ?
-//             Math.max(len + relativeTarget, 0) :
-//             Math.min(relativeTarget, len);
-
-//         // Steps 9-11.
-//         var relativeStart = start >> 0;
-
-//         var from = relativeStart < 0 ?
-//             Math.max(len + relativeStart, 0) :
-//             Math.min(relativeStart, len);
-
-//         // Steps 12-14.
-//         var end = arguments[2];
-//         var relativeEnd = end === undefined ? len : end >> 0;
-
-//         var final = relativeEnd < 0 ?
-//             Math.max(len + relativeEnd, 0) :
-//             Math.min(relativeEnd, len);
-
-//         // Step 15.
-//         var count = Math.min(final - from, len - to);
-
-//         // Steps 16-17.
-//         var direction = 1;
-
-//         if (from < to && to < (from + count)) {
-//             direction = -1;
-//             from += count - 1;
-//             to += count - 1;
-//         }
-
-//         var tempCount = count;
-//         var tempFrom = from;
-//         var tempTo = to;
-//         var adds = [];
-//         var removes = [];
-//         while (tempCount > 0) {
-//             if (tempFrom in O) {
-//                 adds.push({ item: O[tempFrom], index: tempTo });
-//             } else {
-//                 removes.push({ item: O[tempTo], index: tempTo });
-//             }
-
-//             tempFrom += direction;
-//             tempTo += direction;
-//             tempCount--;
-//         }
-
-//         if(adds.length > 0) {
-//             this._onReplacing(adds);
-//         }
-
-//         // Step 18.
-//         while (count > 0) {
-//             if (from in O) {
-//                 O[to] = O[from];
-//             } else {
-//                 delete O[to];
-//           }
-
-//             from += direction;
-//             to += direction;
-//             count--;
-//         }
-
-//         if(removes.length > 0) {
-//             this._onReplaced(removes);
-//         }
-
-//         // Step 19.
-//         return O;
-//     }
-
-//     pop() {
-//         if(this.length == 0) {
-//             return undefined;
-//         }
-
-//         var change = {
-//             item: this[this.legnth - 1],
-//             index: this.length - 1
-//         }
-
-//         this._onRemoving(change);
-//         var result = pop.call(this);
-//         this._onRemoved(change);
-//         return result;
-//     }
-
-//     push(items) {
-//         if(arguments.length == 0) {
-//             return this.length;
-//         }
-
-//         var change = [];
-//         for(var i = 0; i < arguments.length; ++i) {
-//             change.push({
-//                 item: arguments[i],
-//                 index: this.length + i
-//             });
-//         }
-
-//         this._onAdding(change);
-//         var result = push.apply(this, change.map(current => current.item));
-//         this._onAdded(change);
-
-//         return result;
-//     }
-
-//     reverse() {
-//         if(this.length == 0) {
-//             return;
-//         }
-
-//         var change = [];
-//         for(var i = 0; i < this.length; ++i) {
-//             change.push({
-//                 item: this[i],
-//                 index: this.length - 1 - i
-//             });
-//         }
-
-
-//         this._onMoving(change);
-//         var result = reverse.call(this);
-//         this._onMoved(change);
-//         return result;
-//     }
-
-//     shift() {
-//         if(this.length == 0) {
-//             return;
-//         }
-
-//         var change = { iten: this[0], index: 0 };
-//         this._onRemoving(change);
-//         var result = shift.call(this);
-//         this._onRemoved(change);
-//         return result;
-//     }
-
-//     splice(start, deleteCount) {
-//         if(start < 0) {
-//             start = Math.max(0, this.length + start);
-//         } else if (start > this.length) {
-//             start = this.length;
-//         }
-
-//         if(deleteCount < 0) {
-//             return [];            
-//         } else if (deleteCount == 0) {
-//             // Adding
-//             if(arguments.length <= 2) {
-//                 return [];
-//             }
-
-//             var change = [];
-//             for(var i = 2; i < arguments.length; ++i) {
-//                 change.push({
-//                     item: arguments[i],
-//                     index: start + (i - 2)
-//                 });
-//             }
-
-//             if(change.length == 0) {
-//                 return [];
-//             }
-
-//             this._onAdding(change);
-
-//             var args = [];
-//             for(var i = 0; i < arguments.length; ++i) {
-//                 args.push(arguments[i]);
-//             }
-
-//             var result = splice.apply(this, args);
-
-//             this._onAdded(change);
-
-//             return result;
-
-//         } else {
-//             // Removing
-//             var change = [];
-
-//             deleteCount = deleteCount || this.length;
-
-//             if((deleteCount + start) > this.length) {
-//                 deleteCount = this.length - start;
-//             }
-
-//             for(var i = 0; i < deleteCount; i++) {
-//                 change.push({
-//                     item: this[start + i],
-//                     index: start + i
-//                 });
-//             }
-
-//             if(change.length == 0) {
-//                 return [];
-//             }
-
-//             this._onRemoving(change);
-
-//             var args = [];
-//             for(var i = 0; i < arguments.length; i++) {
-//                 args.push(arguments[i]);
-//             }
-
-//             var result = splice.apply(this, args);
-
-//             this._onRemoved(change);
-
-//             return result;
-//         }
-//     }
-
-//     unshift() {
-//         if(arguments.length == 0) {
-//             return this.length;
-//         }
-
-//         var change = [];
-//         for(var i = 0; i < arguments.length; ++i) {
-//             change.push({
-//                 item: arguments[i],
-//                 index: arguments.length - 1 - i
-//             });
-//         }
-
-//         var args = [];
-//         for(var i = 0; i < arguments.length; i++) {
-//             args.push(arguments[i]);
-//         }
-//         this._onAdding(change);
-//         var result = unshift.apply(this, args);
-//         this._onAdded(change);
-//         return result;
-//     }
-// }
-
-// ObservableCollection.events = events;
-
-
-// //-----------------------------------------------------------------------
-// // Keeps multiple ObservableCollections in sync by using the
-// // provided transformations. Call dispose on the returned sync object
-// // to discontinue syncing between the collections.
-// //
-// // options {Object}
-// //  master: {Object - ObservableCollection}
-// //  slave: (optional) {Object - ObservableCollection}
-// //      This field is optional. If not provided, will create a new colection
-// //      and sync that one with the provided master.
-// //  addSlaveItem: { function(masterItem, masterItemIndex) }
-// //  removeSlaveItem: { function(slaveItem) }
-// //  compare: { function(masterItem, slaveItem) returns true if they are equal }
-// //-----------------------------------------------------------------------
-// var sync = function sync(options) {
-//     var syncObj = { };
-
-//     syncObj.master = options.master;
-//     syncObj.slave = options.slave || create();
-
-//     syncObj.addSlaveItem = options.addSlaveItem ||
-//         function(masterItem, masterIndex) { this.slave.insert(masterItem, masterIndex); }.bind(syncObj),
-
-//     syncObj.removeSlaveItem = options.removeSlaveItem ||
-//         function(slaveItem) { this.slave.remove(slaveItem); }.bind(syncObj),
-
-//     syncObj.items_added = function(items) {
-//         var self = this;
-//         items.forEach(function(item) {
-//             self.addSlaveItem(item.item, item.index);
-//         });
-//     }.bind(syncObj);
-
-
-//     syncObj.items_removed = function(items) {
-//             if(items.length == 1) {
-//                 this.removeSlaveItem(options.slave.at(item.index));
-//                 return;
-//             }
-
-//             // Remove from the end of the array as it's a safe delete
-//             // Sort by highest index first
-//             items.sort(function(a, b) {
-//                 if(a.index < b.index) return 1;
-//                 if(a.index > b.index) return -1;
-//                 return 0;
-//             });
-
-//             for(var i = 0; i < items.length; i++) {
-//                 var item = items[i];
-//                 this.removeSlaveItem(this.slave.at(item.index));
-//             }
-//         }.bind(syncObj);
-
-//     syncObj.dispose = function() {
-//             this.master.remove(events.added, this.items_added);
-//             this.master.remove(events.removed, this.items_removed);
-//         };
-
-
-//     // Do the synching
-//     for(var i = 0; i < syncObj.master.length; i++) {
-//         var isInMasterRange = i < syncObj.master.length;
-//         var isInSlaveRange = i < syncObj.slave.length;
-
-//         // Add to the slave
-//         if (isInMasterRange && !isInSlaveRange) {
-//             syncObj.addSlaveItem(syncObj.master.at(i), i);
-//             continue;
-//         }
-
-//         // Remove from slave
-//         if (isInSlaveRange && !isInMasterRange) {
-//             syncObj.removeSlaveItem(syncObj.slave.at(i));
-//             syncObj.slave.RemoveAt(i);
-//             --i;
-//             continue;
-//         }
-
-//         // Compare and make sure they are equal
-//         if (isInMasterRange && isInSlaveRange) {
-//             // If they are not equal, replace the slave item
-//             if (!syncObj.compare(syncObj.master.at(i), syncObj.slave.at(i)))
-//             {
-//                 syncObj.removeSlaveItem(syncObj.slave.at(i));
-//                 syncObj.addSlaveItem(syncObj.master.at(i), i);
-//             }
-//         }
-//     }
-
-//     syncObj.master.on(events.added, syncObj.items_added);
-//     syncObj.master.on(events.removed, syncObj.items_removed);
-
-//     return syncObj;
-// }
-
-// module.exports = ObservableCollection;
-// ObservableCollection.events = events;
-// ObservableCollection.sync = sync;
-
-
-
-/*
-var create = function create() {
-    var obj = {
-        _items: [],
-        get length() {
-            return this._items.length;
-        },
-        //
-        //  Adds items to the collection. Mutliple arguments
-        //  can be passed in to add mutliple items
-        //
-        add: function add(item) {
-            var toAdd = []
-            if(arguments.length > 0) {
-                var startIndex = this._items.length;
-                for(var i = 0; i < arguments.length; ++i) {
-                    toAdd.push({ item: arguments[i], index: startIndex + i });
-                }
-            } else {
-                toAdd.push({ item: item, index: this._items.length });
-            }
-            
-            this._onAdding(toAdd);
-            
-            for(var i = 0; i < toAdd.length; ++i) {
-                this._items.push(toAdd[i].item);
-            }
-
-            this._onAdded(toAdd);  
-        },
-        //
-        //  'addMany' is necessary since arrays can be added to the collection.
-        //
-        // addMany: function addMany(items) {
-        //     var toAdd = [];
-        //     var self = this;
-        //     var startIndex = this._items.length;
-        
-        //     toAdd = items.map(function(item, index) {
-        //         return {
-        //             item: item,
-        //             index: startIndex + index
-        //         };
-        //     });
-        
-        //     // Sort by index
-        //     toAdd.sort(function(a, b) {
-        //         if(a.index > b.index) return 1;
-        //         if(a.index < b.index) return -1;
-        //         return 0;
-        //     })
-        
-        //     this._onAdding(toAdd);
-        
-        //     for(var i = 0; i < toAdd.length; i++) {
-        //         this._items.splice(toAdd[i].index, 0, toAdd[i].item);
-        //     }
-        
-        //     this._onAdded(toAdd);
-        // },
-        remove: function remove(item) {
-            var toRemove = []
-            if(arguments.length > 0) {
-                for(var i = 0; i < arguments.length; ++i) {
-                    var currentItem = arguments[i];
-                    var currentIndex = this._items.indexOf(currentItem);
-                    
-                    // Ignore items that are not part of the original collection
-                    if(currentIndex < 0) { continue; }
-                    toRemove.push({ item: item, index: this._items.indexOf(currentItem) });
-                }
-            } else {
-                toRemove.push({ item: item, index: this._items.indexOf(item) });
-            }
-            
-            if(toRemove.length == 0) {
-                return;
-            }
-            
-            this._onRemoving(toRemove);
-            
-            // Sort to remove safely from the end
-            toRemove.sort(sortByIndexReverse);
-            
-            // [REMOVE]
-            console.log(toRemove);
-            
-            for(var i = 0; i < toRemove.length; i++) {
-                this._items.splice(toRemove[i].index, 1);
-            }
-
-            this._onRemoved(toRemove);            
-        },
-        // removeMany: function removeMany(items) {
-        //     var self = this;
-        //     var itemsToRemove = items.map(function(item, index) {
-        //         return {
-        //             item: item,
-        //             index: self._items.indexOf(item)
-        //         }
-        //     });
-        
-        //     if(itemsToRemove.length == 0) {
-        //         return;
-        //     }
-        
-        //     itemsToRemove = itemsToRemove.filter(function(item) {
-        //         return item.index >= 0;
-        //     });
-        
-        //     // Remove safely from the end without affecting higher indexes
-        //     itemsToRemove.sort(_sortByIndexReverse);
-        
-        //     this._onRemoving(itemsToRemove);
-            
-        //     for(var i = 0; i < itemsToRemove.length; i++) {
-        //         this._items.splice(itemsToRemove[i].index, 1);
-        //     }
-        
-        //     this._onRemoved(itemsToRemove);
-        // },
-        splice: function splice(start, deleteCount) {
-            if(start < 0) {
-                start = this._items.length + start;
-            } else if (start > this._items.length) {
-                start = this._items.length;
-            }
-        
-            if(deleteCount < 0) {
-                return; // Do nothing (raise an error?)
-            } else if(deleteCount == 0) {
-                // Adding
-                if(arguments.length > 2) {
-                    var toAdd = [];
-                    for(var i = 2; i < arguments.length; i++) {
-                        toAdd.push({
-                            item: arguments[i],
-                            index: start + (i - 2)
-                        });
-                    }
-        
-                    if(toAdd.length == 0) {
-                        return [];
-                    }
-        
-                    this._onAdding(toAdd);
-        
-                    var args = [];
-                    for(var i = 0; i < arguments.length; i++) {
-                        args.push(arguments[i]);
-                    }
-        
-                    this._items.splice.apply(this._items, args);
-        
-                    this._onAdded(toAdd);
-        
-                    return toAdd.map(function(item, index) { return item; });
-                }
-            } else if(deleteCount > 0) {
-                // Removing
-                var toRemove = [];
-        
-                if((deleteCount + start) > this._items.length) {
-                    deleteCount = this._items.length - start;
-                }
-        
-                for(var i = 0; i < deleteCount; i++) {
-                    toRemove.push({
-                        item: this._items[start + i],
-                        index: start + i
-                    });
-                }
-        
-                if(toRemove.length == 0) {
-                    return [];
-                }
-        
-                this._onRemoving(toRemove);
-        
-                var args = [];
-                for(var i = 0; i < arguments.length; i++) {
-                    args.push(arguments[i]);
-                }
-        
-                this._items.splice.apply(this._items, args);
-        
-                this._onRemoved(toRemove);
-        
-                return toRemove.map(function(item, index) { return item; });
-            }
-        
-            return [];
-        },
-        push: function push(items) {
-            this.add(items);
-            return this._items.length;          
-        },
-        find: function find(predicate) {
-            for(var i=0; i < this._items.length; i++) {
-                var value = this._items[i];
-                if(predicate(value, i, this._items)) {
-                    return value;
-                }
-            }
-        
-            return void 0;            
-        },
-        pop: function pop() {
-            if(this._items.length == 0) { 
-                return undefined;
-            }
-        
-            var index = Math.max(0, this._items.length - 1);
-            
-            var removed = []
-            removed.push({
-                item: this._items[index],
-                index: index
-            });
-        
-            this._onRemoving(removed);
-            var value = this._items.pop();
-            this._onRemoved(removed);
-            return value;            
-        },
-        insert: function insert(item, index) {
-            this._onAdding([{item: item, index: index}]);
-            this._items.splice(index, 0, item);   
-            this._onAdded([{item: item, index: index}]);            
-        },
-        at: function at(index) {
-            var result = this._items[index];
-        
-            if(result == undefined) {
-                throw new RangeError('Index out of range');
-            }
-            
-            return result;             
-        },
-        _onAdding: function _onAdding(items) {
-            this.emit(events.adding, items);
-        },
-        _onAdded: function _onAdded(items) {
-            this.emit(events.added, items);
-        },
-        _onRemoving: function _onRemoving(items) {
-            this.emit(events.removing, items);
-        },
-        _onRemoved: function _onRemoved(items) {
-            this.emit(events.removed, items);
-        }
-    };
-    
-    EventEmitter.mixin(obj);
-    return obj;
-}
-*/
-
-
-
-
-
-
-
-// Consider:
-// Adding a mixin method, that will add the methods for an
-// Observable collection. Add the following functions for overriding:
-//  - _onAdding
-//  - _onAdded
-//  - _onRemoving
-//  - _onRemoved
-
-
-
-
-
-//------------------------------------------------------------------------
-// This clas implements a collection that can be observed for changes.
-//
-// Raised events:
-//
-//  The following events contain the same parameters passed into the
-//  listener calback:
-//      An array of objects containing the
-//          - item: Item in context
-//          - index: The item's index
-//
-//  - 'adding'
-//  - 'added'
-//  - 'removing'
-//  - 'removed
-//
-//  Will need:
-//  - 'moved'
-//
-//------------------------------------------------------------------------
-// function ObservableCollection() {
-//     EventEmitter.call(this);
-//     this._items = [];
-
-//     Object.defineProperty(this, 'length', {
-//         get: function() { return this._items.length; }
-//     });
-// }
-
-// util.inherits(ObservableCollection, EventEmitter);
-
-//------------------------------------------------------------------------
-// List of supported events
-// ObservableCollection.events = {
-//     adding: 'adding',
-//     added: 'added', 
-//     removing: 'removing',
-//     removed: 'removed'
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype.add = function add(item) {
-//     var self = this;
-
-//     var toAdd = { item: item, index: this._items.length };
-
-//     this._onAdding([toAdd]);
-
-//     self._items.push(item);
-
-//     this._onAdded([toAdd]);
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype.addMany = function addMany(items) {
-//     var toAdd = [];
-//     var self = this;
-//     var startIndex = this._items.length;
-
-//     toAdd = items.map(function(item, index) {
-//         return {
-//             item: item,
-//             index: startIndex + index
-//         };
-//     });
-
-//     // Sort by index
-//     toAdd.sort(function(a, b) {
-//         if(a.index > b.index) return 1;
-//         if(a.index < b.index) return -1;
-//         return 0;
-//     })
-
-//     this._onAdding(toAdd);
-
-//     for(var i = 0; i < toAdd.length; i++) {
-//         this._items.splice(toAdd[i].index, 0, toAdd[i].item);
-//     }
-
-//     this._onAdded(toAdd);    
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype.remove = function remove(item) {
-//     var index = this._items.indexOf(item);
-
-//     if(index < 0) {
-//         return;
-//     }
-
-//     var itemToRemove = {
-//         item: item,
-//         index:index
-//     };
-
-//     this._onRemoving(itemToRemove);
-//     this._items.splice(index, 1);
-//     this._onRemoved(itemToRemove);
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype.removeMany = function remove(items) {
-//     var self = this;
-//     var itemsToRemove = items.map(function(item, index) {
-//         return {
-//             item: item,
-//             index: self._items.indexOf(item)
-//         }
-//     });
-
-//     if(itemsToRemove.length == 0) {
-//         return;
-//     }
-
-//     itemsToRemove = itemsToRemove.filter(function(item) {
-//         return item.index >= 0;
-//     });
-
-//     // Remove safely from the end without affecting higher indexes
-//     itemsToRemove.sort(_sortByIndexReverse);
-
-//     this._onRemoving(itemsToRemove);
-
-//     for(var i = 0; i < itemsToRemove.length; i++) {
-//         this._items.splice(itemsToRemove[i].index, 1);
-//     }
-
-//     this._onRemoved(itemsToRemove);
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype.splice = function splice(start, deleteCount) {
-//     if(start < 0) {
-//         start = this._items.length + start;
-//     } else if (start > this._items.length) {
-//         start = this._items.length;
-//     }
-
-//     var isAdding = false;
-//     if(deleteCount < 0) {
-//         return; // Do nothing (raise an error?)
-//     } else if(deleteCount == 0) {
-//         // Adding
-//         if(arguments.length > 2) {
-//             var toAdd = [];
-//             for(var i = 2; i < arguments.length; i++) {
-//                 toAdd.push({
-//                     item: arguments[i],
-//                     index: start + (i - 2)
-//                 });
-//             }
-
-//             if(toAdd.length == 0) {
-//                 return [];
-//             }
-
-//             this._onAdding(toAdd);
-
-//             var args = [];
-//             for(var i = 0; i < arguments.length; i++) {
-//                 args.push(arguments[i]);
-//             }
-
-//             this._items.splice.apply(this._items, args);
-
-//             this._onAdded(toAdd);
-
-//             return toAdd.map(function(item, index) { return item; });;
-//         }
-//     } else if(deleteCount > 0) {
-//         // Removing
-//         var toRemove = [];
-
-//         if((deleteCount + start) > this._items.length) {
-//             deleteCount = this._items.length - start;
-//         }
-
-//         for(var i = 0; i < deleteCount; i++) {
-//             toRemove.push({
-//                 item: this._items[start + i],
-//                 index: start + i
-//             });
-//         }
-
-//         if(toRemove.length == 0) {
-//             return [];
-//         }
-
-//         this._onRemoving(toRemove);
-
-//         var args = [];
-//         for(var i = 0; i < arguments.length; i++) {
-//             args.push(arguments[i]);
-//         }
-
-//         this._items.splice.apply(this._items, args);
-
-//         this._onRemoved(toRemove);
-
-//         return toRemove.map(function(item, index) { return item; });
-//     }
-
-//     return [];
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype.push = function push(items) {
-//     this.add(items);
-//     return this._items.length;
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype.find = function(predicate) {
-//     for(var i=0; i < this._items.length; i++) {
-//         var value = this._items[i];
-//         if(predicate(value, i, this._items)) {
-//             return value;
-//         }
-//     }
-
-//     return void 0;
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype.pop = function pop() {
-//     if(this._items.length == 0) { 
-//         return undefined;
-//     }
-
-//     var index = Math.max(0, this._items.length - 1);
-
-//     var removed = []
-//     removed.push({
-//         item: this._items[index],
-//         index: index
-//     });
-
-//     this._onRemoving(removed);
-//     var value = this._items.pop();
-//     this._onRemoved(removed);
-//     return value;
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype.insert = function insert(item, index) {
-//     this._onAdding([{item: item, index: index}]);
-//     this._items.splice(index, 0, item);   
-//     this._onAdded([{item: item, index: index}]);
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype.at = function at(index) {
-//     var result = this._items[index];
-
-//     if(result == undefined) {
-//         throw new RangeError('Index out of range');
-//     }
-
-//     return result;    
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype._onAdding = function _onAdding(items) {
-//     this.emit(ObservableCollection.events.adding, items);
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype._onAdded = function _onAdded(items) {
-//     this.emit(ObservableCollection.events.added, items);
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype._onRemoving = function _onRemoving(items) {
-//     this.emit(ObservableCollection.events.removing, items);
-// }
-
-// //------------------------------------------------------------------------
-// ObservableCollection.prototype._onRemoved = function _onRemoved(items) {
-//     this.emit(ObservableCollection.events.removed, items);
-// }
 
 // Since events represent changes to the collection, it's
 // possible to have different collection changes batched
@@ -21699,7 +20243,8 @@ class CollectionType extends type {
 //------------------------------------------------------------------------
 class CollectionValue {
    constructor(itemType) {
-      eventEmitter.mixin(this);
+      EventBus$1.patch(this);
+
       this._type = new CollectionType(itemType);
       this._items = new observableCollection();
    }
@@ -22081,6 +20626,11 @@ var collection = {
       return new CollectionValue(itemType);
    },
 
+   // Accepts Type or Value
+   isCollection(typeOrValue) {
+      return (typeOrValue instanceof CollectionType ||
+         typeOrValue instanceof CollectionValue)
+   },
    events: events$2
 };
 
@@ -22095,12 +20645,15 @@ var types = {
    collection: collection
 };
 
+var { EventBus: EventBus$4 } = eventEmitter;
+
+
 // This class is designed to be a mixin for classes that
 // want support for a name field that raises events when 
 // the name changes
 class NamedObject {
     constructor(name) {
-        eventEmitter.mixin(this);
+        EventBus$4.patch(this);
         this._name = name;
     }
 
@@ -22327,12 +20880,18 @@ class NamespaceCollection extends namedCollection {
 
 var namespaceCollection = NamespaceCollection;
 
+const { EventBus: EventBus$5 } = eventEmitter;
+
+
+
+
+
 //------------------------------------------------------------------------
 class Member extends namedObject {
     constructor(model, name, value) {
         super(name);
         
-        eventEmitter.mixin(this);
+        EventBus$5.patch(this);
         this._model = model;
         
         // Setup value
@@ -22525,12 +21084,7 @@ class Model extends qualifiedObject {
         return this._members;
     }
     
-    _emitEvent() {
-        var args = [];
-        for(var i = 0; i < arguments.length; ++i) {
-            args[i] = arguments[i];
-        }
-        
+    _emitEvent(...args) {        
         this.context.project.emit.apply(this.context.project, args);
         this.emit.apply(this, args);
     }
@@ -22722,12 +21276,14 @@ class Field extends namedObject {
     
     _onMemberValueChanged(change) {
         if(this._isInheriting) {
-            this._onInheritedValueChanged(change);
+            this._onValueChanging(change);
+            this._onInheritedValueChanged(change)
+                .then(_ => this._onValueChanged(change));
         }
     }
     
     _onInheritedValueChanged(change) {
-        this._value.applyChangeSet(change);
+        return this._value.applyChangeSet(change);
     }
 }
 
@@ -22801,93 +21357,6 @@ class FieldCollection extends namedCollection {
 }
 
 var fieldCollection = FieldCollection;
-
-
-/*
-function InstanceMemberCollection(instance, model) {
-    Emitter.mixin(this);
-    CommonCollection.mixin(this);
-
-    this.instance = instance;
-    this.model = model;
-
-    Object.defineProperty(this, 'context', {
-        get: function() {
-            return this.instance.context;
-        }
-    });
-
-    this._onItemsAdding = function(items) {
-        this.context.project.emit(InstanceMemberCollection.events.adding, items);
-        this.emit(InstanceMemberCollection.events.adding, items)
-    }
-
-    this._onItemsAdded= function(items) {
-        this.context.project.emit(InstanceMemberCollection.events.added, items);
-        this.emit(InstanceMemberCollection.events.added, items)
-    }
-    
-    this._onItemsRemoving = function(items) {
-        this.context.project.emit(InstanceMemberCollection.events.removing, items);
-        this.emit(InstanceMemberCollection.events.removing, items)
-    }
-    
-    this._onItemsRemoved = function(items) {
-        this.context.project.emit(InstanceMemberCollection.events.removed, items);
-        this.emit(InstanceMemberCollection.events.removed, items)
-    }
-}
-
-//------------------------------------------------------------------------
-// List of supported events
-InstanceMemberCollection.events = {
-    adding: 'instance-member-adding',
-    added: 'instance-member-added',
-    removing: 'instance-member-removing',
-    removed: 'instance-member-removed',   
-}
-
-//------------------------------------------------------------------------
-InstanceMemberCollection.prototype.add = function add(name, type, value) {
-    this.insert(name, type, value, this._items.length);
-}
-
-//------------------------------------------------------------------------
-InstanceMemberCollection.prototype.insert = function insert(name, type, value, index) {
-    var member = this.model.members.get(name);
-    var instanceMember = new InstanceMember(this.instance, member);
-
-    var items = [{item: instanceMember, index: this._items.length}];
-
-    this._onAdding(items);
-    this._items.insert(instanceMember, index);
-    this._onAdded(items);
-    return instanceMember;
-}
-
-//------------------------------------------------------------------------
-// Sets the value of the Field with the specified name. Returns
-// the field if it exists, otherwise returns undefined.
-//------------------------------------------------------------------------
-InstanceMemberCollection.prototype.set = function set(name, value) {
-    var found = this.get(name);
-
-    if(found) {
-        found.value = value;
-    }
-
-    return found;
-}
-
-//------------------------------------------------------------------------
-InstanceMemberCollection.prototype.get = function get(name) {
-    var found = this._items.find(function(item) {
-        return item.name === name;
-    });
-
-    return found;
-}
-*/
 
 class Instance extends qualifiedObject {
     constructor(name, namespace, model) {
@@ -23206,7 +21675,7 @@ class Namespace$1 extends qualifiedObject {
             args[i] = arguments[i];
         }        
         
-        this.context.project.emit.apply(this, args);
+        this.context.project.emit.apply(this.context.project, args);
         this.emit.apply(this, args);
     }
     
@@ -23509,6 +21978,14 @@ class Search {
 
 var search = Search;
 
+const { EventBus: EventBus$3 } = eventEmitter;
+
+
+
+
+
+
+
 class Util {
    static * iterateFamily(parent, getSibling, getItems) {
       var children = getItems(parent);
@@ -23525,18 +22002,19 @@ class Util {
 
       for (let sibling of getSibling(parent)) {
          yield* this.iterateFamily(sibling, getSibling, getItems);
-         // for(let grandChild of iterateFamily(child, getChildren)) {
-         //     yield grandChild;
-         // }
       }
 
       return;
    }
 }
 
-class Project {
+class Project extends eventemitter3{
    constructor() {
-      eventEmitter.mixin(this);
+      super();
+      
+      EventBus$3.on('beforeEmit', ({ event, source, values }) => {
+         this.emit(event, { source, values });
+      });
 
       this._undoStack = new undo.Stack();
 
@@ -23752,6 +22230,7 @@ module.exports = {
    Member: member,
    Namespace: namespace,
    NamespaceCollection: namespaceCollection,
+   ObservableCollection: observableCollection,
    ModelCollection: modelCollection,
    Project: project,
    Events: events,
@@ -23813,14 +22292,15 @@ var lib_3 = lib.Model;
 var lib_4 = lib.Member;
 var lib_5 = lib.Namespace;
 var lib_6 = lib.NamespaceCollection;
-var lib_7 = lib.ModelCollection;
-var lib_8 = lib.Project;
-var lib_9 = lib.Events;
-var lib_10 = lib.types;
-var lib_11 = lib.create;
-var lib_12 = lib.utils;
-var lib_13 = lib.test;
-var lib_14 = lib.use;
+var lib_7 = lib.ObservableCollection;
+var lib_8 = lib.ModelCollection;
+var lib_9 = lib.Project;
+var lib_10 = lib.Events;
+var lib_11 = lib.types;
+var lib_12 = lib.create;
+var lib_13 = lib.utils;
+var lib_14 = lib.test;
+var lib_15 = lib.use;
 
 exports['default'] = lib;
 exports.Instance = lib_1;
@@ -23829,14 +22309,15 @@ exports.Model = lib_3;
 exports.Member = lib_4;
 exports.Namespace = lib_5;
 exports.NamespaceCollection = lib_6;
-exports.ModelCollection = lib_7;
-exports.Project = lib_8;
-exports.Events = lib_9;
-exports.types = lib_10;
-exports.create = lib_11;
-exports.utils = lib_12;
-exports.test = lib_13;
-exports.use = lib_14;
+exports.ObservableCollection = lib_7;
+exports.ModelCollection = lib_8;
+exports.Project = lib_9;
+exports.Events = lib_10;
+exports.types = lib_11;
+exports.create = lib_12;
+exports.utils = lib_13;
+exports.test = lib_14;
+exports.use = lib_15;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 

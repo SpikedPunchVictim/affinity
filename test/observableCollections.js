@@ -1,17 +1,17 @@
 'use strict';
 
-var chai = require('chai');
-var expect = require('chai').expect;
-var assert = require('chai').assert;
-var spies = require('chai-spies');
-var ObservableCollection = require('../lib/collections/observableCollection.js');
-var EventEmitter = require('../lib/eventEmitter.js');
+const chai = require('chai');
+const expect = require('chai').expect;
+const assert = require('chai').assert;
+const spies = require('chai-spies');
+const ObservableCollection = require('../lib/collections/observableCollection.js');
+const { EventBus } = require('../lib/eventEmitter.js');
 
 chai.use(spies);
 
 class TestObject {
     constructor(property1, property2, property3) {
-        EventEmitter.mixin(this);
+        EventBus.patch(this);
         this.property1 = property1;
         this.property2 = property2;
         this.property3 = property3;

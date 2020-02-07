@@ -5,13 +5,13 @@ const expect = require('chai').expect;
 const assert = require('chai').assert;
 const spies = require('chai-spies');
 const ObservableCollection = require('../lib/collections/observableCollection.js');
-const { EventBus } = require('../lib/eventEmitter.js');
+const { EventEmitter } = require('../lib/eventEmitter.js');
 
 chai.use(spies);
 
-class TestObject {
+class TestObject extends EventEmitter {
     constructor(property1, property2, property3) {
-        EventBus.patch(this);
+        super()
         this.property1 = property1;
         this.property2 = property2;
         this.property3 = property3;

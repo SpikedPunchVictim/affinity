@@ -1,5 +1,12 @@
 # affinity
 
+An data modeling system with:
+* Referential integrity
+* Plugin Support
+* Realtime monitoring of data changes
+
+`affinity` allows you to build out your application with data as the centerpiece. With each module making changes to the data as they need, and other modules responding to those changes.
+
 # Events
 
 ## Project
@@ -30,6 +37,19 @@ project.on('valueChanged', (event, { source, values }) => {
 
 
 
+# Request For Change
+
+A `request-for-change` event is emitted any time a Qualified Resource is updated. It allows developers to hook into every value change process to respond to data changes in real time. The
+
+
+```js
+
+project.on('request-for-change', ({ rfc }) => {
+   rfc.await((ctx, cb) => {
+      // Some code here to update a DB or respond to the data change
+   })
+})
+```
 
 
 =======

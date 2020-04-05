@@ -1,7 +1,0 @@
-node_modules
-bin
-obj
-.ntvs_analysis.dat
-*.njsproj
-debug.log
-package-lock.json

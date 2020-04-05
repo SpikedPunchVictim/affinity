@@ -1,5 +1,0 @@
-ModelCollection/NamespaceCollection/InstanceCollection:
-  - Change the events to: 'adding', 'added', etc instead of the gloabl Event object.
-    Only use the global events object for subscribing to changes on the Project.
-    It makes it easier to sub to changes, and people will remember it better. ie
-      project.root.models.on('added', items => ...)

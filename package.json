@@ -1,0 +1,32 @@
+{
+  "name": "@intoxicating/affinity",
+  "version": "1.0.0",
+  "description": "Affinity data modeling system",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SpikedPunchVictim/affinity.git"
+  },
+  "keywords": [
+    "data",
+    "modeling",
+    "model",
+    "observable",
+    "\"state",
+    "management\"",
+    "reactive"
+  ],
+  "author": "William Hoopes",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/SpikedPunchVictim/affinity/issues"
+  },
+  "homepage": "https://github.com/SpikedPunchVictim/affinity#readme",
+  "devDependencies": {
+    "typescript": "^3.7.5"
+  }
+}

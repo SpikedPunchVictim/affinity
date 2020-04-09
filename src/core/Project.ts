@@ -1,92 +1,69 @@
-import { IQualifiedObject } from './QualifiedObject'
-import { IModel } from './Model'
+import { INamespace } from './Namespace'
+import { IRequestForChangeSource, RequestForChangeSource } from './RequestForChange'
+import { IEventRouter } from './events/EventRouter'
+import { IQualifiedObject } from '.'
+import { NamespaceCollection, INamespaceCollection } from './collections'
+import { INamedObject } from './NamedObject'
 
-
-interface IInstance  extends IQualifiedObject {
-
-}
-
-
-interface IModelCollection {
-   get(name: string): IModel
-}
-
-interface IInstanceCollection {
-
-}
-
-interface INamespaceCollection {
-
-}
-
-interface INamespace {
-   children: INamespaceCollection
-   models: IModelCollection
-   instances: IInstanceCollection
-}
-
-
-
-
-
-interface ISearch {
-
-}
-
-interface IProjectListener {
-   commit(handler: any): void
-   open(handler: any): void
-}
-
-interface IModelAccessor extends IQualifiedObjectAccessor<IModel> {
-
-}
-
-interface IInstanceAccessor extends IQualifiedObjectAccessor<IInstance> {
-
-}
-
-interface INamespaceAccessor extends IQualifiedObjectAccessor<INamespace> {
-
-}
-
-interface IQualifiedObjectAccessor<T extends IQualifiedObject> {
-   get(name: string): T | undefined
-   iter(): IterableIterator<T>
-}
+export type UseHandler = (events: IEventRouter) => void
 
 interface IProject {
    root: INamespace
-   readonly search: ISearch
-   models(): IModelAccessor
-   instances(): IInstanceAccessor
-   namespaces(): INamespaceAccessor
-   open(): Promise<boolean>
-   commit(): Promise<boolean>
-   readonly on: IProjectListener
+   // readonly search: ISearch
+   // use(handler: UseHandler): void
+   // open(): Promise<boolean>
+   // commit(): Promise<boolean>
+   // readonly on: IProjectListener
 }
 
-export default class Project implements IProject {
-   public root: INamespace
+export interface IProjectContext {
+   rfcSource: IRequestForChangeSource
+}
 
-   constructor() {
+class ProjectContext implements IProjectContext {
+   rfcSource: IRequestForChangeSource
 
+   constructor(rfcSource?: IRequestForChangeSource) {
+      this.rfcSource = rfcSource || new RequestForChangeSource()
    }
-   
-   model(path: string): IModel | undefined {
-      let tokens = path.split('.')
+}
 
-      let current = this.root
+class RootNamespace implements INamespace {
+   context: IProjectContext
+   children: INamespaceCollection
+   // models: IModelCollection
+   // instances: IInstanceCollection
 
-      for(let i = 0; i < tokens.length; ++i) {
-         if(i == (tokens.length - 1)) {
-            return current.models(tokens[i])
-         } else {
-            current = current.children.get(tokens[i])
-         }
-      }
+   readonly name: string = ''
+   readonly qualifiedName: string = ''
+   readonly parent: INamespace | null = null
 
-      return undefined
+   constructor(context: IProjectContext) {
+      this.context = context
+      this.children = new NamespaceCollection(this, context)
+   }
+
+   move(name: string): Promise<IQualifiedObject> {
+      throw new Error(`Cannot move the Root Namespace`)
+   }
+
+   rename(name: string) : Promise<INamedObject> {
+      throw new Error(`Cannot rename the Root Namespace`)
+   }
+}
+
+export interface IProjectOptions {
+   rfcSource?: IRequestForChangeSource
+}
+
+
+export class Project implements IProject {
+   public root: INamespace
+   readonly context: IProjectContext
+
+   constructor(options?: IProjectOptions) {
+      this.context = new ProjectContext(options?.rfcSource)
+      this.root = new RootNamespace(this.context)
    }
 
 }

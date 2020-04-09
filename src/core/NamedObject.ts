@@ -1,23 +1,16 @@
 export interface INamedObject {
-   name: string
+   readonly name: string
+   rename(name: string): Promise<INamedObject>
 }
 
 export class NamedObject implements INamedObject {
-   private _name: string = ''
+   readonly name: string = ''
 
    constructor(name: string) {
-      this._name = name
+      this.name = name
    }
 
-   get name() {
-      return this._name
-   }
-
-   set name(value) {
-
-   }
-
-   getName() : string {
-      return this._name
+   rename(name: string) : Promise<INamedObject> {
+      return Promise.resolve(this)
    }
 }

@@ -1,10 +1,9 @@
 export interface INamedObject {
-    name: string;
+    readonly name: string;
+    rename(name: string): Promise<INamedObject>;
 }
 export declare class NamedObject implements INamedObject {
-    private _name;
+    readonly name: string;
     constructor(name: string);
-    get name(): string;
-    set name(value: string);
-    getName(): string;
+    rename(name: string): Promise<INamedObject>;
 }

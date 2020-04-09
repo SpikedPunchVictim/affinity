@@ -1,6 +1,6 @@
 # affinity
 
-A data modeling system that allows developers to create & delete custom data structures at runtime wirth referential integrity.
+A data modeling system that allows developers to create & delete custom data structures at runtime wirth referential integrity. There are zero dependencies for this library.
 
 # Installation
 
@@ -15,7 +15,7 @@ let project = new Project()
 
 let child = await project.root.new('child')
 
-await child.setName('changedNameChild')
+await child.rename('changedNameChild')
 
 await child.models.new('model1', {
    
@@ -29,7 +29,7 @@ project.root.new('child', nspace => {
 
 
 
-=======
+----
 TODO:
 - Add a `uuid` to every Model, Member, Instance, Field. This helps external systems keep track of items outside of their changes. It's too easy for developers to rely on names to keep track of state (ie whether or not a member or field has been checked in a UI)
 
@@ -46,7 +46,7 @@ let child = root.new('child')
 //  Populate the model
 let model = child.models.new('model')
 model.members.new('stringMember', types.string.value('inital-value'))
-model.append({
+await model.append({
    cost: 0.0,
    isHeavy: true,
    name: '',
@@ -54,14 +54,14 @@ model.append({
 })
 
 // or maybe:
-model.append([
+await model.append([
    double('cost', 0.0),
    bool('isHeavy', true),
    string('name', '')
 ])
 
 // Respond before the member value has changed
-model.on.valueChanging(change => {
+model.on<ValueChanging>(change => {
    //...
    // Returning false will discard the change
    // For multiple changing handlers, all fo them must return true
@@ -69,15 +69,15 @@ model.on.valueChanging(change => {
    // return true | false | Promise<bool>
 })
 
-model.on.memberMoved(change => {
+model.on<MemberMoved>(change => {
    //..
 })
 
-model.on.disposing(change => {
+model.on<Disposing>(change => {
    //.. Model still exists
 })
 
-model.on.disposed(change => {
+model.on<Disposed>(change => {
    //.. Model has been removed from all references
 })
 
@@ -94,6 +94,53 @@ model.insert(2, {
 
 child.instances.new('instance', model)
 ```
+
+# Plugins
+
+```ts
+class Redis {
+
+   use(project) {
+      // events is an EventRouter
+      // Handlers are added to each event route, where each event router
+      // can handle multiple handlers
+      project.use(async (router) => {
+         router.on<ModelCreating>(this.createTable)
+
+         // Multiple handlers are run in order
+         router.modelCreating(this.createTable)
+         router.modelCreating(this.applySchemaToTable)
+
+         router.memberMoving(this.memberMoving)
+         router.modelCreating(this.modelCreating)
+
+         // Inline handler
+         router.projectCommitting(async (change) => {
+            // ...
+         })
+      })
+   }
+
+   async createTable(change) {
+      // ...
+   }
+
+   async applySchemaToTable(change) {
+      // ...
+   }
+
+   async modelCreating(change) {
+
+   }
+
+   async memberMoving(change) {
+
+   }
+
+}
+
+```
+
 
 # Improvements
 

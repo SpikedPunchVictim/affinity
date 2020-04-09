@@ -1,44 +1,68 @@
-type RfcHandler = (context: IRfcContext) => void
+type RfcHandler = (action: IRfcAction, err?: Error) => void
 type RfcChainCallback = (err?: Error) => void
-type RfcChainHandler = (context: IRfcContext, callback: RfcChainCallback) => void
+type RfcChainHandler = (action: IRfcAction, callback: RfcChainCallback) => void
 
-interface IRfcContext {
+export interface IRfcAction {
    readonly type: string
 }
+
+export class BatchedActions<T extends IRfcAction> implements IRfcAction {
+   readonly type: string = 'rfc-batched-actions'
+   readonly actions: Array<IRfcAction>
+
+   constructor(actions: Array<IRfcAction>) {
+      this.actions = actions
+   }
+}
+
+
+// interface RequestForChange<T> {
+//    item: T
+// }
 
 export interface IRequestForChange {
    notify(handler: RfcHandler): IRequestForChange
    chain(handler: RfcChainHandler): IRequestForChange // chain, join, await
    fulfill(handler: RfcHandler): IRequestForChange
    reject(handler: RfcHandler): IRequestForChange
-   commit(): void
+   commit(): Promise<void>
+}
+
+export interface IRequestForChangeSource {
+   create(action: IRfcAction): IRequestForChange
+}
+
+export class RequestForChangeSource implements IRequestForChangeSource {
+   create(action: IRfcAction): IRequestForChange {
+      return new RequestForChange(action)
+   }
 }
 
 export class RequestForChange implements IRequestForChange {
-   readonly context: IRfcContext
+   readonly action: IRfcAction
 
-   constructor(context: IRfcContext) {
-      this.context = context
+   constructor(action: IRfcAction) {
+      this.action = action
    }
 
    notify(handler: RfcHandler): IRequestForChange {
-
+      return this
    }
 
    chain(handler: RfcChainHandler): IRequestForChange {
-
+      return this
    }
 
    fulfill(handler: RfcHandler): IRequestForChange {
-
+      return this
    }
    
    reject(handler: RfcHandler): IRequestForChange {
-
+      return this
    }
 
-   commit(): void {
-      
+   commit(): Promise<void> {
+      return Promise.resolve()
    }
 }
 

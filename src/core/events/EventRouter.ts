@@ -1,5 +1,17 @@
 import { IEvent } from './Base'
 
+/*
+   EventBus
+      A single event bus for the application. It will allow any depth of
+      child buses to attach to it. Child bus events are emitted up through their parents.
+      This means that:
+         Parent --> subscribers listen for event 'E' here too
+            |- Child --> subscribers listen for event 'E' here too
+                |- SubChild --> raises event 'E' (subscribers can listen to it on the SubChild)
+
+
+*/
+
 export type EventHandler<T extends IEvent> = (event: T) => Promise<void>
 
 export interface IEventRouter {

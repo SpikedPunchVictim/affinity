@@ -68,7 +68,5 @@ export class MemberCollection extends ObservableCollection<IMember> {
          .commit()
       
       return members
-
    }
-
 }

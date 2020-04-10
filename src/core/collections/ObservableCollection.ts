@@ -85,7 +85,7 @@ export class EventMap {
 }
 
 export class ObservableCollection<T> extends EventEmitter {
-   private items: Array<T>
+   protected items: Array<T>
    readonly eventMap: EventMap
 
    constructor(eventMap: EventMap = new EventMap()) {

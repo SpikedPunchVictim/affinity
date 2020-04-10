@@ -1,20 +1,26 @@
-import { INamespace } from './Namespace'
-import { IRequestForChangeSource, RequestForChangeSource } from './RequestForChange'
-import { IEventRouter } from './events/EventRouter'
-import { IQualifiedObject } from '.'
-import { NamespaceCollection, INamespaceCollection } from './collections'
-import { INamedObject } from './NamedObject'
+import { 
+   IEventRouter,
+   INamedObject,
+   INamespace,
+   IQualifiedObject,
+   IRequestForChangeSource,
+   RequestForChangeSource } from '.'
+
+import { 
+   basename,
+   parentPath,
+   QualifiedObjectType,
+   Switch } from './utils'
+
+import {
+   IInstanceCollection,
+   IModelCollection,
+   InstanceCollection,
+   ModelCollection,
+   NamespaceCollection,
+   INamespaceCollection } from './collections'
 
 export type UseHandler = (events: IEventRouter) => void
-
-interface IProject {
-   root: INamespace
-   // readonly search: ISearch
-   // use(handler: UseHandler): void
-   // open(): Promise<boolean>
-   // commit(): Promise<boolean>
-   // readonly on: IProjectListener
-}
 
 export interface IProjectContext {
    rfcSource: IRequestForChangeSource
@@ -31,8 +37,8 @@ class ProjectContext implements IProjectContext {
 class RootNamespace implements INamespace {
    context: IProjectContext
    children: INamespaceCollection
-   // models: IModelCollection
-   // instances: IInstanceCollection
+   models: IModelCollection
+   instances: IInstanceCollection
 
    readonly name: string = ''
    readonly qualifiedName: string = ''
@@ -41,6 +47,8 @@ class RootNamespace implements INamespace {
    constructor(context: IProjectContext) {
       this.context = context
       this.children = new NamespaceCollection(this, context)
+      this.models = new ModelCollection(this, this.context)
+      this.instances = new InstanceCollection(this, this.context)
    }
 
    move(name: string): Promise<IQualifiedObject> {
@@ -56,6 +64,19 @@ export interface IProjectOptions {
    rfcSource?: IRequestForChangeSource
 }
 
+interface IProject {
+   root: INamespace
+
+   get(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<IQualifiedObject | undefined>
+   // create<T extends IQualifiedObject>(qualifiedPath: string): Promise<T>
+   // delete<T extends IQualifiedObject>(qualifiedPath: string): Promise<void>
+   // move<T extends IQualifiedObject>(fromPath: string, toPath: string): Promise<T>
+   // readonly search: ISearch
+   // use(handler: UseHandler): void
+   // open(): Promise<boolean>
+   // commit(): Promise<boolean>
+   // readonly on: IProjectListener
+}
 
 export class Project implements IProject {
    public root: INamespace
@@ -65,5 +86,49 @@ export class Project implements IProject {
       this.context = new ProjectContext(options?.rfcSource)
       this.root = new RootNamespace(this.context)
    }
+
+   get(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<IQualifiedObject | undefined> {
+      let parentQPath = parentPath(qualifiedPath)
+
+      if(parentQPath === undefined) {
+         return Promise.resolve(undefined)
+      }
+
+      let current: INamespace | undefined = this.root
+      let tokens = parentQPath.split('.')
+
+      for(let token of tokens) {
+         current = current.children.get(token)
+
+         if(current === undefined) {
+            return Promise.resolve(undefined)
+         }
+      }
+
+      // current is the Parent Namespace at this point
+      let baseQPath = basename(qualifiedPath)
+
+      let result = Switch.case<IQualifiedObject | undefined>(qualifiedType, {
+         Namespace: () => current?.children.get(baseQPath),
+         Model: () => current?.models.get(baseQPath),
+         Instance: () => current?.instances.get(baseQPath)
+      })
+
+      return result === undefined ?
+         Promise.resolve(undefined) :
+         Promise.resolve(result)
+   }
+
+   // create<T extends IQualifiedObject>(qualifiedPath: string): Promise<T> {
+
+   // }
+
+   // delete<T extends IQualifiedObject>(qualifiedPath: string): Promise<void> {
+
+   // }
+   
+   // move<T extends IQualifiedObject>(fromPath: string, toPath: string): Promise<T> {
+
+   // }
 
 }

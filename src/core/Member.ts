@@ -3,7 +3,6 @@ import { IValue } from './Value';
 import { ArgumentError } from '../errors/ArgumentError';
 
 export interface IMember extends INamedObject {
-   readonly name: string
    readonly value: IValue
 }
 

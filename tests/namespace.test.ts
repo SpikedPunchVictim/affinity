@@ -1,6 +1,7 @@
 import 'mocha'
 import { expect } from 'chai'
 import { Project, Namespace } from '../src'
+import { QualifiedObjectType } from '../src/core/utils'
 
 describe('Namespaces', function() {
    it('Should be able to create one', async function() {
@@ -20,7 +21,7 @@ describe('Namespaces', function() {
       let ns = await project.root.children.create(name)
       let subNs = await ns.children.create(subName)
 
-      let res = project.get(Namespace, name)
+      let res = project.get(QualifiedObjectType.Namespace, name)
       console.dir(res)
 
       expect(ns.name).to.equal(name)

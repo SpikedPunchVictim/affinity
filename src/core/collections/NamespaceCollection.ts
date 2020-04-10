@@ -5,6 +5,7 @@ import { IProjectContext } from "../Project";
 export interface INamespaceCollection {
    create(name: string): Promise<INamespace>
    get(name: string): INamespace | undefined
+   delete(name: string): Promise<void>
 }
 
 export class NamespaceCollection 
@@ -33,5 +34,17 @@ export class NamespaceCollection
       }
 
       return undefined
+   }
+
+   delete(name: string): Promise<void> {
+      let found = this.get(name)
+
+      if(found === undefined) {
+         return Promise.resolve()
+      }
+
+      super.remove(found)
+      
+      return Promise.resolve()
    }
 }

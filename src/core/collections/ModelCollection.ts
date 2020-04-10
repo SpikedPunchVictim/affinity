@@ -6,6 +6,7 @@ import { INamespace } from '../Namespace'
 export interface IModelCollection {
    create(name: string): Promise<IModel>
    get(name: string): IModel | undefined
+   delete(name: string): Promise<void>
 }
 
 export class ModelCollection 
@@ -34,5 +35,17 @@ export class ModelCollection
       }
 
       return undefined
+   }
+
+   delete(name: string): Promise<void> {
+      let found = this.get(name)
+
+      if(found === undefined) {
+         return Promise.resolve()
+      }
+
+      super.remove(found)
+      
+      return Promise.resolve()
    }
 }

@@ -1,24 +1,21 @@
-import { ObservableCollection } from "./ObservableCollection";
-import { IMember, Member } from "../Member";
-import { IValue } from "../Value";
-import { IModel } from "../Model";
-import { IProjectContext } from "../Project";
-import { IRfcAction, BatchedActions } from "../RequestForChange";
+import {
+   ObservableCollection
+} from '.'
+
+import {
+   BatchedActions,
+   IMember,
+   IModel,
+   IProjectContext,
+   IValue,
+   Member,
+   MemberCreateAction
+} from '../'
 
 export type MemberParameters = {
    name: string,
    value: IValue
 }
-
-export class MemberCreateAction implements IRfcAction {
-   readonly type: string = 'member-create'
-   readonly member: IMember
-
-   constructor(member: IMember) {
-      this.member = member
-   }
-}
-
 
 export interface IMemberCollection {
    readonly model: IModel

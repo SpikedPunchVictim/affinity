@@ -1,15 +1,16 @@
 import { IndexOutOfRangeError } from "../../errors/IndexOutOfRangeError"
 import { EventEmitter } from 'events'
 
-type VisitHandler<T> = (value: T, index: number, array: Array<T>) => void
+export type VisitHandler<T> = (value: T, index: number, array: Array<T>) => void
+export type PredicateHandler<T> = (value: T, index: number, array: Array<T>) => boolean
 
 //------------------------------------------------------------------------
 // Sorts the event response formatted items by index in reverse. ie larger
 // indexes appear first.
 //------------------------------------------------------------------------
-// function sortByIndexReverse<T extends IndexableItem<T>>(a: T, b: T): number {
-//    return sortByIndex(a, b) * -1;
-// }
+function sortByIndexReverse<T>(a: IndexableItem<T>, b: IndexableItem<T>): number {
+   return sortByIndex(a, b) * -1;
+}
 
 //------------------------------------------------------------------------
 // Sorts the event response formatted items by index in reverse. ie larger
@@ -165,81 +166,67 @@ export class ObservableCollection<T> extends EventEmitter {
    //    this._move(change);
    // }
 
-   // clear() {
-   //    var change = []
-   //    for (var i = 0; i < this._items.length; ++i) {
-   //       change.push({
-   //          item: this._items[i],
-   //          index: i
-   //       });
-   //    }
+   clear() {
+      let changes = new Array<ItemRemove<T>>()
 
-   //    this._remove(change);
-   // }
+      for (let i = 0; i < this.items.length; ++i) {
+         changes.push(new ItemRemove(this.items[i], i))
+      }
 
-   // remove(item) {
-   //    var change = []
-   //    for (var i = 0; i < arguments.length; ++i) {
-   //       var current = arguments[i];
-   //       var itemIndex = this._items.indexOf(current);
+      this._remove(changes);
+   }
 
-   //       if (itemIndex < 0) {
-   //          continue;
-   //       }
+   remove(...items: T[]) {
+      let changes = new Array<ItemRemove<T>>()
 
-   //       change.push({
-   //          item: current,
-   //          index: itemIndex
-   //       });
-   //    }
+      for(let item of items) {
+         let itemIndex = this.items.indexOf(item)
 
-   //    this._remove(change);
-   // }
+         if (itemIndex < 0) {
+            continue
+         }
 
-   // removeAt(index) {
-   //    if (index < 0 || index >= this.length) {
-   //       throw new Error(util.format('Index out of bouds when removing at index %s', index));
-   //    }
-   //    var item = this._items[index];
+         changes.push(new ItemRemove(item, itemIndex))
+      }
 
-   //    var change = [];
-   //    change.push({
-   //       item: item,
-   //       index: index
-   //    });
+      this._remove(changes);
+   }
 
-   //    this._remove(change);
-   // }
+   removeAt(index: number) {
+      if (index < 0 || index >= this.length) {
+         throw new Error(`Index out of bouds when removing at index ${index}`)
+      }
 
-   // // filter(item, index, collection)
-   // removeAll(filter) {
-   //    if (this._items.length <= 0 || filter == null || filter === undefined) {
-   //       return false;
-   //    }
+      let item = this.items[index];
 
-   //    // Error?
-   //    if (!_.isFunction(filter)) {
-   //       return false;
-   //    }
+      let changes = new Array<ItemRemove<T>>()
+      changes.push(new ItemRemove(item, index))
 
-   //    var toRemove = [];
-   //    for (var i = 0; i < this._items.length; ++i) {
-   //       var currentItem = this._items[i];
-   //       if (filter(currentItem, i, this)) {
-   //          toRemove.push({
-   //             item: currentItem,
-   //             index: i
-   //          });
-   //       }
-   //    }
+      this._remove(changes);
+   }
 
-   //    if (toRemove.length == 0) {
-   //       return false;
-   //    }
+   removeAll(filter: PredicateHandler<T>): boolean {
+      if (this.items.length <= 0 || filter == null || filter === undefined) {
+         return false;
+      }
 
-   //    this._remove(toRemove);
-   //    return true;
-   // }
+      let toRemove = new Array<ItemRemove<T>>()
+
+      for (let i = 0; i < this.items.length; ++i) {
+         let currentItem = this.items[i]
+
+         if (filter(currentItem, i, this.items)) {
+            toRemove.push(new ItemRemove(currentItem, i))
+         }
+      }
+
+      if (toRemove.length == 0) {
+         return false;
+      }
+
+      this._remove(toRemove);
+      return true;
+   }
 
    private _add(items: Array<ItemAdd<T>>) {
       // Sort before raising events
@@ -254,6 +241,20 @@ export class ObservableCollection<T> extends EventEmitter {
       }
 
       super.emit(this.eventMap.added, items)
+   }
+
+   _remove(items: Array<ItemRemove<T>>) {
+      // Safely remove the items from the end &
+      // sort before raising events
+      items.sort(sortByIndexReverse);
+
+      super.emit(this.eventMap.removing, items)
+
+      for (var i = 0; i < items.length; ++i) {
+         this.items.splice(items[i].index, 1);
+      }
+
+      super.emit(this.eventMap.removed, items)
    }
 
    // private _move(items) {

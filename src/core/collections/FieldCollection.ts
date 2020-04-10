@@ -1,25 +1,13 @@
 import {
    Field,
+   FieldCreateAction,
    IField,
    IInstance,
    IMember,
-   IRfcAction,
    ObservableCollection,
    IProjectContext,
    BatchedActions } from "..";
 import { ArgumentError } from "../../errors/ArgumentError";
-
-
-export class FieldCreateAction implements IRfcAction {
-   readonly type: string = 'field-create'
-   readonly instance: IInstance
-   readonly field: IField
-
-   constructor(instance: IInstance, field: IField) {
-      this.instance = instance
-      this.field = field
-   }
-}
 
 export interface IFieldCollection {
    readonly parent: IInstance
@@ -82,7 +70,7 @@ export class FieldCollection extends ObservableCollection<IField> {
       if(name == null) {
          throw new ArgumentError(`name must be valid`)
       }
-      
+
       return super.find(field => field.name.toLowerCase() === name.toLowerCase())
    }
 }

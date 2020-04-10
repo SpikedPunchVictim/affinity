@@ -24,11 +24,9 @@ export interface IModel extends IQualifiedObject {
 
 export class Model extends QualifiedObject implements IModel {
    readonly members: IMemberCollection
-   readonly context: IProjectContext
 
    constructor(parent: INamespace, name: string, context: IProjectContext) {
-      super(parent, name)
-      this.context = context
+      super(parent, name, context)
       this.members = new MemberCollection(this, this.context)
    }
 

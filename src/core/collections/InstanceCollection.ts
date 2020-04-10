@@ -10,6 +10,7 @@ import { Instance } from ".."
 export interface IInstanceCollection {
    create(model: IModel, name: string): Promise<IInstance>
    get(name: string): IInstance | undefined
+   delete(name: string): Promise<void>
 }
 
 export class InstanceCollection 
@@ -38,5 +39,17 @@ export class InstanceCollection
       }
 
       return undefined
+   }
+
+   delete(name: string): Promise<void> {
+      let found = this.get(name)
+
+      if(found === undefined) {
+         return Promise.resolve()
+      }
+
+      super.remove(found)
+      
+      return Promise.resolve()
    }
 }

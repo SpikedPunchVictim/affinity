@@ -20,14 +20,12 @@ export interface INamespace extends IQualifiedObject {
 export class Namespace extends QualifiedObject {
    readonly children: INamespaceCollection
    readonly models: IModelCollection
-   readonly context: IProjectContext
    readonly instances: IInstanceCollection
 
    constructor(parent: INamespace, name: string, context: IProjectContext) {
-      super(parent, name)
-      this.context = context
-      this.children = new NamespaceCollection(this, this.context)
-      this.models = new ModelCollection(this, this.context)
-      this.instances = new InstanceCollection(this, this.context)
+      super(parent, name, context)
+      this.children = new NamespaceCollection(this, context)
+      this.models = new ModelCollection(this, context)
+      this.instances = new InstanceCollection(this, context)
    }
 }

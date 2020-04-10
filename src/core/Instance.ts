@@ -23,12 +23,10 @@ export class Instance
 
    readonly model: IModel
    readonly fields: IFieldCollection
-   readonly context: IProjectContext
 
    constructor(parent: INamespace, model: IModel, name: string, context: IProjectContext) {
-      super(parent, name)
+      super(parent, name, context)
       this.model = model
-      this.context = context
       this.fields = new FieldCollection(this, this.context)
    }
 

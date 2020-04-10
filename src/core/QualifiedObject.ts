@@ -1,12 +1,17 @@
 // import { RequestForChange } from './RequestForChange'
-import { INamedObject, NamedObject } from './NamedObject'
-import { INamespace } from './Namespace'
-import { ArgumentError } from '../errors/ArgumentError'
+import { 
+   INamedObject,
+   INamespace,
+   IProjectContext,
+   NamedObject } from '.'
+
+import { ArgumentError } from '../errors/'
+import { ParentChangeAction } from './Actions'
 
 export interface IQualifiedObject extends INamedObject {
    readonly qualifiedName: string
    readonly parent: INamespace | null
-   move(name: string): Promise<IQualifiedObject>
+   move(to: INamespace): Promise<IQualifiedObject>
 }
 
 export class QualifiedObject extends NamedObject {
@@ -32,19 +37,33 @@ export class QualifiedObject extends NamedObject {
       return this._parent
    }
 
+   get rfc() {
+      return this.context.rfcSource
+   }
+
+   readonly context: IProjectContext
+
    private _parent: INamespace
 
-   constructor(parent: INamespace, name: string) {
+   constructor(parent: INamespace, name: string, context: IProjectContext) {
       super(name)
 
       if (parent == null) {
          throw new ArgumentError(`parent must be valid`)
       }
 
+      this.context = context
       this._parent = parent
    }
 
-   move(name: string): Promise<IQualifiedObject> {
-      return Promise.resolve(this)
+   async move(to: INamespace): Promise<IQualifiedObject> {
+      // TODO: Validate move
+      let rfc = this.context.rfcSource.create(new ParentChangeAction(this, this.parent, to))
+      
+      await rfc
+         .fulfill(action => this._parent = to)
+         .commit()
+      
+      return this
    }
 }

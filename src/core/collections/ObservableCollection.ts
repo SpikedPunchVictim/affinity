@@ -1,14 +1,17 @@
-import { IndexOutOfRangeError } from "../../errors/IndexOutOfRangeError"
+import { IndexOutOfRangeError } from "../../errors/"
 import { EventEmitter } from 'events'
 
 export type VisitHandler<T> = (value: T, index: number, array: Array<T>) => void
 export type PredicateHandler<T> = (value: T, index: number, array: Array<T>) => boolean
+export type ChangeRequestAddHandler<T> = (items: Array<ItemAdd<T>>, array: Array<T>) => Promise<boolean>
+export type ChangeRequestRemoveHandler<T> = (items: Array<ItemRemove<T>>, array: Array<T>) => Promise<boolean>
+export type ChangeRequestMoveHandler<T> = (items: Array<ItemMove<T>>, array: Array<T>) => Promise<boolean>
 
 //------------------------------------------------------------------------
 // Sorts the event response formatted items by index in reverse. ie larger
 // indexes appear first.
 //------------------------------------------------------------------------
-function sortByIndexReverse<T>(a: IndexableItem<T>, b: IndexableItem<T>): number {
+export function sortByIndexReverse<T>(a: IndexableItem<T>, b: IndexableItem<T>): number {
    return sortByIndex(a, b) * -1;
 }
 
@@ -16,10 +19,11 @@ function sortByIndexReverse<T>(a: IndexableItem<T>, b: IndexableItem<T>): number
 // Sorts the event response formatted items by index in reverse. ie larger
 // indexes appear first.
 //------------------------------------------------------------------------
-function sortByIndex<T>(a: IndexableItem<T>, b: IndexableItem<T>): number {
-   if (a.index > b.index) return 1
-   if (a.index < b.index) return -1
-   return 0
+export function sortByIndex<T>(a: IndexableItem<T>, b: IndexableItem<T>): number {
+   return a.index - b.index
+   // if (a.index > b.index) return 1
+   // if (a.index < b.index) return -1
+   // return 0
 }
 
 abstract class IndexableItem<T> {
@@ -44,15 +48,26 @@ export class ItemRemove<T> extends IndexableItem<T> {
    }
 }
 
-export class ItemMove<T> {
+export class ItemMove<T> extends IndexableItem<T> {
    readonly item: T
    readonly from: number
    readonly to: number
 
    constructor(item: T, from: number, to: number) {
+      super(item, from)
       this.item = item
       this.from = from
       this.to = to
+   }
+}
+
+export class ObservableOptions {
+   ignoreChangeRequest?: boolean
+
+   static defaults(options?: ObservableOptions) {
+      options = options || {}
+      options.ignoreChangeRequest = options.ignoreChangeRequest || false
+      return options
    }
 }
 
@@ -85,21 +100,69 @@ export class EventMap {
    }
 }
 
-export class ObservableCollection<T> extends EventEmitter {
-   protected items: Array<T>
-   readonly eventMap: EventMap
+/**
+ * This class holds the Change Request Handlers
+ * for each type of collection edit. Each edit
+ * is verified before being committed.
+ */
+export class ObservableChangeRequest<T> {
+   add: ChangeRequestAddHandler<T> = () => Promise.resolve(true)
+   move: ChangeRequestMoveHandler<T> = () => Promise.resolve(true)
+   remove: ChangeRequestRemoveHandler<T> = () => Promise.resolve(true)
 
-   constructor(eventMap: EventMap = new EventMap()) {
+   constructor(handlers?: Partial<ObservableChangeRequest<T>>) {
+      if(handlers) {
+         Object.keys(handlers)
+            .forEach(k => {
+               if(this[k]) {
+                  this[k] = handlers[k]
+               }
+            })
+      }
+   }
+}
+
+export interface IObservableCollection<T> {
+   readonly length: number
+   at(index: number): T | undefined
+   forEach(visit: VisitHandler<T>): void
+   map(visit: VisitHandler<T>): void[]
+   indexOf(item: T): number | undefined
+   contains(item: T): boolean
+   find(visit: VisitHandler<T>): T | undefined
+   filter(visit: VisitHandler<T>): Array<T>
+   insert(index: number, item: T): Promise<boolean>
+   add(args: T | T[]): Promise<boolean>
+   move(from: number, to: number): Promise<boolean>
+   clear(options?: ObservableOptions): Promise<boolean>
+   remove(items: T | T[]): Promise<boolean>
+   removeAt(index: number): Promise<boolean>
+   removeAll(filter: PredicateHandler<T>): Promise<boolean>
+}
+
+export class ObservableCollection<T> 
+   extends EventEmitter
+   implements IObservableCollection<T> {
+
+   protected items: Array<T>
+   protected eventMap: EventMap
+   protected changeRequests: ObservableChangeRequest<T>
+
+   constructor(
+      eventMap: EventMap = new EventMap(),
+      changeRequests: ObservableChangeRequest<T> = new ObservableChangeRequest<T>()
+   ) {
       super()
       this.items = new Array<T>()
       this.eventMap = eventMap
+      this.changeRequests = changeRequests
    }
 
-   get length() {
+   get length(): number {
       return this.items.length
    }
 
-   at(index: number) {
+   at(index: number): T | undefined {
       return this.items[index]
    }
 
@@ -127,57 +190,66 @@ export class ObservableCollection<T> extends EventEmitter {
       return this.items.filter(visit)
    }
 
-   insert(index: number, item: T): void {
+   insert(index: number, item: T, options?: ObservableOptions): Promise<boolean> {
       if (index < 0 || index > this.length) {
          throw new IndexOutOfRangeError(index)
       }
 
       let change = new Array<ItemAdd<T>>()
       change.push(new ItemAdd<T>(item, index))
-      this._add(change)
+      
+      return this._add(change, options)
    }
 
-   add(...args: T[]) {
-      var change = new Array<ItemAdd<T>>();
+   add(args: T | T[], options?: ObservableOptions): Promise<boolean> {
+      var change = new Array<ItemAdd<T>>()
+
+      if(!Array.isArray(args)) {
+         args = [args]
+      }
 
       for (var i = 0; i < args.length; ++i) {
          let item: T = args[i]
          change.push(new ItemAdd(item, this.length + i))
       }
 
-      this._add(change);
+      return this._add(change, options);
    }
 
-   // move(from: number, to: number) {
-   //    if (from < 0 || from >= this.length) {
-   //       throw new IndexOutOfRangeError(from)
-   //    }
+   move(from: number, to: number, options?: ObservableOptions): Promise<boolean> {
+      if (from < 0 || from >= this.length) {
+         throw new IndexOutOfRangeError(from)
+      }
 
-   //    if (to < 0 || to >= this.length) {
-   //       throw new IndexOutOfRangeError(to)
-   //    }
+      if (to < 0 || to >= this.length) {
+         throw new IndexOutOfRangeError(to)
+      }
 
-   //    if (from == to) {
-   //       return;
-   //    }
+      if (from == to) {
+         return Promise.resolve(false)
+      }
 
-   //    let change = new Array<ItemMove<T>>()
-   //    change.push(new ItemMove(this.items[from], from, to))
-   //    this._move(change);
-   // }
+      let change = new Array<ItemMove<T>>()
+      change.push(new ItemMove(this.items[from], from, to))
+      return this._move(change, options)
+   }
 
-   clear() {
+   clear(options?: ObservableOptions): Promise<boolean> {
       let changes = new Array<ItemRemove<T>>()
 
       for (let i = 0; i < this.items.length; ++i) {
          changes.push(new ItemRemove(this.items[i], i))
       }
 
-      this._remove(changes);
+      return this._remove(changes, options);
    }
 
-   remove(...items: T[]) {
+   remove(items: T | T[], options?: ObservableOptions): Promise<boolean> {
       let changes = new Array<ItemRemove<T>>()
+
+      if(!Array.isArray(items)) {
+         items = [items]
+      }
 
       for(let item of items) {
          let itemIndex = this.items.indexOf(item)
@@ -189,25 +261,25 @@ export class ObservableCollection<T> extends EventEmitter {
          changes.push(new ItemRemove(item, itemIndex))
       }
 
-      this._remove(changes);
+      return this._remove(changes, options);
    }
 
-   removeAt(index: number) {
+   removeAt(index: number, options?: ObservableOptions): Promise<boolean> {
       if (index < 0 || index >= this.length) {
          throw new Error(`Index out of bouds when removing at index ${index}`)
       }
 
-      let item = this.items[index];
+      let item = this.items[index]
 
       let changes = new Array<ItemRemove<T>>()
       changes.push(new ItemRemove(item, index))
 
-      this._remove(changes);
+      return this._remove(changes, options)
    }
 
-   removeAll(filter: PredicateHandler<T>): boolean {
+   removeAll(filter: PredicateHandler<T>, options?: ObservableOptions): Promise<boolean> {
       if (this.items.length <= 0 || filter == null || filter === undefined) {
-         return false;
+         return Promise.resolve(false)
       }
 
       let toRemove = new Array<ItemRemove<T>>()
@@ -221,52 +293,91 @@ export class ObservableCollection<T> extends EventEmitter {
       }
 
       if (toRemove.length == 0) {
-         return false;
+         return Promise.resolve(false)
       }
 
-      this._remove(toRemove);
-      return true;
+      return this._remove(toRemove, options)
    }
 
-   private _add(items: Array<ItemAdd<T>>) {
+   protected async _add(items: Array<ItemAdd<T>>, options?: ObservableOptions): Promise<boolean> {
       // Sort before raising events
       // Add from the front of the Array to the back
       // to preserve intended index ordering
       items.sort(sortByIndex)
 
-      super.emit(this.eventMap.adding, items)
+      options = ObservableOptions.defaults(options)
+
+      if(options.ignoreChangeRequest === false) {
+         let allowed = await this.changeRequests.add(items, this.items)
+
+         if(!allowed) {
+            return false
+         }
+      }
+
+      this.emit(this.eventMap.adding, items)
 
       for (var i = 0; i < items.length; ++i) {
          this.items.splice(items[i].index, 0, items[i].item)
       }
 
-      super.emit(this.eventMap.added, items)
+      this.emit(this.eventMap.added, items)
+
+      return true
    }
 
-   _remove(items: Array<ItemRemove<T>>) {
+   protected async _remove(items: Array<ItemRemove<T>>, options?: ObservableOptions): Promise<boolean> {
+      options = ObservableOptions.defaults(options)
+
       // Safely remove the items from the end &
       // sort before raising events
-      items.sort(sortByIndexReverse);
+      items.sort(sortByIndexReverse)
 
-      super.emit(this.eventMap.removing, items)
+      if(options.ignoreChangeRequest === false) {
+         let allowed = await this.changeRequests.remove(items, this.items)
 
-      for (var i = 0; i < items.length; ++i) {
-         this.items.splice(items[i].index, 1);
+         if(!allowed) {
+            return false
+         }
       }
 
-      super.emit(this.eventMap.removed, items)
+      this.emit(this.eventMap.removing, items)
+
+      for (var i = 0; i < items.length; ++i) {
+         this.items.splice(items[i].index, 1)
+      }
+
+      this.emit(this.eventMap.removed, items)
+
+      return true
    }
 
-   // private _move(items) {
-   //    this._onMoving(items);
+   protected async _move(items: Array<ItemMove<T>>, options?: ObservableOptions): Promise<boolean> {
+      options = ObservableOptions.defaults(options)
 
-   //    for (var i = 0; i < items.length; ++i) {
-   //       let current = items[i];
-   //       this._items.splice(current.from, 1);
-   //       this._items.splice(current.to, 0, current.item);
-   //    }
+      // Sort by the index they are going to. This prevents
+      // items being added at the bottom of the list, and its
+      // index being updated by adding an item above it in the list.
+      items.sort((a: ItemMove<T>, b: ItemMove<T>) =>  a.to - b.to)
 
-   //    this._onMoved(items);
-   // }
+      if(options.ignoreChangeRequest === false) {
+         let allowed = await this.changeRequests.move(items, this.items)
 
+         if(!allowed) {
+            return false
+         }
+      }
+
+      this.emit(this.eventMap.moving, items)
+
+      for (var i = 0; i < items.length; ++i) {
+         let current = items[i]
+         this.items.splice(current.from, 1)
+         this.items.splice(current.to, 0, current.item)
+      }
+
+      this.emit(this.eventMap.moved, items)
+
+      return items.length > 0
+   }
 }

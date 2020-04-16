@@ -1,10 +1,11 @@
+import { QualifiedObject } from './QualifiedObject'
+
 import { 
    IField,
    IModel,
    INamespace,
    IQualifiedObject,
-   IProjectContext,
-   QualifiedObject } from ".";
+   IProjectContext } from ".";
 
 import { 
    IFieldCollection,

@@ -71,3 +71,7 @@ export function isModel(obj: IQualifiedObject): obj is IModel {
 export function isInstance(obj: IQualifiedObject): obj is IInstance {
    return (obj as IInstance).fields !== undefined
 }
+
+export function as<TResult extends IQualifiedObject>(obj: IQualifiedObject): TResult {
+   return obj as TResult
+}

@@ -1,24 +1,27 @@
 import { 
    IInstance,
    INamespace,
-   IProjectContext,
-   ObservableCollection, 
+   IProjectContext, 
    IModel } from ".."
 
 import { Instance } from ".."
+import { NamedCollection, INamedCollection } from './NamedCollection'
+import { InstanceCreateAction, IRequestForChangeSource } from "../actions"
 
-export interface IInstanceCollection {
-   create(model: IModel, name: string): Promise<IInstance>
-   get(name: string): IInstance | undefined
-   delete(name: string): Promise<void>
+export interface IInstanceCollection extends INamedCollection<IInstance> {
+   create(name: string, model: IModel): Promise<IInstance>
 }
 
 export class InstanceCollection 
-   extends ObservableCollection<IInstance>
+   extends NamedCollection<IInstance>
    implements IInstanceCollection {
    
    readonly parent: INamespace
    readonly context: IProjectContext
+
+   private get rfc(): IRequestForChangeSource {
+      return this.context.rfc
+   }
    
    constructor(parent: INamespace, context: IProjectContext) {
       super()
@@ -26,30 +29,17 @@ export class InstanceCollection
       this.context = context
    }
 
-   create(model: IModel, name: string): Promise<IInstance> {
+   async create(name: string, model: IModel): Promise<IInstance> {
       let instance = new Instance(this.parent, model, name, this.context)
+
+      let rfc = this.rfc.create(new InstanceCreateAction(instance))
+
+      await rfc
+         .fulfill(async () => {
+            await this.add(instance, { ignoreChangeRequest: true })
+         })
+         .commit()
+
       return Promise.resolve(instance)
-   }
-
-   get(name: string): IInstance | undefined {
-      for(let model of super.items) {
-         if(model.name.toLowerCase() === name.toLowerCase()) {
-            return model
-         }
-      }
-
-      return undefined
-   }
-
-   delete(name: string): Promise<void> {
-      let found = this.get(name)
-
-      if(found === undefined) {
-         return Promise.resolve()
-      }
-
-      super.remove(found)
-      
-      return Promise.resolve()
    }
 }

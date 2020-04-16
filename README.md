@@ -95,29 +95,41 @@ model.insert(2, {
 child.instances.new('instance', model)
 ```
 
+**Using Plugins**
+```js
+import { Redis } from 'affinity-plugin-redis'
+import { Mongo } from 'affinity-plugin-mongo'
+
+let project = new Project()
+
+let redis = new Redis('connection string and options here')
+let mongo = new Mongo('connection string and options here')
+
+project.use(redis)
+project.use(mongo)
+```
+
 # Plugins
 
 ```ts
 class Redis {
 
-   use(project) {
+   setup(project, router) {
       // events is an EventRouter
       // Handlers are added to each event route, where each event router
       // can handle multiple handlers
-      project.use(async (router) => {
-         router.on<ModelCreating>(this.createTable)
+      router.on(ModelCreate.type, this.createTable)
 
-         // Multiple handlers are run in order
-         router.modelCreating(this.createTable)
-         router.modelCreating(this.applySchemaToTable)
+      // Multiple handlers are run in order
+      router.on(ModelCreate.type, this.createTable)
+      router.on(ModelCreate.type, this.applySchemaToTable)
 
-         router.memberMoving(this.memberMoving)
-         router.modelCreating(this.modelCreating)
+      router.on(MemberMove.type, this.memberMoving)
+      router.on(InstanceCreate.type, this.modelCreating)
 
-         // Inline handler
-         router.projectCommitting(async (change) => {
-            // ...
-         })
+      // Inline handler
+      router.on(ProjectCommit.type, async (change) => {
+         // ...
       })
    }
 

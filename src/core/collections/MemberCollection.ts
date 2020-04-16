@@ -1,29 +1,27 @@
 import {
-   ObservableCollection
-} from '.'
-
-import {
-   BatchedActions,
    IMember,
    IModel,
    IProjectContext,
    IValue,
-   Member,
-   MemberCreateAction
+   Member
 } from '../'
+
+import { BatchedActions } from '../actions/Actions'
+import { MemberCreateAction } from '../actions/Model'
+import { NamedCollection, INamedCollection } from './NamedCollection'
 
 export type MemberParameters = {
    name: string,
    value: IValue
 }
 
-export interface IMemberCollection {
+export interface IMemberCollection extends INamedCollection<IMember> {
    readonly model: IModel
    create(name: string, value: IValue): Promise<IMember>
    createMany(params: Array<MemberParameters>): Promise<Array<IMember>>
 }
 
-export class MemberCollection extends ObservableCollection<IMember> {
+export class MemberCollection extends NamedCollection<IMember> {
    readonly model: IModel
    readonly context: IProjectContext
 
@@ -35,9 +33,9 @@ export class MemberCollection extends ObservableCollection<IMember> {
 
    async create(name: string, value: IValue): Promise<IMember> {
       let member = new Member(name, value)
-      let rfc = this.context.rfcSource.create(new MemberCreateAction(member))
+      let rfc = this.context.rfc.create(new MemberCreateAction(member))
 
-      rfc.fulfill(action => this.add(member))
+      rfc.fulfill(async () => await this.add(member, { ignoreChangeRequest: true }))
          .commit()
 
       return Promise.resolve(member)
@@ -53,12 +51,10 @@ export class MemberCollection extends ObservableCollection<IMember> {
          members.push(member)
       }
 
-      let rfc = this.context.rfcSource.create(new BatchedActions(actions))
+      let rfc = this.context.rfc.create(new BatchedActions(actions))
 
       await rfc
-         .fulfill(acts => {
-            super.add(...members)
-         })
+         .fulfill(async (acts) => await this.add(members, { ignoreChangeRequest: true }))
          .reject((actions, err) => {
             throw new Error(`Failed to create Members. Reason: ${err}`) 
          })

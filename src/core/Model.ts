@@ -1,10 +1,9 @@
 import { IQualifiedObject, QualifiedObject } from './QualifiedObject'
 import { EditHandler } from './Edit';
 import { INamespace } from './Namespace';
-import { EventHandler } from './events/EventRouter';
-import { IEvent } from './events/Base';
 import { MemberCollection, IMemberCollection } from './collections/MemberCollection';
 import { IProjectContext } from './Project';
+import { ModelRenameAction } from './actions/Model';
 
 
 export interface IModelListener {
@@ -19,7 +18,6 @@ export class ModelEdit {
 export interface IModel extends IQualifiedObject {
    readonly members: IMemberCollection
    apply(model: EditHandler<ModelEdit>): Promise<IModel>
-   on<T extends IEvent>(handler: EventHandler<T>): void
 }
 
 export class Model extends QualifiedObject implements IModel {
@@ -30,12 +28,16 @@ export class Model extends QualifiedObject implements IModel {
       this.members = new MemberCollection(this, this.context)
    }
 
-   on<T extends IEvent>(handler: EventHandler<T>): void {
-
-   }
-
    apply(model: EditHandler<ModelEdit>): Promise<IModel> {
       return Promise.resolve(this)
+   }
+
+   protected onRename(newName: string): Promise<void> {
+      let rfc = this.rfc.create(new ModelRenameAction(this, this.name, newName))
+
+      return rfc
+         .fulfill(action => this._name = newName)
+         .commit()
    }
 }
 

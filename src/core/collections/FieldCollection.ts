@@ -1,15 +1,16 @@
+import { FieldCreateAction } from '../actions/Instance'
+import { BatchedActions } from '../actions/Actions'
+
 import {
-   Field,
-   FieldCreateAction,
    IField,
+   Field,
    IInstance,
    IMember,
-   ObservableCollection,
-   IProjectContext,
-   BatchedActions } from "..";
-import { ArgumentError } from "../../errors/ArgumentError";
+   IProjectContext } from "..";
 
-export interface IFieldCollection {
+import { NamedCollection, INamedCollection } from './NamedCollection';
+
+export interface IFieldCollection extends INamedCollection<IField> {
    readonly parent: IInstance
 
    // Note: May need a create that takes a Model
@@ -17,11 +18,9 @@ export interface IFieldCollection {
    // 
    create(member: IMember): Promise<IMember>
    createMany(members: Array<IMember>): Promise<Array<IField>>
-
-   get(name: string): IField | undefined
 }
 
-export class FieldCollection extends ObservableCollection<IField> {
+export class FieldCollection extends NamedCollection<IField> {
    readonly parent: IInstance
    readonly context: IProjectContext
 
@@ -34,9 +33,9 @@ export class FieldCollection extends ObservableCollection<IField> {
    async create(member: IMember): Promise<IMember> {
       let field = new Field(this.parent, member, member.value.clone())
 
-      let rfc = this.context.rfcSource.create(new FieldCreateAction(this.parent, field))
+      let rfc = this.context.rfc.create(new FieldCreateAction(field))
 
-      rfc.fulfill(action => this.add(field))
+      rfc.fulfill(async (action) => await this.add(field, { ignoreChangeRequest: true }))
          .commit()
 
       return Promise.resolve(field)
@@ -48,15 +47,15 @@ export class FieldCollection extends ObservableCollection<IField> {
 
       for(let member of members) {
          let field = new Field(this.parent, member, member.value.clone())
-         actions.push(new FieldCreateAction(this.parent, field))
+         actions.push(new FieldCreateAction(field))
          fields.push(field)
       }
 
-      let rfc = this.context.rfcSource.create(new BatchedActions(actions))
+      let rfc = this.context.rfc.create(new BatchedActions(actions))
 
       await rfc
-         .fulfill(acts => {
-            super.add(...fields)
+         .fulfill(async (acts) => {
+            await this.add(fields, { ignoreChangeRequest: true })
          })
          .reject((actions, err) => {
             throw new Error(`Failed to create Members. Reason: ${err}`) 
@@ -64,13 +63,5 @@ export class FieldCollection extends ObservableCollection<IField> {
          .commit()
       
       return fields
-   }
-
-   get(name: string): IField | undefined {
-      if(name == null) {
-         throw new ArgumentError(`name must be valid`)
-      }
-
-      return super.find(field => field.name.toLowerCase() === name.toLowerCase())
    }
 }

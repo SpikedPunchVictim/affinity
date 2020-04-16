@@ -1,28 +1,9 @@
+import { IActionRouter } from "./ActionRouter"
+import { IRfcAction } from "./Actions"
+
 type RfcHandler = (action: IRfcAction, err?: Error) => void
-type RfcChainCallback = (err?: Error) => void
-type RfcChainHandler = (action: IRfcAction, callback: RfcChainCallback) => void
-
-export interface IRfcAction {
-   readonly type: string
-}
-
-export class BatchedActions<T extends IRfcAction> implements IRfcAction {
-   readonly type: string = 'rfc-batched-actions'
-   readonly actions: Array<IRfcAction>
-
-   constructor(actions: Array<IRfcAction>) {
-      this.actions = actions
-   }
-}
-
-
-// interface RequestForChange<T> {
-//    item: T
-// }
 
 export interface IRequestForChange {
-   notify(handler: RfcHandler): IRequestForChange
-   chain(handler: RfcChainHandler): IRequestForChange // chain, join, await
    fulfill(handler: RfcHandler): IRequestForChange
    reject(handler: RfcHandler): IRequestForChange
    commit(): Promise<void>
@@ -33,36 +14,52 @@ export interface IRequestForChangeSource {
 }
 
 export class RequestForChangeSource implements IRequestForChangeSource {
+   readonly router: IActionRouter
+   
+   constructor(router: IActionRouter) {
+      this.router = router
+   }
+
    create(action: IRfcAction): IRequestForChange {
-      return new RequestForChange(action)
+      return new RequestForChange(action, this.router)
    }
 }
 
 export class RequestForChange implements IRequestForChange {
+   readonly router: IActionRouter
    readonly action: IRfcAction
+   private rejects: Array<RfcHandler>
+   private fulfills: Array<RfcHandler>
 
-   constructor(action: IRfcAction) {
+   constructor(action: IRfcAction, router: IActionRouter) {
       this.action = action
-   }
-
-   notify(handler: RfcHandler): IRequestForChange {
-      return this
-   }
-
-   chain(handler: RfcChainHandler): IRequestForChange {
-      return this
+      this.router = router
+      this.fulfills = new Array<RfcHandler>()
+      this.rejects = new Array<RfcHandler>()
    }
 
    fulfill(handler: RfcHandler): IRequestForChange {
+      this.fulfills.push(handler)
       return this
    }
    
    reject(handler: RfcHandler): IRequestForChange {
+      this.rejects.push(handler)
       return this
    }
 
-   commit(): Promise<void> {
-      return Promise.resolve()
+   async commit(): Promise<void> {
+      try {
+         await this.router.raise(this.action)
+
+         for(let handler of this.fulfills) {
+            handler(this.action)
+         }
+      } catch(err) {
+         for(let handler of this.rejects) {
+            handler(this.action, err)
+         }
+      }
    }
 }
 

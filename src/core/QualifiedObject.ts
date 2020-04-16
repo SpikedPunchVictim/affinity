@@ -1,12 +1,17 @@
 // import { RequestForChange } from './RequestForChange'
+import { NamedObject } from './NamedObject'
+
 import { 
    INamedObject,
    INamespace,
-   IProjectContext,
-   NamedObject } from '.'
+   IProjectContext, 
+   IModel,
+   IInstance} from '.'
 
 import { ArgumentError } from '../errors/'
-import { ParentChangeAction } from './Actions'
+import { ParentChangeAction } from './actions/QualifiedObject'
+import { QualifiedObjectType, Switch, as } from './utils'
+import { NameCollisionError } from '../errors/NameCollisionError'
 
 export interface IQualifiedObject extends INamedObject {
    readonly qualifiedName: string
@@ -38,7 +43,7 @@ export class QualifiedObject extends NamedObject {
    }
 
    get rfc() {
-      return this.context.rfcSource
+      return this.context.rfc
    }
 
    readonly context: IProjectContext
@@ -58,12 +63,55 @@ export class QualifiedObject extends NamedObject {
 
    async move(to: INamespace): Promise<IQualifiedObject> {
       // TODO: Validate move
-      let rfc = this.context.rfcSource.create(new ParentChangeAction(this, this.parent, to))
+      let found = await this.context.project.get(QualifiedObjectType.Namespace, to.qualifiedName)
       
-      await rfc
-         .fulfill(action => this._parent = to)
+      if(!found) {
+         throw new ArgumentError(`The 'to' Namespace provided to move() doesn't exist in this project`)
+      }
+
+      // Is there a QualifiedObject with that name already at the destination?
+      let exists = Switch.case<boolean>(this, {
+         Namespace: obj => to.children.get(this.name) !== undefined,
+         Model: obj => to.models.get(this.name) !== undefined,
+         Instance: obj => to.instances.get(this.name) !== undefined
+      })
+
+      if(exists) {
+         throw new NameCollisionError(`A QualifiedObject with that name already exists in the target location`)
+      }
+      
+      let self = this
+      await this.rfc.create(new ParentChangeAction(this, this.parent, to))
+         .fulfill(action => {
+            Switch.case(this, {
+               Namespace: async (obj) => {
+                  await self.parent.children.remove(as<INamespace>(self))
+                  await to.children.add(as<INamespace>(self))
+               },
+               Model: async (obj) => {
+                  await self.parent.models.remove(as<IModel>(self))
+                  await to.models.add(as<IModel>(self))
+               },
+               Instance: async (obj) => {
+                  await self.parent.instances.remove(as<IInstance>(self))
+                  await to.instances.add(as<IInstance>(self))
+               }
+            })
+         })
          .commit()
       
       return this
+   }
+
+   setParent(parent: INamespace): void {
+      this._parent = parent
+   }
+
+   /**
+    * Convert this QualifiedObject into an orphaned object, no longer a part
+    * of the project
+    */
+   protected orphan(): void {
+
    }
 }

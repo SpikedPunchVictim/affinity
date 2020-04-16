@@ -1,20 +1,23 @@
-import { ObservableCollection } from "./ObservableCollection";
 import { IProjectContext } from "../Project";
 import { IModel, Model } from "../Model";
 import { INamespace } from '../Namespace'
+import { NamedCollection, INamedCollection } from "./NamedCollection";
+import { IRequestForChangeSource, ModelCreateAction } from "../actions";
 
-export interface IModelCollection {
+export interface IModelCollection extends INamedCollection<IModel> {
    create(name: string): Promise<IModel>
-   get(name: string): IModel | undefined
-   delete(name: string): Promise<void>
 }
 
 export class ModelCollection 
-   extends ObservableCollection<IModel>
+   extends NamedCollection<IModel>
    implements IModelCollection {
    
    readonly parent: INamespace
    readonly context: IProjectContext
+
+   private get rfc(): IRequestForChangeSource {
+      return this.context.rfc
+   }
    
    constructor(parent: INamespace, context: IProjectContext) {
       super()
@@ -22,30 +25,15 @@ export class ModelCollection
       this.context = context
    }
 
-   create(name: string): Promise<IModel> {
+   async create(name: string): Promise<IModel> {
       let model = new Model(this.parent, name, this.context)
+
+      let rfc = this.rfc.create(new ModelCreateAction(model))
+
+      await rfc
+         .fulfill(async () => await this.add(model, { ignoreChangeRequest: true }))
+         .commit()
+
       return Promise.resolve(model)
-   }
-
-   get(name: string): IModel | undefined {
-      for(let model of super.items) {
-         if(model.name.toLowerCase() === name.toLowerCase()) {
-            return model
-         }
-      }
-
-      return undefined
-   }
-
-   delete(name: string): Promise<void> {
-      let found = this.get(name)
-
-      if(found === undefined) {
-         return Promise.resolve()
-      }
-
-      super.remove(found)
-      
-      return Promise.resolve()
    }
 }

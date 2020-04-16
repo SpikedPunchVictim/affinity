@@ -1,5 +1,4 @@
 import { 
-   IEventRouter,
    INamedObject,
    INamespace,
    IQualifiedObject,
@@ -19,20 +18,32 @@ import {
    ModelCollection,
    NamespaceCollection,
    INamespaceCollection } from './collections'
+
 import { ArgumentError } from '../errors/ArgumentError'
 import { InvalidOperationError } from '../errors'
-
-export type UseHandler = (events: IEventRouter) => void
+import { ActionRouter, IActionRouter } from './actions/ActionRouter'
+import { IPlugin } from './plugins/Plugin'
+import { ProjectOpen, ProjectCommit } from './actions/Project'
 
 export interface IProjectContext {
-   rfcSource: IRequestForChangeSource
+   readonly rfc: IRequestForChangeSource
+   readonly router: IActionRouter
+   readonly project: IProject
 }
 
 class ProjectContext implements IProjectContext {
-   rfcSource: IRequestForChangeSource
+   get rfc(): IRequestForChangeSource {
+      return this.project.rfc
+   }
 
-   constructor(rfcSource?: IRequestForChangeSource) {
-      this.rfcSource = rfcSource || new RequestForChangeSource()
+   get router(): IActionRouter {
+      return this.project.router
+   }
+
+   readonly project: IProject
+
+   constructor(project: IProject) {
+      this.project = project
    }
 }
 
@@ -66,8 +77,10 @@ export interface IProjectOptions {
    rfcSource?: IRequestForChangeSource
 }
 
-interface IProject {
-   root: INamespace
+export interface IProject {
+   readonly root: INamespace
+   readonly router: IActionRouter
+   readonly rfc: IRequestForChangeSource
 
    /**
     * Retrieves the QualifiedObject athe the provided qualified path, or undefined if not found.
@@ -75,7 +88,7 @@ interface IProject {
     * @param qualifiedType The type to retrieve
     * @param qualifiedPath The qualified path
     */
-   get(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<IQualifiedObject | undefined>
+   get<TReturn extends IQualifiedObject>(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<TReturn | undefined>
    
    /**
     * Creates all fo the Namespaces to complete the path. Returns
@@ -103,22 +116,43 @@ interface IProject {
    move(qualifiedType: QualifiedObjectType, fromPath: string, toPath: string): Promise<IQualifiedObject | undefined>
    
    // readonly search: ISearch
-   // use(handler: UseHandler): void
-   // open(): Promise<boolean>
-   // commit(): Promise<boolean>
-   // readonly on: IProjectListener
+   use(plugin: IPlugin): Promise<void>
+   open(): Promise<void>
+   commit(): Promise<void>
 }
 
 export class Project implements IProject {
-   public root: INamespace
+   readonly root: INamespace
    readonly context: IProjectContext
+   readonly router: IActionRouter
+   readonly rfc: IRequestForChangeSource
 
    constructor(options?: IProjectOptions) {
-      this.context = new ProjectContext(options?.rfcSource)
+      this.router = new ActionRouter()
+      this.rfc = options?.rfcSource || new RequestForChangeSource(this.router)
+      this.context = new ProjectContext(this)
       this.root = new RootNamespace(this.context)
    }
 
-   get(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<IQualifiedObject | undefined> {
+   open(): Promise<void> {
+      return this.router.raise(new ProjectOpen(this))
+   }
+
+   commit(): Promise<void> {
+      return this.router.raise(new ProjectCommit(this))
+   }
+
+   get<TReturn extends IQualifiedObject>(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<TReturn | undefined> {
+      if(qualifiedPath == null) {
+         throw new ArgumentError(`qualifiedPath must be valid when calling Project.get()`)
+      }
+      
+      if(qualifiedPath === '' && qualifiedType === QualifiedObjectType.Namespace) {
+         // Note: For Typescript, must convert to parent class before returning as TResult
+         let result = this.root as IQualifiedObject
+         return Promise.resolve(result as TReturn)
+      }
+      
       let parentQPath = parentPath(qualifiedPath)
 
       if(parentQPath === undefined) {
@@ -126,7 +160,10 @@ export class Project implements IProject {
       }
 
       let current: INamespace | undefined = this.root
-      let tokens = parentQPath.split('.')
+
+      let tokens = parentQPath
+         .split('.')
+         .filter(it => it !== '')
 
       for(let token of tokens) {
          current = current.children.get(token)
@@ -147,7 +184,7 @@ export class Project implements IProject {
 
       return result === undefined ?
          Promise.resolve(undefined) :
-         Promise.resolve(result)
+         Promise.resolve(result as TReturn)
    }
 
    async create(qualifiedPath: string): Promise<INamespace> {
@@ -209,6 +246,10 @@ export class Project implements IProject {
       }
 
       return await obj.move(to as INamespace)
+   }
+
+   async use(plugin: IPlugin): Promise<void> {
+      plugin.setup(this, this.router)
    }
 
 }

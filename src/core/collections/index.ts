@@ -1,6 +1,6 @@
+export * from './ObservableCollection'
 export * from './FieldCollection'
 export * from './InstanceCollection'
 export * from './MemberCollection'
 export * from './ModelCollection'
 export * from './NamespaceCollection'
-export * from './ObservableCollection'

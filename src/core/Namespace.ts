@@ -1,7 +1,8 @@
+import { QualifiedObject } from './QualifiedObject'
+
 import { 
    IQualifiedObject,
-   IProjectContext,
-   QualifiedObject } from '.'
+   IProjectContext } from '.'
 
 import { 
    IInstanceCollection,
@@ -10,6 +11,7 @@ import {
    ModelCollection,
    NamespaceCollection,
    INamespaceCollection } from './collections'
+import { NamespaceRenameAction } from './actions'
 
 export interface INamespace extends IQualifiedObject {
    readonly children: INamespaceCollection
@@ -27,5 +29,13 @@ export class Namespace extends QualifiedObject {
       this.children = new NamespaceCollection(this, context)
       this.models = new ModelCollection(this, context)
       this.instances = new InstanceCollection(this, context)
+   }
+
+   protected onRename(newName: string): Promise<void> {
+      let rfc = this.rfc.create(new NamespaceRenameAction(this, this.name, newName))
+
+      return rfc
+         .fulfill(action => this._name = newName)
+         .commit()
    }
 }

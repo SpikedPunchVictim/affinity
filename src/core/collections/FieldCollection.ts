@@ -33,9 +33,11 @@ export class FieldCollection extends NamedCollection<IField> {
    async create(member: IMember): Promise<IMember> {
       let field = new Field(this.parent, member, member.value.clone())
 
-      let rfc = this.context.rfc.create(new FieldCreateAction(field))
-
-      rfc.fulfill(async (action) => await this.add(field, { ignoreChangeRequest: true }))
+      await this.context.rfc.create(new FieldCreateAction(field))
+         .fulfill(async (action) => {
+            await this.add(field, { ignoreChangeRequest: true })
+            return
+         })
          .commit()
 
       return Promise.resolve(field)

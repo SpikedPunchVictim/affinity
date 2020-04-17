@@ -76,6 +76,10 @@ export class ObservableEvents {
    static added: string = 'added'
    static moving: string = 'moving'
    static moved: string = 'moved'
+   static movingIn: string = 'movingIn'
+   static movedIn: string = 'movedIn'
+   static movingOut: string = 'movingOut'
+   static movedOut: string = 'movedOut'
    static removing: string = 'removing'
    static removed: string = 'removed'
 }
@@ -85,6 +89,10 @@ export class EventMap {
    added: string = ObservableEvents.added
    moving: string = ObservableEvents.moving
    moved: string = ObservableEvents.moved
+   movingIn: string = ObservableEvents.movingIn
+   movedIn: string = ObservableEvents.movedIn
+   movingOut: string = ObservableEvents.movingOut
+   movedOut: string = ObservableEvents.movedOut
    removing: string = ObservableEvents.removing
    removed: string = ObservableEvents.removed
 
@@ -108,6 +116,8 @@ export class EventMap {
 export class ObservableChangeRequest<T> {
    add: ChangeRequestAddHandler<T> = () => Promise.resolve(true)
    move: ChangeRequestMoveHandler<T> = () => Promise.resolve(true)
+   moveIn: ChangeRequestAddHandler<T> = () => Promise.resolve(true)
+   moveOut: ChangeRequestRemoveHandler<T> = () => Promise.resolve(true)
    remove: ChangeRequestRemoveHandler<T> = () => Promise.resolve(true)
 
    constructor(handlers?: Partial<ObservableChangeRequest<T>>) {
@@ -134,6 +144,8 @@ export interface IObservableCollection<T> {
    insert(index: number, item: T): Promise<boolean>
    add(args: T | T[]): Promise<boolean>
    move(from: number, to: number): Promise<boolean>
+   moveIn(item: T): Promise<boolean>
+   moveOut(item: T): Promise<boolean>
    clear(options?: ObservableOptions): Promise<boolean>
    remove(items: T | T[]): Promise<boolean>
    removeAt(index: number): Promise<boolean>
@@ -232,6 +244,30 @@ export class ObservableCollection<T>
       let change = new Array<ItemMove<T>>()
       change.push(new ItemMove(this.items[from], from, to))
       return this._move(change, options)
+   }
+
+   moveOut(item: T, options?: ObservableOptions): Promise<boolean> {
+      let index = this.items.indexOf(item)
+
+      if(index === undefined) {
+         throw new Error(`item does not exist in this collection`)
+      }
+
+      let changes = new Array<ItemRemove<T>>(new ItemRemove<T>(item, index))
+      return this._moveOut(changes, options)
+   }
+
+   moveIn(item: T, options?: ObservableOptions): Promise<boolean> {
+      let exists = this.items.indexOf(item) >= 0
+
+      if(exists) {
+         return Promise.resolve(true)
+      }
+
+      let change = new ItemAdd<T>(item, Math.max(0, this.items.length - 1))
+      let changes = new Array<ItemAdd<T>>(change)
+      
+      return this._moveIn(changes, options)
    }
 
    clear(options?: ObservableOptions): Promise<boolean> {
@@ -379,5 +415,53 @@ export class ObservableCollection<T>
       this.emit(this.eventMap.moved, items)
 
       return items.length > 0
+   }
+
+   protected async _moveIn(items: Array<ItemAdd<T>>, options?: ObservableOptions): Promise<boolean> {
+      options = ObservableOptions.defaults(options)
+
+      items.sort(sortByIndex)
+
+      if(options.ignoreChangeRequest === false) {
+         let allowed = await this.changeRequests.moveIn(items, this.items)
+
+         if(!allowed) {
+            return false
+         }
+      }
+
+      this.emit(this.eventMap.movingIn, items)
+
+      for (var i = 0; i < items.length; ++i) {
+         this.items.splice(items[i].index, 0, items[i].item)
+      }
+
+      this.emit(this.eventMap.movedIn, items)
+
+      return true
+   }
+
+   protected async _moveOut(items: Array<ItemRemove<T>>, options?: ObservableOptions): Promise<boolean> {
+      options = ObservableOptions.defaults(options)
+
+      items.sort(sortByIndexReverse)
+
+      if(options.ignoreChangeRequest === false) {
+         let allowed = await this.changeRequests.moveOut(items, this.items)
+
+         if(!allowed) {
+            return false
+         }
+      }
+
+      this.emit(this.eventMap.movingOut, items)
+
+      for (var i = 0; i < items.length; ++i) {
+         this.items.splice(items[i].index, 1)
+      }
+
+      this.emit(this.eventMap.movedOut, items)
+
+      return true
    }
 }

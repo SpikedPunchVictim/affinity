@@ -4,13 +4,11 @@ import { NamedObject } from './NamedObject'
 import { 
    INamedObject,
    INamespace,
-   IProjectContext, 
-   IModel,
-   IInstance} from '.'
+   IProjectContext } from '.'
 
 import { ArgumentError } from '../errors/'
 import { ParentChangeAction } from './actions/QualifiedObject'
-import { QualifiedObjectType, Switch, as } from './utils'
+import { QualifiedObjectType, Switch } from './utils'
 import { NameCollisionError } from '../errors/NameCollisionError'
 
 export interface IQualifiedObject extends INamedObject {
@@ -62,6 +60,10 @@ export class QualifiedObject extends NamedObject {
    }
 
    async move(to: INamespace): Promise<IQualifiedObject> {
+      if(this.parent === to) {
+         return Promise.resolve(this)
+      }
+
       // TODO: Validate move
       let found = await this.context.project.get(QualifiedObjectType.Namespace, to.qualifiedName)
       
@@ -80,23 +82,22 @@ export class QualifiedObject extends NamedObject {
          throw new NameCollisionError(`A QualifiedObject with that name already exists in the target location`)
       }
       
-      let self = this
       await this.rfc.create(new ParentChangeAction(this, this.parent, to))
-         .fulfill(action => {
-            Switch.case(this, {
-               Namespace: async (obj) => {
-                  await self.parent.children.remove(as<INamespace>(self))
-                  await to.children.add(as<INamespace>(self))
-               },
-               Model: async (obj) => {
-                  await self.parent.models.remove(as<IModel>(self))
-                  await to.models.add(as<IModel>(self))
-               },
-               Instance: async (obj) => {
-                  await self.parent.instances.remove(as<IInstance>(self))
-                  await to.instances.add(as<IInstance>(self))
+         .fulfill(async (action) => {
+            let hasMovedOut = false
+
+            try {
+               await this.parent.moveOut(this)
+               hasMovedOut = true
+               await to.moveIn(this)
+            } catch(err) {
+               // Damage control
+               if(hasMovedOut) {
+                  await this.parent.moveIn(this)
+               } else {
+                  throw err
                }
-            })
+            }
          })
          .commit()
       

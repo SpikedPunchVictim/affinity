@@ -3,12 +3,12 @@ import { INamespace } from "../..";
 import { IModel } from "../Model";
 import { IInstance } from "..";
 
-export type QualifiedObjectHandler<T> = (obj?: IQualifiedObject) => T
+export type QualifiedObjectHandler<TParam, TResult> = (obj: TParam) => TResult
 
-export type QualifiedObjectMap<T> = {
-   Instance?: QualifiedObjectHandler<T>
-   Model?: QualifiedObjectHandler<T>
-   Namespace?: QualifiedObjectHandler<T>
+export type QualifiedObjectMap<TParam, TResult> = {
+   Instance: QualifiedObjectHandler<TParam, TResult>
+   Model: QualifiedObjectHandler<TParam, TResult>
+   Namespace: QualifiedObjectHandler<TParam, TResult>
 }
 
 export enum QualifiedObjectType {
@@ -25,38 +25,37 @@ export class Switch {
     * @param obj A QualifiedObject or one of the QualifiedObjectType enum
     * @param map A functional mapping to the code to switch to
     */
-   static case<TReturn>(obj: IQualifiedObject | QualifiedObjectType, map: QualifiedObjectMap<TReturn>): TReturn | undefined {
-      if(typeof(obj) === "number") {
-         switch(obj) {
-            case QualifiedObjectType.Namespace: {
-               return map.Namespace ? map.Namespace() : undefined
-            }
-            case QualifiedObjectType.Model: {
-               return map.Model ? map.Model() : undefined
-            }
-            case QualifiedObjectType.Instance: {
-               return map.Instance ? map.Instance() : undefined
-            }
-            default: {
-               throw new Error(`Unsupported QualifiedObject Type`)
-            }
-         }
+   static case<TReturn>(obj: IQualifiedObject, map: QualifiedObjectMap<IQualifiedObject, TReturn>): TReturn | undefined {
+      if(isNamespace(obj) && map.Namespace) {
+         return map.Namespace(obj)
+      }
 
-      } else {
-         if(isNamespace(obj) && map.Namespace) {
-            return map.Namespace(obj)
-         }
-   
-         if(isModel(obj) && map.Model) {
-            return map.Model(obj)
-         }
-   
-         if(isInstance(obj) && map.Instance) {
-            return map.Instance(obj)
-         }
+      if(isModel(obj) && map.Model) {
+         return map.Model(obj)
+      }
+
+      if(isInstance(obj) && map.Instance) {
+         return map.Instance(obj)
       }
 
       return undefined
+   }
+
+   static onType<TReturn>(type: QualifiedObjectType, map: QualifiedObjectMap<void, TReturn>): TReturn {
+      switch(type) {
+         case QualifiedObjectType.Namespace: {
+            return map.Namespace()
+         }
+         case QualifiedObjectType.Model: {
+            return map.Model()
+         }
+         case QualifiedObjectType.Instance: {
+            return map.Instance()
+         }
+         default: {
+            throw new Error(`Unsupported QualifiedObject Type`)
+         }
+      }
    }
 }
 

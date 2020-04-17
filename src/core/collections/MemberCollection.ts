@@ -33,9 +33,12 @@ export class MemberCollection extends NamedCollection<IMember> {
 
    async create(name: string, value: IValue): Promise<IMember> {
       let member = new Member(name, value)
-      let rfc = this.context.rfc.create(new MemberCreateAction(member))
 
-      rfc.fulfill(async () => await this.add(member, { ignoreChangeRequest: true }))
+      await this.context.rfc.create(new MemberCreateAction(member))
+         .fulfill(async () => {
+            await this.add(member, { ignoreChangeRequest: true })
+            return
+         })
          .commit()
 
       return Promise.resolve(member)
@@ -51,10 +54,11 @@ export class MemberCollection extends NamedCollection<IMember> {
          members.push(member)
       }
 
-      let rfc = this.context.rfc.create(new BatchedActions(actions))
-
-      await rfc
-         .fulfill(async (acts) => await this.add(members, { ignoreChangeRequest: true }))
+      await this.context.rfc.create(new BatchedActions(actions))
+         .fulfill(async (acts) => {
+            await this.add(members, { ignoreChangeRequest: true })
+            return
+         })
          .reject((actions, err) => {
             throw new Error(`Failed to create Members. Reason: ${err}`) 
          })

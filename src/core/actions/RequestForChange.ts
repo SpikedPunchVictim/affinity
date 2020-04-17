@@ -1,7 +1,7 @@
 import { IActionRouter } from "./ActionRouter"
 import { IRfcAction } from "./Actions"
 
-type RfcHandler = (action: IRfcAction, err?: Error) => void
+type RfcHandler = (action: IRfcAction, err?: Error) => Promise<void>
 
 export interface IRequestForChange {
    fulfill(handler: RfcHandler): IRequestForChange
@@ -53,7 +53,7 @@ export class RequestForChange implements IRequestForChange {
          await this.router.raise(this.action)
 
          for(let handler of this.fulfills) {
-            handler(this.action)
+            await handler(this.action)
          }
       } catch(err) {
          for(let handler of this.rejects) {

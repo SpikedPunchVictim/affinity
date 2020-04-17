@@ -1,29 +1,17 @@
 import { 
-   INamedObject,
-   INamespace,
-   IQualifiedObject,
-   IRequestForChangeSource,
-   RequestForChangeSource } from '.'
-
-import { 
    basename,
    parentPath,
    QualifiedObjectType,
    Switch } from './utils'
 
-import {
-   IInstanceCollection,
-   IModelCollection,
-   InstanceCollection,
-   ModelCollection,
-   NamespaceCollection,
-   INamespaceCollection } from './collections'
-
-import { ArgumentError } from '../errors/ArgumentError'
-import { InvalidOperationError } from '../errors'
-import { ActionRouter, IActionRouter } from './actions/ActionRouter'
+import { IRequestForChangeSource, RequestForChangeSource } from './actions/RequestForChange'
+import { INamespace, RootNamespace } from './Namespace'
+import { IQualifiedObject } from './QualifiedObject'
 import { IPlugin } from './plugins/Plugin'
+import { ActionRouter, IActionRouter } from './actions/ActionRouter'
 import { ProjectOpen, ProjectCommit } from './actions/Project'
+import { ArgumentError } from '../errors/ArgumentError'
+import { InvalidOperationError } from '../errors/InvalidOperationError'
 
 export interface IProjectContext {
    readonly rfc: IRequestForChangeSource
@@ -44,32 +32,6 @@ class ProjectContext implements IProjectContext {
 
    constructor(project: IProject) {
       this.project = project
-   }
-}
-
-class RootNamespace implements INamespace {
-   context: IProjectContext
-   children: INamespaceCollection
-   models: IModelCollection
-   instances: IInstanceCollection
-
-   readonly name: string = ''
-   readonly qualifiedName: string = ''
-   readonly parent: INamespace | null = null
-
-   constructor(context: IProjectContext) {
-      this.context = context
-      this.children = new NamespaceCollection(this, context)
-      this.models = new ModelCollection(this, this.context)
-      this.instances = new InstanceCollection(this, this.context)
-   }
-
-   move(to: INamespace): Promise<IQualifiedObject> {
-      throw new Error(`Cannot move the Root Namespace`)
-   }
-
-   rename(name: string) : Promise<INamedObject> {
-      throw new Error(`Cannot rename the Root Namespace`)
    }
 }
 
@@ -176,7 +138,7 @@ export class Project implements IProject {
       // current is the Parent Namespace at this point
       let baseQPath = basename(qualifiedPath)
 
-      let result = Switch.case<IQualifiedObject | undefined>(qualifiedType, {
+      let result = Switch.onType<IQualifiedObject | undefined>(qualifiedType, {
          Namespace: () => current?.children.get(baseQPath),
          Model: () => current?.models.get(baseQPath),
          Instance: () => current?.instances.get(baseQPath)
@@ -225,7 +187,7 @@ export class Project implements IProject {
 
       let baseQName = basename(qualifiedPath)
 
-      return Switch.case(qualifiedType, {
+      return Switch.onType(qualifiedType, {
          Namespace: () => parent?.children.delete(baseQName),
          Model: () => parent?.models.delete(baseQName),
          Instance: () => parent?.instances.delete(baseQName)

@@ -2,13 +2,14 @@ import 'mocha'
 import { expect } from 'chai'
 
 import { QualifiedObjectType } from '../src/core/utils'
-import { validateQualifiedPath } from './utils/validate'
+import { validateQualifiedPath, doesReject } from './utils/validate'
 
 import { 
    INamespace,
    Project, 
    IModel,
    IInstance} from '../src/core'
+import { fill } from './utils/create'
 
 describe('Namespaces', function() {
    it('Should be able to create a Namespace', async function() {
@@ -187,7 +188,21 @@ describe('Namespaces', function() {
       expect(qInst1).to.be.undefined
       expect(qInst2).to.be.undefined
       expect(three).to.be.undefined
+   })
 
-      // TODO
+   it(`Should error when there's a name collision during a move`, async function() {
+      let project = await fill({
+         instances: [
+            'one.two.three.one',
+            'one.two.one'
+         ]
+      })
+
+      let model1 = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.three.one')
+      let parent2 = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one.two')
+
+      // @ts-ignore
+      let didThrow = await doesReject(async () => { await model1.move(parent2) })
+      expect(didThrow).to.be.true
    })
 })

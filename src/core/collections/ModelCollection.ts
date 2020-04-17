@@ -28,12 +28,13 @@ export class ModelCollection
    async create(name: string): Promise<IModel> {
       let model = new Model(this.parent, name, this.context)
 
-      let rfc = this.rfc.create(new ModelCreateAction(model))
-
-      await rfc
-         .fulfill(async () => await this.add(model, { ignoreChangeRequest: true }))
+      await this.rfc.create(new ModelCreateAction(model))
+         .fulfill(async () => {
+            await this.add(model, { ignoreChangeRequest: true })
+            return
+         })
          .commit()
 
-      return Promise.resolve(model)
+      return model
    }
 }

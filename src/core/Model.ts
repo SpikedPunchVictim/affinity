@@ -36,7 +36,10 @@ export class Model extends QualifiedObject implements IModel {
       let rfc = this.rfc.create(new ModelRenameAction(this, this.name, newName))
 
       return rfc
-         .fulfill(action => this._name = newName)
+         .fulfill(() => {
+            this._name = newName
+            return Promise.resolve()
+         })
          .commit()
    }
 }

@@ -5,8 +5,6 @@ import { NamedCollection, INamedCollection } from "./NamedCollection";
 import { EventMap, ItemAdd, ItemMove, ItemRemove } from "./ObservableCollection";
 import { Events } from "../Events";
 import { IRfcAction } from "../actions/Actions";
-import { as } from "../utils/Types";
-import { QualifiedObject } from "../QualifiedObject";
 
 export interface INamespaceCollection extends INamedCollection<INamespace> {
    create(name: string): Promise<INamespace>
@@ -40,6 +38,8 @@ export class NamespaceCollection
       this.changeRequests = {
          add: this.onAdd,
          move: this.onMove,
+         moveIn: this.onMoveIn,
+         moveOut: this.onMoveOut,
          remove: this.onRemove
       }
    }
@@ -53,17 +53,14 @@ export class NamespaceCollection
                await this.add(namespace, { ignoreChangeRequest: true })
                return resolve(namespace)
             })
-            .reject((action: IRfcAction, err?: Error) => reject(err))
+            .reject(async (action: IRfcAction, err?: Error) => {
+               return reject(err)
+            })
             .commit()      
       })
    }
 
    async onAdd(items: Array<ItemAdd<INamespace>>, array: Array<INamespace>): Promise<boolean> {
-      for(let item of items) {
-         let obj = as<QualifiedObject>(item.item)
-         obj.setParent(this.parent) 
-      }
-
       return true
    }
 
@@ -72,6 +69,14 @@ export class NamespaceCollection
    }
 
    async onRemove(items: Array<ItemRemove<INamespace>>, array: Array<INamespace>): Promise<boolean> {
+      return true
+   }
+
+   async onMoveIn(items: Array<ItemAdd<INamespace>>): Promise<boolean> {
+      return true
+   }
+
+   async onMoveOut(items: Array<ItemRemove<INamespace>>): Promise<boolean> {
       return true
    }
 }

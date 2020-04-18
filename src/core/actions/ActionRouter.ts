@@ -3,8 +3,8 @@ import { IRfcAction } from "./Actions"
 export type ActionHandler<T extends IRfcAction> = (action: T) => Promise<void>
 
 export interface IActionRouter {
-   on<T extends IRfcAction>(event: ActionHandler<T>): void
-   raise<T extends IRfcAction>(action: IRfcAction): Promise<void>
+   on<T extends IRfcAction>(type: string, handler: ActionHandler<T>): void
+   raise(action: IRfcAction): Promise<void>
 }
 
 export class ActionRouter implements IActionRouter {
@@ -17,15 +17,15 @@ export class ActionRouter implements IActionRouter {
       this._handlerMap = new Map<string, Array<ActionHandler<any>>>()
    }
 
-   on<T extends IRfcAction>(action: ActionHandler<T>): void {
-      let found = this._handlerMap.get(action.name)
+   on<T extends IRfcAction>(type: string, handler: ActionHandler<T>): void {
+      let found = this._handlerMap.get(type)
 
       if(found === undefined) {
          let array = new Array<ActionHandler<T>>()
-         array.push(action)
-         this._handlerMap.set(action.name, array)
+         array.push(handler)
+         this._handlerMap.set(type, array)
       } else {
-         found.push(action)
+         found.push(handler)
       }
    }
 

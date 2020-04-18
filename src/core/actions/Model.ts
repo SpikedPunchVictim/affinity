@@ -43,6 +43,15 @@ export class MemberCreateAction extends CreateAction<IMember> {
       super(MemberCreateAction.type, member)
    }
 }
+
+export class MemberDeleteAction extends DeleteAction<IMember> {
+   static readonly type: string = 'member-delete'
+
+   constructor(member: IMember) {
+      super(MemberDeleteAction.type, member)
+   }
+}
+
 export class MemberRenameAction extends RenameAction<IMember> {
    static readonly type: string = 'member-rename'
 

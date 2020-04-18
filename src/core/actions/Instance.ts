@@ -1,4 +1,4 @@
-import { CreateAction, DeleteAction, RenameAction, MoveAction } from "./Actions"
+import { CreateAction, DeleteAction, RenameAction, MoveAction, ReorderAction } from "./Actions"
 import { IInstance } from "../Instance"
 import { IField } from "../Field"
 import { INamespace } from "../.."
@@ -58,5 +58,13 @@ export class FieldRenameAction extends RenameAction<IField> {
 
    constructor(field: IField, from: string, to: string) {
       super(InstanceRenameAction.type, field, from, to)
+   }
+}
+
+export class FieldReorderAction extends ReorderAction<IField> {
+   static readonly type: string = 'field-reorder'
+
+   constructor(field: IField, from: number, to: number) {
+      super(FieldReorderAction.type, field, from, to)
    }
 }

@@ -9,7 +9,7 @@ import { INamespace, RootNamespace } from './Namespace'
 import { IQualifiedObject } from './QualifiedObject'
 import { IPlugin } from './plugins/Plugin'
 import { ActionRouter, IActionRouter } from './actions/ActionRouter'
-import { ProjectOpen, ProjectCommit } from './actions/Project'
+import { ProjectOpenAction, ProjectCommitAction } from './actions/Project'
 import { ArgumentError } from '../errors/ArgumentError'
 import { InvalidOperationError } from '../errors/InvalidOperationError'
 
@@ -97,11 +97,11 @@ export class Project implements IProject {
    }
 
    open(): Promise<void> {
-      return this.router.raise(new ProjectOpen(this))
+      return this.router.raise(new ProjectOpenAction(this))
    }
 
    commit(): Promise<void> {
-      return this.router.raise(new ProjectCommit(this))
+      return this.router.raise(new ProjectCommitAction(this))
    }
 
    get<TReturn extends IQualifiedObject>(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<TReturn | undefined> {
@@ -211,7 +211,6 @@ export class Project implements IProject {
    }
 
    async use(plugin: IPlugin): Promise<void> {
-      plugin.setup(this, this.router)
+      await plugin.setup(this, this.router)
    }
-
 }

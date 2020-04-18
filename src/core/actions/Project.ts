@@ -2,24 +2,24 @@ import { RfcAction } from "./Actions"
 import { IProject } from "../Project"
 
 
-export class ProjectOpen extends RfcAction {
+export class ProjectOpenAction extends RfcAction {
    static readonly type: string = 'project-open'
-   readonly type: string = ProjectOpen.type
+   readonly type: string = ProjectOpenAction.type
    readonly project: IProject
 
    constructor(project: IProject) {
-      super(ProjectOpen.type)
+      super(ProjectOpenAction.type)
       this.project = project
    }
 }
 
-export class ProjectCommit extends RfcAction {
+export class ProjectCommitAction extends RfcAction {
    static readonly type: string = 'project-commit'
-   readonly type: string = ProjectOpen.type
+   readonly type: string = ProjectOpenAction.type
    readonly project: IProject
 
    constructor(project: IProject) {
-      super(ProjectOpen.type)
+      super(ProjectOpenAction.type)
       this.project = project
    }
 }

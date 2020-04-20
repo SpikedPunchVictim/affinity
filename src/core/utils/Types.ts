@@ -2,6 +2,8 @@ import { IQualifiedObject } from "../QualifiedObject";
 import { INamespace } from "../..";
 import { IModel } from "../Model";
 import { IInstance } from "..";
+import { UnsupportedError } from "../../errors/UnsupportedError";
+import { IObservableCollection } from "../collections";
 
 export type QualifiedObjectHandler<TParam, TResult> = (obj: TParam) => TResult
 
@@ -25,20 +27,20 @@ export class Switch {
     * @param obj A QualifiedObject or one of the QualifiedObjectType enum
     * @param map A functional mapping to the code to switch to
     */
-   static case<TReturn>(obj: IQualifiedObject, map: QualifiedObjectMap<IQualifiedObject, TReturn>): TReturn | undefined {
-      if(isNamespace(obj) && map.Namespace) {
+   static case<TReturn>(obj: IQualifiedObject, map: QualifiedObjectMap<IQualifiedObject, TReturn>): TReturn {
+      if(isNamespace(obj)) {
          return map.Namespace(obj)
       }
 
-      if(isModel(obj) && map.Model) {
+      if(isModel(obj)) {
          return map.Model(obj)
       }
 
-      if(isInstance(obj) && map.Instance) {
+      if(isInstance(obj)) {
          return map.Instance(obj)
       }
 
-      return undefined
+      throw new UnsupportedError(`Unsupported QualifiedObject type encountered in Switch.case()`)
    }
 
    static onType<TReturn>(type: QualifiedObjectType, map: QualifiedObjectMap<void, TReturn>): TReturn {
@@ -73,4 +75,8 @@ export function isInstance(obj: IQualifiedObject): obj is IInstance {
 
 export function as<TResult extends IQualifiedObject>(obj: IQualifiedObject): TResult {
    return obj as TResult
+}
+
+export function asCollection<T, TResult extends IObservableCollection<T>>(collection: IObservableCollection<T>): TResult {
+   return collection as TResult
 }

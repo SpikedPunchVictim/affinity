@@ -1,11 +1,15 @@
 import { NotImplementedError } from "../errors/NotImplementedError"
+import { EventEmitter } from "events"
 
 export interface INamedObject {
    readonly name: string
    rename(name: string): Promise<INamedObject>
 }
 
-export abstract class NamedObject implements INamedObject {
+export abstract class NamedObject 
+   extends EventEmitter 
+   implements INamedObject {
+   
    get name(): string {
       return this._name
    }
@@ -13,6 +17,7 @@ export abstract class NamedObject implements INamedObject {
    protected _name: string = ''
 
    constructor(name: string) {
+      super()
       this._name = name
    }
 

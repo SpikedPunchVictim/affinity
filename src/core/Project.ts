@@ -12,10 +12,12 @@ import { ActionRouter, IActionRouter } from './actions/ActionRouter'
 import { ProjectOpenAction, ProjectCommitAction } from './actions/Project'
 import { ArgumentError } from '../errors/ArgumentError'
 import { InvalidOperationError } from '../errors/InvalidOperationError'
+import { IOrchestrator, Orchestrator } from './Orchestrator'
 
 export interface IProjectContext {
    readonly rfc: IRequestForChangeSource
    readonly router: IActionRouter
+   readonly orchestrator: IOrchestrator
    readonly project: IProject
 }
 
@@ -29,9 +31,11 @@ class ProjectContext implements IProjectContext {
    }
 
    readonly project: IProject
+   readonly orchestrator: IOrchestrator
 
    constructor(project: IProject) {
       this.project = project
+      this.orchestrator = new Orchestrator(project, this)
    }
 }
 

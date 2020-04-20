@@ -4,9 +4,9 @@ import {
    IProjectContext, 
    IModel } from ".."
 
-import { Instance } from ".."
 import { NamedCollection, INamedCollection } from './NamedCollection'
-import { InstanceCreateAction, IRequestForChangeSource } from "../actions"
+import { IRequestForChangeSource } from "../actions"
+import { IOrchestrator } from "../Orchestrator"
 
 export interface IInstanceCollection extends INamedCollection<IInstance> {
    create(name: string, model: IModel): Promise<IInstance>
@@ -19,8 +19,8 @@ export class InstanceCollection
    readonly parent: INamespace
    readonly context: IProjectContext
 
-   private get rfc(): IRequestForChangeSource {
-      return this.context.rfc
+   get orchestrator(): IOrchestrator {
+      return this.context.orchestrator
    }
    
    constructor(parent: INamespace, context: IProjectContext) {
@@ -30,16 +30,6 @@ export class InstanceCollection
    }
 
    async create(name: string, model: IModel): Promise<IInstance> {
-      let instance = new Instance(this.parent, model, name, this.context)
-
-      let rfc = this.rfc.create(new InstanceCreateAction(instance))
-
-      await rfc
-         .fulfill(async () => {
-            await this.add(instance, { ignoreChangeRequest: true })
-         })
-         .commit()
-
-      return Promise.resolve(instance)
+      return this.orchestrator.createInstance(this.parent, model, name)
    }
 }

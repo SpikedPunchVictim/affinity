@@ -61,15 +61,15 @@ export class ItemMove<T> extends IndexableItem<T> {
    }
 }
 
-export class ObservableOptions {
-   ignoreChangeRequest?: boolean
+// export class ObservableOptions {
+//    ignoreChangeRequest?: boolean
 
-   static defaults(options?: ObservableOptions) {
-      options = options || {}
-      options.ignoreChangeRequest = options.ignoreChangeRequest || false
-      return options
-   }
-}
+//    static defaults() {
+//       options = options || {}
+//       options.ignoreChangeRequest = options.ignoreChangeRequest || false
+//       return options
+//    }
+// }
 
 export class ObservableEvents {
    static adding: string = 'adding'
@@ -84,29 +84,29 @@ export class ObservableEvents {
    static removed: string = 'removed'
 }
 
-export class EventMap {
-   adding: string = ObservableEvents.adding
-   added: string = ObservableEvents.added
-   moving: string = ObservableEvents.moving
-   moved: string = ObservableEvents.moved
-   movingIn: string = ObservableEvents.movingIn
-   movedIn: string = ObservableEvents.movedIn
-   movingOut: string = ObservableEvents.movingOut
-   movedOut: string = ObservableEvents.movedOut
-   removing: string = ObservableEvents.removing
-   removed: string = ObservableEvents.removed
+// export class EventMap {
+//    adding: string = ObservableEvents.adding
+//    added: string = ObservableEvents.added
+//    moving: string = ObservableEvents.moving
+//    moved: string = ObservableEvents.moved
+//    movingIn: string = ObservableEvents.movingIn
+//    movedIn: string = ObservableEvents.movedIn
+//    movingOut: string = ObservableEvents.movingOut
+//    movedOut: string = ObservableEvents.movedOut
+//    removing: string = ObservableEvents.removing
+//    removed: string = ObservableEvents.removed
 
-   constructor(values?: Partial<EventMap>) {
-      if(values) {
-         Object.keys(values)
-            .forEach(k => {
-               if(this[k]) {
-                  this[k] = values[k]
-               }
-            })
-      }
-   }
-}
+//    constructor(values?: Partial<EventMap>) {
+//       if(values) {
+//          Object.keys(values)
+//             .forEach(k => {
+//                if(this[k]) {
+//                   this[k] = values[k]
+//                }
+//             })
+//       }
+//    }
+// }
 
 /**
  * This class holds the Change Request Handlers
@@ -146,7 +146,7 @@ export interface IObservableCollection<T> {
    move(from: number, to: number): Promise<boolean>
    moveIn(item: T): Promise<boolean>
    moveOut(item: T): Promise<boolean>
-   clear(options?: ObservableOptions): Promise<boolean>
+   clear(): Promise<boolean>
    remove(items: T | T[]): Promise<boolean>
    removeAt(index: number): Promise<boolean>
    removeAll(filter: PredicateHandler<T>): Promise<boolean>
@@ -157,21 +157,114 @@ export class ObservableCollection<T>
    implements IObservableCollection<T> {
 
    protected items: Array<T>
-   protected eventMap: EventMap
    protected changeRequests: ObservableChangeRequest<T>
 
    constructor(
-      eventMap: EventMap = new EventMap(),
       changeRequests: ObservableChangeRequest<T> = new ObservableChangeRequest<T>()
    ) {
       super()
       this.items = new Array<T>()
-      this.eventMap = eventMap
       this.changeRequests = changeRequests
    }
 
    get length(): number {
       return this.items.length
+   }
+
+   createAddChangelist(items: T | T[]): ItemAdd<T>[] {
+      let change = new Array<ItemAdd<T>>()
+
+      if(!Array.isArray(items)) {
+         items = [items]
+      }
+
+      for (let i = 0; i < items.length; ++i) {
+         let item: T = items[i]
+         change.push(new ItemAdd(item, this.length + i))
+      }
+
+      // Sort by index to preserve order when adding
+      change.sort(sortByIndex)
+
+      return change
+   }
+
+   createMoveChangelist(from: number, to: number): Array<ItemMove<T>> {
+      if (from < 0 || from >= this.length) {
+         throw new IndexOutOfRangeError(from)
+      }
+
+      if (to < 0 || to >= this.length) {
+         throw new IndexOutOfRangeError(to)
+      }
+
+      if (from == to) {
+         return new Array<ItemMove<T>>()
+      }
+
+      let change = new Array<ItemMove<T>>()
+      change.push(new ItemMove(this.items[from], from, to))
+
+      // Sort by the index they are going to. This prevents
+      // items being added at the bottom of the list, and its
+      // index being updated by adding an item above it in the list.
+      change.sort((a: ItemMove<T>, b: ItemMove<T>) =>  a.to - b.to)
+
+      return change
+   }
+
+   createRemoveChangelist(items: T | T[]): Array<ItemRemove<T>> {
+      let changes = new Array<ItemRemove<T>>()
+
+      if(!Array.isArray(items)) {
+         items = [items]
+      }
+
+      for(let item of items) {
+         let itemIndex = this.items.indexOf(item)
+
+         if (itemIndex < 0) {
+            continue
+         }
+
+         changes.push(new ItemRemove(item, itemIndex))
+      }
+
+      return changes
+   }
+
+   performAdd(items: Array<ItemAdd<T>>): void {
+      // Sort before raising events
+      // Add from the front of the Array to the back
+      // to preserve intended index ordering
+      items.sort(sortByIndex)
+
+      for (var i = 0; i < items.length; ++i) {
+         this.items.splice(items[i].index, 0, items[i].item)
+      }
+   }
+
+   performRemove(items: Array<ItemRemove<T>>): void {
+      // Safely remove the items from the end &
+      // sort before raising events
+      items.sort(sortByIndexReverse)
+
+      for (var i = 0; i < items.length; ++i) {
+         this.items.splice(items[i].index, 1)
+      }
+   }
+
+   performMove(items: Array<ItemMove<T>>): void {
+      // Sort by the index they are going to. This prevents
+      // items being added at the bottom of the list, and its
+      // index being updated by adding an item above it in the list.
+      items.sort((a: ItemMove<T>, b: ItemMove<T>) =>  a.to - b.to)
+
+      for (var i = 0; i < items.length; ++i) {
+         let current = items[i]
+         this.items.splice(current.from, 1)
+         this.items.splice(current.to, 0, current.item)
+      }
    }
 
    at(index: number): T | undefined {
@@ -202,7 +295,7 @@ export class ObservableCollection<T>
       return this.items.filter(visit)
    }
 
-   insert(index: number, item: T, options?: ObservableOptions): Promise<boolean> {
+   insert(index: number, item: T): Promise<boolean> {
       if (index < 0 || index > this.length) {
          throw new IndexOutOfRangeError(index)
       }
@@ -210,10 +303,10 @@ export class ObservableCollection<T>
       let change = new Array<ItemAdd<T>>()
       change.push(new ItemAdd<T>(item, index))
       
-      return this._add(change, options)
+      return this._add(change)
    }
 
-   add(args: T | T[], options?: ObservableOptions): Promise<boolean> {
+   add(args: T | T[]): Promise<boolean> {
       var change = new Array<ItemAdd<T>>()
 
       if(!Array.isArray(args)) {
@@ -225,10 +318,10 @@ export class ObservableCollection<T>
          change.push(new ItemAdd(item, this.length + i))
       }
 
-      return this._add(change, options);
+      return this._add(change);
    }
 
-   move(from: number, to: number, options?: ObservableOptions): Promise<boolean> {
+   move(from: number, to: number): Promise<boolean> {
       if (from < 0 || from >= this.length) {
          throw new IndexOutOfRangeError(from)
       }
@@ -243,10 +336,10 @@ export class ObservableCollection<T>
 
       let change = new Array<ItemMove<T>>()
       change.push(new ItemMove(this.items[from], from, to))
-      return this._move(change, options)
+      return this._move(change)
    }
 
-   moveOut(item: T, options?: ObservableOptions): Promise<boolean> {
+   moveOut(item: T): Promise<boolean> {
       let index = this.items.indexOf(item)
 
       if(index === undefined) {
@@ -254,10 +347,10 @@ export class ObservableCollection<T>
       }
 
       let changes = new Array<ItemRemove<T>>(new ItemRemove<T>(item, index))
-      return this._moveOut(changes, options)
+      return this._moveOut(changes)
    }
 
-   moveIn(item: T, options?: ObservableOptions): Promise<boolean> {
+   moveIn(item: T): Promise<boolean> {
       let exists = this.items.indexOf(item) >= 0
 
       if(exists) {
@@ -267,20 +360,20 @@ export class ObservableCollection<T>
       let change = new ItemAdd<T>(item, Math.max(0, this.items.length - 1))
       let changes = new Array<ItemAdd<T>>(change)
       
-      return this._moveIn(changes, options)
+      return this._moveIn(changes)
    }
 
-   clear(options?: ObservableOptions): Promise<boolean> {
+   clear(): Promise<boolean> {
       let changes = new Array<ItemRemove<T>>()
 
       for (let i = 0; i < this.items.length; ++i) {
          changes.push(new ItemRemove(this.items[i], i))
       }
 
-      return this._remove(changes, options);
+      return this._remove(changes);
    }
 
-   remove(items: T | T[], options?: ObservableOptions): Promise<boolean> {
+   remove(items: T | T[]): Promise<boolean> {
       let changes = new Array<ItemRemove<T>>()
 
       if(!Array.isArray(items)) {
@@ -297,10 +390,10 @@ export class ObservableCollection<T>
          changes.push(new ItemRemove(item, itemIndex))
       }
 
-      return this._remove(changes, options);
+      return this._remove(changes);
    }
 
-   removeAt(index: number, options?: ObservableOptions): Promise<boolean> {
+   removeAt(index: number): Promise<boolean> {
       if (index < 0 || index >= this.length) {
          throw new Error(`Index out of bouds when removing at index ${index}`)
       }
@@ -310,10 +403,10 @@ export class ObservableCollection<T>
       let changes = new Array<ItemRemove<T>>()
       changes.push(new ItemRemove(item, index))
 
-      return this._remove(changes, options)
+      return this._remove(changes)
    }
 
-   removeAll(filter: PredicateHandler<T>, options?: ObservableOptions): Promise<boolean> {
+   removeAll(filter: PredicateHandler<T>): Promise<boolean> {
       if (this.items.length <= 0 || filter == null || filter === undefined) {
          return Promise.resolve(false)
       }
@@ -332,24 +425,14 @@ export class ObservableCollection<T>
          return Promise.resolve(false)
       }
 
-      return this._remove(toRemove, options)
+      return this._remove(toRemove)
    }
 
-   protected async _add(items: Array<ItemAdd<T>>, options?: ObservableOptions): Promise<boolean> {
+   protected async _add(items: Array<ItemAdd<T>>): Promise<boolean> {
       // Sort before raising events
       // Add from the front of the Array to the back
       // to preserve intended index ordering
       items.sort(sortByIndex)
-
-      options = ObservableOptions.defaults(options)
-
-      if(options.ignoreChangeRequest === false) {
-         let allowed = await this.changeRequests.add(items, this.items)
-
-         if(!allowed) {
-            return false
-         }
-      }
 
       this.emit(this.eventMap.adding, items)
 
@@ -362,7 +445,7 @@ export class ObservableCollection<T>
       return true
    }
 
-   protected async _remove(items: Array<ItemRemove<T>>, options?: ObservableOptions): Promise<boolean> {
+   protected async _remove(items: Array<ItemRemove<T>>): Promise<boolean> {
       options = ObservableOptions.defaults(options)
 
       // Safely remove the items from the end &
@@ -388,7 +471,7 @@ export class ObservableCollection<T>
       return true
    }
 
-   protected async _move(items: Array<ItemMove<T>>, options?: ObservableOptions): Promise<boolean> {
+   protected async _move(items: Array<ItemMove<T>>): Promise<boolean> {
       options = ObservableOptions.defaults(options)
 
       // Sort by the index they are going to. This prevents
@@ -417,7 +500,7 @@ export class ObservableCollection<T>
       return items.length > 0
    }
 
-   protected async _moveIn(items: Array<ItemAdd<T>>, options?: ObservableOptions): Promise<boolean> {
+   protected async _moveIn(items: Array<ItemAdd<T>>): Promise<boolean> {
       options = ObservableOptions.defaults(options)
 
       items.sort(sortByIndex)
@@ -441,7 +524,7 @@ export class ObservableCollection<T>
       return true
    }
 
-   protected async _moveOut(items: Array<ItemRemove<T>>, options?: ObservableOptions): Promise<boolean> {
+   protected async _moveOut(items: Array<ItemRemove<T>>): Promise<boolean> {
       options = ObservableOptions.defaults(options)
 
       items.sort(sortByIndexReverse)

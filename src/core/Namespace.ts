@@ -15,16 +15,14 @@ import {
    NamespaceCollection,
    INamespaceCollection } from './collections'
    
-import { NamespaceRenameAction } from './actions'
 import { Switch, as } from './utils'
 import { ArgumentError } from '../errors'
+import { EventEmitter } from 'events'
 
 export interface INamespace extends IQualifiedObject {
    readonly children: INamespaceCollection
    readonly models: IModelCollection
    readonly instances: IInstanceCollection
-   moveIn(obj: IQualifiedObject): Promise<IQualifiedObject>
-   moveOut(obj: IQualifiedObject): Promise<IQualifiedObject>
 }
 
 export class Namespace extends QualifiedObject {
@@ -39,28 +37,15 @@ export class Namespace extends QualifiedObject {
       this.instances = new InstanceCollection(this, context)
    }
 
-   protected onRename(newName: string): Promise<void> {
-      let rfc = this.rfc.create(new NamespaceRenameAction(this, this.name, newName))
-
-      return rfc
-         .fulfill(action => {
-            this._name = newName
-            return Promise.resolve()
-         })
-         .commit()
-   }
-
-   moveIn(obj: IQualifiedObject): Promise<IQualifiedObject> {
-      return moveIn(this, obj)
-   }
-
-   moveOut(obj: IQualifiedObject): Promise<IQualifiedObject> {
-      return moveOut(this, obj)
+   protected async onRename(newName: string): Promise<void> {
+      this.orchestrator.rename(this, newName)
    }
 }
 
-
-export class RootNamespace implements INamespace {
+export class RootNamespace 
+   extends EventEmitter
+   implements INamespace {
+   
    context: IProjectContext
    children: INamespaceCollection
    models: IModelCollection
@@ -71,6 +56,7 @@ export class RootNamespace implements INamespace {
    readonly parent: INamespace | null = null
 
    constructor(context: IProjectContext) {
+      super()
       this.context = context
       this.children = new NamespaceCollection(this, context)
       this.models = new ModelCollection(this, this.context)
@@ -84,42 +70,4 @@ export class RootNamespace implements INamespace {
    rename(name: string): Promise<INamedObject> {
       throw new Error(`Cannot rename the Root Namespace`)
    }
-
-   moveIn(obj: IQualifiedObject): Promise<IQualifiedObject> {
-      return moveIn(this, obj)
-   }
-
-   moveOut(obj: IQualifiedObject): Promise<IQualifiedObject> {
-      return moveOut(this, obj)
-   }
-}
-
-async function moveOut(from: INamespace, obj: IQualifiedObject): Promise<IQualifiedObject> {
-   if(obj == null) {
-      throw new ArgumentError(`obj must be valid when moving between Namespaces`)
-   }
-
-   await Switch.case(obj, {
-      Namespace: async (it) => await from.children.moveOut(as<INamespace>(it)),
-      Model: async (it) => await from.models.moveOut(as<IModel>(it)),
-      Instance: async (it) => await from.instances.moveOut(as<IInstance>(it))
-   })
-
-   return obj
-}
-
-async function moveIn(to: INamespace, obj: IQualifiedObject): Promise<IQualifiedObject> {
-   if(obj == null) {
-      throw new ArgumentError(`obj must be valid when moving between Namespaces`)
-   }
-
-   await Switch.case(obj, {
-      Namespace: async (it) => to.children.moveIn(as<INamespace>(it)),
-      Model: async (it) => to.models.moveIn(as<IModel>(it)),
-      Instance: async (it) => to.instances.moveIn(as<IInstance>(it))
-   })
-
-   let target = as<QualifiedObject>(obj)
-   target.setParent(as<INamespace>(to))
-   return obj
 }

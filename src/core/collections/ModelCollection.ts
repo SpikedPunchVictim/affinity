@@ -1,8 +1,7 @@
 import { IProjectContext } from "../Project";
-import { IModel, Model } from "../Model";
+import { IModel } from "../Model";
 import { INamespace } from '../Namespace'
 import { NamedCollection, INamedCollection } from "./NamedCollection";
-import { IRequestForChangeSource, ModelCreateAction } from "../actions";
 import { IOrchestrator } from "../Orchestrator";
 
 export interface IModelCollection extends INamedCollection<IModel> {
@@ -15,10 +14,6 @@ export class ModelCollection
    
    readonly parent: INamespace
    readonly context: IProjectContext
-
-   private get rfc(): IRequestForChangeSource {
-      return this.context.rfc
-   }
 
    get orchestrator(): IOrchestrator {
       return this.context.orchestrator

@@ -3,8 +3,6 @@ import { QualifiedObject } from './QualifiedObject'
 import { 
    IQualifiedObject,
    IProjectContext, 
-   IModel,
-   IInstance,
    INamedObject} from '.'
 
 import { 
@@ -15,8 +13,6 @@ import {
    NamespaceCollection,
    INamespaceCollection } from './collections'
    
-import { Switch, as } from './utils'
-import { ArgumentError } from '../errors'
 import { EventEmitter } from 'events'
 
 export interface INamespace extends IQualifiedObject {

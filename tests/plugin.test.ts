@@ -37,11 +37,12 @@ import {
 
 import { ProjectOpenAction, ProjectCommitAction } from '../src/core/actions/Project';
 import { QualifiedObjectType } from '../src/core/utils';
+import { fill } from './utils/create';
 
 class TestPlugin implements IPlugin {
    readonly name: string = 'test-only-plugin'
 
-   callMap: Map<string, boolean> = new Map<string, boolean>()
+   callMap: Map<string, IRfcAction> = new Map<string, IRfcAction>()
 
    constructor() {
 
@@ -57,7 +58,7 @@ class TestPlugin implements IPlugin {
 
    register<TAction extends IRfcAction>(router: IActionRouter, type: string): void {
       router.on<TAction>(type, async (action) => {
-         this.callMap.set(type, true)
+         this.callMap.set(type, action)
       })
    }
 
@@ -227,5 +228,31 @@ describe('Plugins', function () {
          })
       }
    })
+
+   /*
+   // TODO:
+   it('Namespace delete returns action in depth first order', function() {
+      let project = fill({
+         namespaces: [
+            'one.two.three.four.ns1',
+            'one.two.three.ns2',
+            'one.two.three.ns3',
+         ],
+         models: [
+            'one.two.three.model1',
+            'one.two.three.model2',
+            'one.two.three.model3',
+            'one.two.three.model4',
+            'one.two.three.four.model5',
+            'one.two.three.four.model6',
+            'one.two.three.four.ns1.model7',
+         ],
+         instances: [
+            'one.two.three.four.inst1',
+            'one.two.three.int2'
+         ]
+      })
+   })
+   */
 
 })

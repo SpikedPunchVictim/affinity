@@ -26,12 +26,31 @@ export interface IQualifiedObjectAccessor<T extends IQualifiedObject> {
 }
 
 export interface ISearch {
-   models: IModelAccessor
-   instances: IInstanceAccessor
-   namespaces: INamespaceAccessor
+   // models: IModelAccessor
+   // instances: IInstanceAccessor
+   // namespaces: INamespaceAccessor
    find<T extends IQualifiedObject>(qualifiedName: string): Promise<T>
    findAll<T extends IQualifiedObject>(pattern: string): Promise<Array<T>>
 }
+
+// export class Search implements ISearch {
+//    readonly project: IProject
+
+//    constructor(project: IProject) {
+//       this.project = project
+//    }
+
+//    findAll<T extends IQualifiedObject>(pattern: string): Promise<Array<T>> {
+//       //@ts-ignore
+//       if(pattern = null) {
+//          throw new ArgumentError(`pattern must be valid`)
+//       }
+
+//       if(pattern.endsWith('**'))
+
+
+//    }
+// }
 
 /*
 

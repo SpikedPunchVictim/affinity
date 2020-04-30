@@ -145,48 +145,49 @@ describe('Namespaces', function() {
    })
 
    it('Deleting Namespace deletes everything under it', async function() {
-      let project = new Project()
+      let project = await fill({
+         models: [
+            'one.two.model1',
+            'one.two.model2'
+         ],
+         instances: [
+            'one.two.inst1',
+            'one.two.inst2'
+         ]
+      })
 
-      await project.create('one.two.three')
-      let two = await project.get(QualifiedObjectType.Namespace, 'one.two') as INamespace
-
-      let model1 = await two.models.create('model1')
-      let model2 = await two.models.create('model2')
-      await two.instances.create('inst1', model1)
-      await two.instances.create('inst2', model2)
-
-      let qModel1 = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model1')
-      let qModel2 = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model2')
-      let qInst1 = await project.get<IModel>(QualifiedObjectType.Instance, 'one.two.inst1')
-      let qInst2 = await project.get<IModel>(QualifiedObjectType.Instance, 'one.two.inst2')
-
-      // @ts-ignore
-      validateQualifiedPath(qModel1, 'one.two.model1')
+      let model1 = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model1')
+      let model2 = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model2')
+      let inst1 = await project.get<IModel>(QualifiedObjectType.Instance, 'one.two.inst1')
+      let inst2 = await project.get<IModel>(QualifiedObjectType.Instance, 'one.two.inst2')
 
       // @ts-ignore
-      validateQualifiedPath(qModel2, 'one.two.model2')
+      validateQualifiedPath(model1, 'one.two.model1')
 
       // @ts-ignore
-      validateQualifiedPath(qInst1, 'one.two.inst1')
+      validateQualifiedPath(model2, 'one.two.model2')
 
       // @ts-ignore
-      validateQualifiedPath(qInst2, 'one.two.inst2')
+      validateQualifiedPath(inst1, 'one.two.inst1')
+
+      // @ts-ignore
+      validateQualifiedPath(inst2, 'one.two.inst2')
 
       let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
 
       // @ts-ignore
       await one.children.delete('two')
 
-      qModel1 = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model1')
-      qModel2 = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model2')
-      qInst1 = await project.get<IModel>(QualifiedObjectType.Instance, 'one.two.inst1')
-      qInst2 = await project.get<IModel>(QualifiedObjectType.Instance, 'one.two.inst2')
+      model1 = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model1')
+      model2 = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model2')
+      inst1 = await project.get<IModel>(QualifiedObjectType.Instance, 'one.two.inst1')
+      inst2 = await project.get<IModel>(QualifiedObjectType.Instance, 'one.two.inst2')
       let three = await project.get<IModel>(QualifiedObjectType.Namespace, 'one.two.three')
 
-      expect(qModel1).to.be.undefined
-      expect(qModel2).to.be.undefined
-      expect(qInst1).to.be.undefined
-      expect(qInst2).to.be.undefined
+      expect(model1).to.be.undefined
+      expect(model2).to.be.undefined
+      expect(inst1).to.be.undefined
+      expect(inst2).to.be.undefined
       expect(three).to.be.undefined
    })
 
@@ -205,4 +206,6 @@ describe('Namespaces', function() {
       let didThrow = await doesReject(async () => { await model1.move(parent2) })
       expect(didThrow).to.be.true
    })
+
+   // TODO: Test for all other thrown Errors during a move()
 })

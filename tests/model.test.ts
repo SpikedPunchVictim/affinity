@@ -4,6 +4,7 @@ import { Project } from '../src'
 import { Model, INamespace } from '../src/core'
 import { validateQualifiedPath } from './utils/validate'
 import { QualifiedObjectType } from '../src/core/utils'
+import { fill } from './utils/create'
 
 describe('Models', function() {
    it('Can be created', async function() {
@@ -44,10 +45,13 @@ describe('Models', function() {
    })
 
    it('Can be moved', async function() {
-      let project = new Project()
-
-      let three = await project.create('one.two.three')
-      let model = await three.models.create('model')
+      let project = await fill({
+         models: [
+            'one.two.three.model'
+         ]
+      })
+      
+      let model = await project.get(QualifiedObjectType.Model, 'one.two.three.model')
 
       expect(model).to.not.be.undefined
 

@@ -1,4 +1,4 @@
-import { ObservableCollection, EventMap, IObservableCollection } from "./ObservableCollection";
+import { ObservableCollection, IObservableCollection } from "./ObservableCollection";
 import { INamedObject } from "../NamedObject";
 import { ArgumentError } from "../../errors";
 
@@ -11,8 +11,8 @@ export class NamedCollection<T extends INamedObject>
    extends ObservableCollection<T> 
    implements INamedCollection<T> {
 
-   constructor(eventMap?: EventMap) {
-      super(eventMap)
+   constructor() {
+      super()
    }
 
    get(name: string): T | undefined {

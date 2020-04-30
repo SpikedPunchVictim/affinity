@@ -3,9 +3,11 @@ import { EventEmitter } from 'events'
 
 export type VisitHandler<T> = (value: T, index: number, array: Array<T>) => void
 export type PredicateHandler<T> = (value: T, index: number, array: Array<T>) => boolean
-export type ChangeRequestAddHandler<T> = (items: Array<ItemAdd<T>>, array: Array<T>) => Promise<boolean>
-export type ChangeRequestRemoveHandler<T> = (items: Array<ItemRemove<T>>, array: Array<T>) => Promise<boolean>
-export type ChangeRequestMoveHandler<T> = (items: Array<ItemMove<T>>, array: Array<T>) => Promise<boolean>
+// export type ChangeRequestAddHandler<T> = (items: Array<ItemAdd<T>>, array: Array<T>) => Promise<boolean>
+// export type ChangeRequestRemoveHandler<T> = (items: Array<ItemRemove<T>>, array: Array<T>) => Promise<boolean>
+// export type ChangeRequestMoveHandler<T> = (items: Array<ItemMove<T>>, array: Array<T>) => Promise<boolean>
+export type OpHandler<T, TChange extends IndexableItem<T>> = (change: TChange[], op: OpAction) => void
+export type OpAction = () => void
 
 //------------------------------------------------------------------------
 // Sorts the event response formatted items by index in reverse. ie larger
@@ -113,27 +115,26 @@ export class ObservableEvents {
  * for each type of collection edit. Each edit
  * is verified before being committed.
  */
-export class ObservableChangeRequest<T> {
-   add: ChangeRequestAddHandler<T> = () => Promise.resolve(true)
-   move: ChangeRequestMoveHandler<T> = () => Promise.resolve(true)
-   moveIn: ChangeRequestAddHandler<T> = () => Promise.resolve(true)
-   moveOut: ChangeRequestRemoveHandler<T> = () => Promise.resolve(true)
-   remove: ChangeRequestRemoveHandler<T> = () => Promise.resolve(true)
+// export class ObservableChangeRequest<T> {
+//    add: ChangeRequestAddHandler<T> = () => Promise.resolve(true)
+//    move: ChangeRequestMoveHandler<T> = () => Promise.resolve(true)
+//    remove: ChangeRequestRemoveHandler<T> = () => Promise.resolve(true)
 
-   constructor(handlers?: Partial<ObservableChangeRequest<T>>) {
-      if(handlers) {
-         Object.keys(handlers)
-            .forEach(k => {
-               if(this[k]) {
-                  this[k] = handlers[k]
-               }
-            })
-      }
-   }
-}
+//    constructor(handlers?: Partial<ObservableChangeRequest<T>>) {
+//       if(handlers) {
+//          Object.keys(handlers)
+//             .forEach(k => {
+//                if(this[k]) {
+//                   this[k] = handlers[k]
+//                }
+//             })
+//       }
+//    }
+// }
 
 export interface IObservableCollection<T> {
    readonly length: number
+   [Symbol.iterator](): Iterator<T>
    at(index: number): T | undefined
    forEach(visit: VisitHandler<T>): void
    map(visit: VisitHandler<T>): void[]
@@ -144,34 +145,14 @@ export interface IObservableCollection<T> {
    insert(index: number, item: T): Promise<boolean>
    add(args: T | T[]): Promise<boolean>
    move(from: number, to: number): Promise<boolean>
-   moveIn(item: T): Promise<boolean>
-   moveOut(item: T): Promise<boolean>
    clear(): Promise<boolean>
    remove(items: T | T[]): Promise<boolean>
    removeAt(index: number): Promise<boolean>
    removeAll(filter: PredicateHandler<T>): Promise<boolean>
 }
 
-export class ObservableCollection<T> 
-   extends EventEmitter
-   implements IObservableCollection<T> {
-
-   protected items: Array<T>
-   protected changeRequests: ObservableChangeRequest<T>
-
-   constructor(
-      changeRequests: ObservableChangeRequest<T> = new ObservableChangeRequest<T>()
-   ) {
-      super()
-      this.items = new Array<T>()
-      this.changeRequests = changeRequests
-   }
-
-   get length(): number {
-      return this.items.length
-   }
-
-   createAddChangelist(items: T | T[]): ItemAdd<T>[] {
+export class ObservableChangelist {
+   static add<T>(items: T | T[], collection: IObservableCollection<T>): Array<ItemAdd<T>> {
       let change = new Array<ItemAdd<T>>()
 
       if(!Array.isArray(items)) {
@@ -180,7 +161,7 @@ export class ObservableCollection<T>
 
       for (let i = 0; i < items.length; ++i) {
          let item: T = items[i]
-         change.push(new ItemAdd(item, this.length + i))
+         change.push(new ItemAdd(item, collection.length + i))
       }
 
       // Sort by index to preserve order when adding
@@ -189,12 +170,12 @@ export class ObservableCollection<T>
       return change
    }
 
-   createMoveChangelist(from: number, to: number): Array<ItemMove<T>> {
-      if (from < 0 || from >= this.length) {
+   static move<T>(from: number, to: number, collection: IObservableCollection<T>): Array<ItemMove<T>> {
+      if (from < 0 || from >= collection.length) {
          throw new IndexOutOfRangeError(from)
       }
 
-      if (to < 0 || to >= this.length) {
+      if (to < 0 || to >= collection.length) {
          throw new IndexOutOfRangeError(to)
       }
 
@@ -203,7 +184,9 @@ export class ObservableCollection<T>
       }
 
       let change = new Array<ItemMove<T>>()
-      change.push(new ItemMove(this.items[from], from, to))
+
+      //@ts-ignore
+      change.push(new ItemMove(collection.at(from), from, to))
 
       // Sort by the index they are going to. This prevents
       // items being added at the bottom of the list, and its
@@ -213,7 +196,7 @@ export class ObservableCollection<T>
       return change
    }
 
-   createRemoveChangelist(items: T | T[]): Array<ItemRemove<T>> {
+   static remove<T>(items: T | T[], collection: IObservableCollection<T>): Array<ItemRemove<T>> {
       let changes = new Array<ItemRemove<T>>()
 
       if(!Array.isArray(items)) {
@@ -221,16 +204,63 @@ export class ObservableCollection<T>
       }
 
       for(let item of items) {
-         let itemIndex = this.items.indexOf(item)
+         let itemIndex = collection.indexOf(item)
 
-         if (itemIndex < 0) {
+         if (itemIndex === undefined || itemIndex < 0) {
             continue
          }
 
          changes.push(new ItemRemove(item, itemIndex))
       }
 
+      // Safely remove the items from the end &
+      // sort before raising events
+      changes.sort(sortByIndexReverse)
+
       return changes
+   }
+}
+
+export class ObservableCollection<T> 
+   extends EventEmitter
+   implements IObservableCollection<T> {
+
+   protected items: Array<T>
+
+   constructor() {
+      super()
+      this.items = new Array<T>()
+   }
+
+   get length(): number {
+      return this.items.length
+   }
+
+   [Symbol.iterator](): Iterator<T> {
+      let index = 0
+      let self = this
+      return {
+         next(): IteratorResult<T> {
+            return index == self.items.length ?
+               { value: undefined, done: true } :
+               { value: self.items[index++], done: false }
+         }
+      }
+   }
+
+   internalAdd(items: T | Array<T>, handler: OpHandler<T, ItemAdd<T>>): void {
+      let change = ObservableChangelist.add(items, this)
+      handler(change, () => this.performAdd(change))
+   }
+
+   internalRemove(items: T | T[], handler: OpHandler<T, ItemRemove<T>>): void {
+      let change = ObservableChangelist.remove(items, this)
+      handler(change, () => this.performRemove(change))
+   }
+
+   internalMove(from: number, to: number, handler: OpHandler<T, ItemMove<T>>): void {
+      let change = ObservableChangelist.move(from, to, this)
+      handler(change, () => this.performRemove(change))
    }
 
    performAdd(items: Array<ItemAdd<T>>): void {
@@ -306,91 +336,24 @@ export class ObservableCollection<T>
       return this._add(change)
    }
 
-   add(args: T | T[]): Promise<boolean> {
-      var change = new Array<ItemAdd<T>>()
-
-      if(!Array.isArray(args)) {
-         args = [args]
-      }
-
-      for (var i = 0; i < args.length; ++i) {
-         let item: T = args[i]
-         change.push(new ItemAdd(item, this.length + i))
-      }
-
+   add(items: T | T[]): Promise<boolean> {
+      let change = ObservableChangelist.add(items, this)
       return this._add(change);
    }
 
    move(from: number, to: number): Promise<boolean> {
-      if (from < 0 || from >= this.length) {
-         throw new IndexOutOfRangeError(from)
-      }
-
-      if (to < 0 || to >= this.length) {
-         throw new IndexOutOfRangeError(to)
-      }
-
-      if (from == to) {
-         return Promise.resolve(false)
-      }
-
-      let change = new Array<ItemMove<T>>()
-      change.push(new ItemMove(this.items[from], from, to))
+      let change = ObservableChangelist.move(from, to, this)
       return this._move(change)
    }
 
-   moveOut(item: T): Promise<boolean> {
-      let index = this.items.indexOf(item)
-
-      if(index === undefined) {
-         throw new Error(`item does not exist in this collection`)
-      }
-
-      let changes = new Array<ItemRemove<T>>(new ItemRemove<T>(item, index))
-      return this._moveOut(changes)
-   }
-
-   moveIn(item: T): Promise<boolean> {
-      let exists = this.items.indexOf(item) >= 0
-
-      if(exists) {
-         return Promise.resolve(true)
-      }
-
-      let change = new ItemAdd<T>(item, Math.max(0, this.items.length - 1))
-      let changes = new Array<ItemAdd<T>>(change)
-      
-      return this._moveIn(changes)
-   }
-
    clear(): Promise<boolean> {
-      let changes = new Array<ItemRemove<T>>()
-
-      for (let i = 0; i < this.items.length; ++i) {
-         changes.push(new ItemRemove(this.items[i], i))
-      }
-
-      return this._remove(changes);
+      let change = ObservableChangelist.remove(this.items, this)
+      return this._remove(change);
    }
 
    remove(items: T | T[]): Promise<boolean> {
-      let changes = new Array<ItemRemove<T>>()
-
-      if(!Array.isArray(items)) {
-         items = [items]
-      }
-
-      for(let item of items) {
-         let itemIndex = this.items.indexOf(item)
-
-         if (itemIndex < 0) {
-            continue
-         }
-
-         changes.push(new ItemRemove(item, itemIndex))
-      }
-
-      return this._remove(changes);
+      let change = ObservableChangelist.remove(items, this)
+      return this._remove(change)
    }
 
    removeAt(index: number): Promise<boolean> {
@@ -400,10 +363,8 @@ export class ObservableCollection<T>
 
       let item = this.items[index]
 
-      let changes = new Array<ItemRemove<T>>()
-      changes.push(new ItemRemove(item, index))
-
-      return this._remove(changes)
+      let change = ObservableChangelist.remove(item, this)
+      return this._remove(change)
    }
 
    removeAll(filter: PredicateHandler<T>): Promise<boolean> {
@@ -411,13 +372,13 @@ export class ObservableCollection<T>
          return Promise.resolve(false)
       }
 
-      let toRemove = new Array<ItemRemove<T>>()
+      let toRemove = new Array<T>()
 
       for (let i = 0; i < this.items.length; ++i) {
          let currentItem = this.items[i]
 
          if (filter(currentItem, i, this.items)) {
-            toRemove.push(new ItemRemove(currentItem, i))
+            toRemove.push(currentItem)
          }
       }
 
@@ -425,7 +386,8 @@ export class ObservableCollection<T>
          return Promise.resolve(false)
       }
 
-      return this._remove(toRemove)
+      let change = ObservableChangelist.remove(toRemove, this)
+      return this._remove(change)
    }
 
    protected async _add(items: Array<ItemAdd<T>>): Promise<boolean> {
@@ -434,60 +396,40 @@ export class ObservableCollection<T>
       // to preserve intended index ordering
       items.sort(sortByIndex)
 
-      this.emit(this.eventMap.adding, items)
+      this.emit(ObservableEvents.adding, items)
 
       for (var i = 0; i < items.length; ++i) {
          this.items.splice(items[i].index, 0, items[i].item)
       }
 
-      this.emit(this.eventMap.added, items)
+      this.emit(ObservableEvents.added, items)
 
       return true
    }
 
    protected async _remove(items: Array<ItemRemove<T>>): Promise<boolean> {
-      options = ObservableOptions.defaults(options)
-
       // Safely remove the items from the end &
       // sort before raising events
       items.sort(sortByIndexReverse)
 
-      if(options.ignoreChangeRequest === false) {
-         let allowed = await this.changeRequests.remove(items, this.items)
-
-         if(!allowed) {
-            return false
-         }
-      }
-
-      this.emit(this.eventMap.removing, items)
+      this.emit(ObservableEvents.removing, items)
 
       for (var i = 0; i < items.length; ++i) {
          this.items.splice(items[i].index, 1)
       }
 
-      this.emit(this.eventMap.removed, items)
+      this.emit(ObservableEvents.removed, items)
 
       return true
    }
 
    protected async _move(items: Array<ItemMove<T>>): Promise<boolean> {
-      options = ObservableOptions.defaults(options)
-
       // Sort by the index they are going to. This prevents
       // items being added at the bottom of the list, and its
       // index being updated by adding an item above it in the list.
       items.sort((a: ItemMove<T>, b: ItemMove<T>) =>  a.to - b.to)
 
-      if(options.ignoreChangeRequest === false) {
-         let allowed = await this.changeRequests.move(items, this.items)
-
-         if(!allowed) {
-            return false
-         }
-      }
-
-      this.emit(this.eventMap.moving, items)
+      this.emit(ObservableEvents.moving, items)
 
       for (var i = 0; i < items.length; ++i) {
          let current = items[i]
@@ -495,56 +437,8 @@ export class ObservableCollection<T>
          this.items.splice(current.to, 0, current.item)
       }
 
-      this.emit(this.eventMap.moved, items)
+      this.emit(ObservableEvents.moved, items)
 
       return items.length > 0
-   }
-
-   protected async _moveIn(items: Array<ItemAdd<T>>): Promise<boolean> {
-      options = ObservableOptions.defaults(options)
-
-      items.sort(sortByIndex)
-
-      if(options.ignoreChangeRequest === false) {
-         let allowed = await this.changeRequests.moveIn(items, this.items)
-
-         if(!allowed) {
-            return false
-         }
-      }
-
-      this.emit(this.eventMap.movingIn, items)
-
-      for (var i = 0; i < items.length; ++i) {
-         this.items.splice(items[i].index, 0, items[i].item)
-      }
-
-      this.emit(this.eventMap.movedIn, items)
-
-      return true
-   }
-
-   protected async _moveOut(items: Array<ItemRemove<T>>): Promise<boolean> {
-      options = ObservableOptions.defaults(options)
-
-      items.sort(sortByIndexReverse)
-
-      if(options.ignoreChangeRequest === false) {
-         let allowed = await this.changeRequests.moveOut(items, this.items)
-
-         if(!allowed) {
-            return false
-         }
-      }
-
-      this.emit(this.eventMap.movingOut, items)
-
-      for (var i = 0; i < items.length; ++i) {
-         this.items.splice(items[i].index, 1)
-      }
-
-      this.emit(this.eventMap.movedOut, items)
-
-      return true
    }
 }

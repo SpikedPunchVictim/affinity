@@ -7,10 +7,16 @@ import { IObservableCollection } from "../collections";
 
 export type QualifiedObjectHandler<TParam, TResult> = (obj: TParam) => TResult
 
-export type QualifiedObjectMap<TParam, TResult> = {
-   Instance: QualifiedObjectHandler<TParam, TResult>
-   Model: QualifiedObjectHandler<TParam, TResult>
-   Namespace: QualifiedObjectHandler<TParam, TResult>
+export type QualifiedObjectMap<TResult> = {
+   Instance: QualifiedObjectHandler<IInstance, TResult>
+   Model: QualifiedObjectHandler<IModel, TResult>
+   Namespace: QualifiedObjectHandler<INamespace, TResult>
+}
+
+export type QualifiedTypeMap<TResult> = {
+   Instance: QualifiedObjectHandler<QualifiedObjectType, TResult>
+   Model: QualifiedObjectHandler<QualifiedObjectType, TResult>
+   Namespace: QualifiedObjectHandler<QualifiedObjectType, TResult>
 }
 
 export enum QualifiedObjectType {
@@ -20,6 +26,14 @@ export enum QualifiedObjectType {
    Instance
 }
 
+export function getType(obj: IQualifiedObject): QualifiedObjectType {
+   return Switch.case(obj, {
+      Namespace: () => QualifiedObjectType.Namespace,
+      Model: () => QualifiedObjectType.Model,
+      Instance: () => QualifiedObjectType.Instance
+   })
+}
+
 export class Switch {
    /**
     * Provides a simpler switch/case for QualifiedObjects
@@ -27,7 +41,7 @@ export class Switch {
     * @param obj A QualifiedObject or one of the QualifiedObjectType enum
     * @param map A functional mapping to the code to switch to
     */
-   static case<TReturn>(obj: IQualifiedObject, map: QualifiedObjectMap<IQualifiedObject, TReturn>): TReturn {
+   static case<TReturn>(obj: IQualifiedObject, map: QualifiedObjectMap<TReturn>): TReturn {
       if(isNamespace(obj)) {
          return map.Namespace(obj)
       }
@@ -43,16 +57,16 @@ export class Switch {
       throw new UnsupportedError(`Unsupported QualifiedObject type encountered in Switch.case()`)
    }
 
-   static onType<TReturn>(type: QualifiedObjectType, map: QualifiedObjectMap<void, TReturn>): TReturn {
+   static onType<TReturn>(type: QualifiedObjectType, map: QualifiedTypeMap<TReturn>): TReturn {
       switch(type) {
          case QualifiedObjectType.Namespace: {
-            return map.Namespace()
+            return map.Namespace(type)
          }
          case QualifiedObjectType.Model: {
-            return map.Model()
+            return map.Model(type)
          }
          case QualifiedObjectType.Instance: {
-            return map.Instance()
+            return map.Instance(type)
          }
          default: {
             throw new Error(`Unsupported QualifiedObject Type`)
@@ -79,4 +93,21 @@ export function as<TResult extends IQualifiedObject>(obj: IQualifiedObject): TRe
 
 export function asCollection<T, TResult extends IObservableCollection<T>>(collection: IObservableCollection<T>): TResult {
    return collection as TResult
+}
+
+/**
+ * Creates a sort function with custom weighted values
+ * 
+ * @param map A QualifiedObjectMap that assigns weighted values used when sorting
+ */
+export function sortByType(map: QualifiedObjectMap<number>): (a: IQualifiedObject, b: IQualifiedObject) => number {
+   let assign = (obj: IQualifiedObject): number => {
+      return Switch.case(obj, map)
+   }
+
+   return (a: IQualifiedObject, b: IQualifiedObject): number => {
+      let aValue = assign(a)
+      let bValue = assign(b)
+      return aValue - bValue
+   }
 }

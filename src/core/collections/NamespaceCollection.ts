@@ -1,9 +1,9 @@
 import { INamespace } from "../Namespace";
 import { IProjectContext } from "../Project";
 import { NamedCollection, INamedCollection } from "./NamedCollection";
-import { Events } from "../Events";
 import { IOrchestrator } from "../Orchestrator";
 import { IRequestForChangeSource } from "../actions";
+import { ItemRemove } from "./ObservableCollection";
 
 export interface INamespaceCollection extends INamedCollection<INamespace> {
    create(name: string): Promise<INamespace>
@@ -32,5 +32,9 @@ export class NamespaceCollection
 
    async create(name: string): Promise<INamespace> {
       return await this.orchestrator.createNamespace(this.parent, name)
+   }
+
+   async _remove(items: Array<ItemRemove<INamespace>>): Promise<boolean> {
+      return await this.orchestrator.delete(items.map(it => it.item))
    }
 }

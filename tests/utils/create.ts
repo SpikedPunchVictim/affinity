@@ -1,6 +1,13 @@
 import { Project } from "../../src"
 import { basename, parentPath } from "../../src/core/utils"
 
+/**
+ * Populates a Project
+ * @param config {object} An object with the following
+ *    - namespaces {Array<string>}
+ *    - models {Array<string>}
+ *    - instances {Array<string>}
+ */
 export async function fill(config: any): Promise<Project> {
    let project = new Project()
 

@@ -5,7 +5,6 @@ import {
    IModel } from ".."
 
 import { NamedCollection, INamedCollection } from './NamedCollection'
-import { IRequestForChangeSource } from "../actions"
 import { IOrchestrator } from "../Orchestrator"
 
 export interface IInstanceCollection extends INamedCollection<IInstance> {

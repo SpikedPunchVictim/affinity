@@ -13,6 +13,7 @@ import { ProjectOpenAction, ProjectCommitAction } from './actions/Project'
 import { ArgumentError } from '../errors/ArgumentError'
 import { InvalidOperationError } from '../errors/InvalidOperationError'
 import { IOrchestrator, Orchestrator } from './Orchestrator'
+import { EventEmitter } from 'events'
 
 export interface IProjectContext {
    readonly rfc: IRequestForChangeSource
@@ -43,7 +44,7 @@ export interface IProjectOptions {
    rfcSource?: IRequestForChangeSource
 }
 
-export interface IProject {
+export interface IProject extends EventEmitter {
    readonly root: INamespace
    readonly router: IActionRouter
    readonly rfc: IRequestForChangeSource
@@ -87,13 +88,17 @@ export interface IProject {
    commit(): Promise<void>
 }
 
-export class Project implements IProject {
+export class Project
+   extends EventEmitter 
+   implements IProject {
+   
    readonly root: INamespace
    readonly context: IProjectContext
    readonly router: IActionRouter
    readonly rfc: IRequestForChangeSource
 
    constructor(options?: IProjectOptions) {
+      super()
       this.router = new ActionRouter()
       this.rfc = options?.rfcSource || new RequestForChangeSource(this.router)
       this.context = new ProjectContext(this)

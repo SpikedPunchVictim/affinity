@@ -57,7 +57,7 @@ export class RequestForChange implements IRequestForChange {
          }
       } catch(err) {
          for(let handler of this.rejects) {
-            handler(this.action, err)
+            await handler(this.action, err)
          }
       }
    }

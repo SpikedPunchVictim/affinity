@@ -1,5 +1,6 @@
 import { IValue } from "../Value"
 import { INamespace } from "../.."
+import { IObservableCollection } from "../collections/ObservableCollection"
 
 export interface IRfcAction {
    readonly type: string
@@ -20,6 +21,19 @@ export class RfcAction implements IRfcAction {
 
    constructor(type: string) {
       this.type = type
+   }
+}
+
+export class IndexedAction<T> extends RfcAction {
+   readonly collection: IObservableCollection<T>
+   readonly index: number
+   readonly item: T
+
+   constructor(type: string, collection: IObservableCollection<T>, item: T, index: number = -1) {
+      super(type)
+      this.collection = collection
+      this.item = item
+      this.index = index
    }
 }
 

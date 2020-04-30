@@ -18,7 +18,7 @@ export interface IQualifiedObject extends INamedObject, EventEmitter {
 
 export class QualifiedObject extends NamedObject {
    get qualifiedName(): string {
-      var results = new Array<string>()
+      let results = new Array<string>()
 
       results.push(this.name)
 
@@ -35,7 +35,7 @@ export class QualifiedObject extends NamedObject {
       return results.join('.')
    }
 
-   get parent(): INamespace {
+   get parent(): INamespace | null {
       return this._parent
    }
 
@@ -49,7 +49,7 @@ export class QualifiedObject extends NamedObject {
 
    readonly context: IProjectContext
 
-   private _parent: INamespace
+   private _parent: INamespace | null
 
    constructor(parent: INamespace, name: string, context: IProjectContext) {
       super(name)
@@ -68,48 +68,14 @@ export class QualifiedObject extends NamedObject {
 
    async move(to: INamespace): Promise<IQualifiedObject> {
       return this.orchestrator.move(this, to)
-      // if(this.parent === to) {
-      //    return Promise.resolve(this)
-      // }
+   }
 
-      // // TODO: Validate move
-      // let found = await this.context.project.get(QualifiedObjectType.Namespace, to.qualifiedName)
-      
-      // if(!found) {
-      //    throw new ArgumentError(`The 'to' Namespace provided to move() doesn't exist in this project`)
-      // }
-
-      // // Is there a QualifiedObject with that name already at the destination?
-      // let exists = Switch.case<boolean>(this, {
-      //    Namespace: obj => to.children.get(this.name) !== undefined,
-      //    Model: obj => to.models.get(this.name) !== undefined,
-      //    Instance: obj => to.instances.get(this.name) !== undefined
-      // })
-
-      // if(exists) {
-      //    throw new NameCollisionError(`A QualifiedObject with that name already exists in the target location`)
-      // }
-      
-      // await this.rfc.create(new ParentChangeAction(this, this.parent, to))
-      //    .fulfill(async (action) => {
-      //       let hasMovedOut = false
-
-      //       try {
-      //          await this.parent.moveOut(this)
-      //          hasMovedOut = true
-      //          await to.moveIn(this)
-      //       } catch(err) {
-      //          // Damage control
-      //          if(hasMovedOut) {
-      //             await this.parent.moveIn(this)
-      //          } else {
-      //             throw err
-      //          }
-      //       }
-      //    })
-      //    .commit()
-      
-      // return this
+   /**
+    * Orphans the QulifiedObject
+    */
+   orphan(): void {
+      this._parent = null
+      this._name = '@rphaned'
    }
 
    setParent(parent: INamespace): void {

@@ -5,6 +5,15 @@ import { validateQualifiedPath } from './utils/validate'
 import { QualifiedObjectType } from '../src/core/utils'
 import { IInstance, INamespace } from '../src/core'
 
+/*
+   TODO Tests:
+      value.test.ts
+         * Every value can be updated
+         * For every type of value, the correct update events are generated
+         * Test forUInt andInt positive/negative should throw erros if not correct
+         * Array type and sub types have to equal in order for them to be equal
+*/
+
 describe('Projects', function() {
    it('Project create() creates Namespaces', async function() {
       let project = new Project()

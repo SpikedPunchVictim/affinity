@@ -1,9 +1,10 @@
 import { IQualifiedObject } from "../QualifiedObject";
 import { INamespace } from "../..";
 import { IModel } from "../Model";
-import { IInstance } from "..";
+import { IInstance, IValue } from "..";
 import { UnsupportedError } from "../../errors/UnsupportedError";
 import { IObservableCollection } from "../collections";
+import { IType } from "../values/Value";
 
 export type QualifiedObjectHandler<TParam, TResult> = (obj: TParam) => TResult
 
@@ -93,6 +94,14 @@ export function as<TResult extends IQualifiedObject>(obj: IQualifiedObject): TRe
 
 export function asCollection<T, TResult extends IObservableCollection<T>>(collection: IObservableCollection<T>): TResult {
    return collection as TResult
+}
+
+export function asValue<TValue extends IValue>(value: IValue): TValue {
+   return value as TValue
+}
+
+export function asType<TType extends IType>(type: IType): TType {
+   return type as TType
 }
 
 /**

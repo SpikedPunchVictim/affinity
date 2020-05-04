@@ -29,7 +29,9 @@ import {
    FieldCreateAction,
    NamespaceDeleteAction,
    ModelDeleteAction,
-   InstanceDeleteAction } from "./actions";
+   InstanceDeleteAction, 
+   MemberValueChangeAction,
+   FieldValueChangeAction} from "./actions";
 
 
 import { Events } from "./Events";
@@ -40,6 +42,8 @@ import { IMember, Member } from "./Member";
 import { Field, IField } from "./Field";
 import { InvalidOperationError } from "../errors";
 import { depthFirst } from "./utils/Search";
+import { IValue, MemberValueChange, FieldValueChange } from "./values/Value";
+import { ChangeValueHandler } from "./values/ValueFactory";
 
 export interface IOrchestrator {
    createNamespace(parent: INamespace, name: string): Promise<INamespace>
@@ -50,6 +54,8 @@ export interface IOrchestrator {
    delete<T extends IQualifiedObject>(item: T | T[]): Promise<boolean>
    rename(source: IQualifiedObject, newName: string): Promise<IQualifiedObject>
    move(source: IQualifiedObject, to: INamespace): Promise<IQualifiedObject>
+   updateMemberValue(member: IMember, oldValue: IValue, newValue: IValue, changeValue: ChangeValueHandler): Promise<IValue>
+   updateFieldValue(field: IField, oldValue: IValue, newValue: IValue, changeValue: ChangeValueHandler): Promise<IValue>
 }
 
 export class Orchestrator implements IOrchestrator {
@@ -118,9 +124,7 @@ export class Orchestrator implements IOrchestrator {
       // Generate RfcActions for each deleted object
       for(let item of items) {
          Switch.case(item, {
-            Namespace: (obj) => {
-               let ns = as<INamespace>(item)
-
+            Namespace: (ns) => {
                depthFirst<IQualifiedObject>(ns, obj => {
                   let results = new Array<IQualifiedObject>()
 
@@ -325,7 +329,7 @@ export class Orchestrator implements IOrchestrator {
       let actions = new Array<MemberCreateAction>()
 
       for(let param of params) {
-         let member = new Member(model, param.name, param.value)
+         let member = new Member(model, param.name, param.value, this)
          members.push(member)
          actions.push(new MemberCreateAction(member))
       }
@@ -579,5 +583,57 @@ export class Orchestrator implements IOrchestrator {
          .commit()
       
       return source
+   }
+
+   async updateMemberValue(member: IMember, oldValue: IValue, newValue: IValue, changeValue: ChangeValueHandler): Promise<IValue> {
+      let change = new MemberValueChange(member, oldValue, newValue)
+      let updatedValue: IValue
+
+      await this.rfc.create(new MemberValueChangeAction(member, oldValue, newValue))
+         .fulfill(async () => {
+            emit([
+               { source: member, event: Events.Member.ValueChanging, data: change },
+               { source: member.model, event: Events.Model.ValueChanging, data: change },
+               { source: this.project, event: Events.Model.ValueChanging, data: change }
+            ])
+      
+            updatedValue = changeValue()
+      
+            emit([
+               { source: member, event: Events.Member.ValueChanged, data: change },
+               { source: member.model, event: Events.Model.ValueChanged, data: change },
+               { source: this.project, event: Events.Model.ValueChanged, data: change }
+            ])
+         })
+         .commit()
+
+      //@ts-ignore
+      return updatedValue
+   }
+
+   async updateFieldValue(field: IField, oldValue: IValue, newValue: IValue, changeValue: ChangeValueHandler): Promise<IValue> {
+      let change = new FieldValueChange(field, oldValue, newValue)
+      let updatedValue: IValue
+
+      await this.rfc.create(new FieldValueChangeAction(field, oldValue, newValue))
+         .fulfill(async () => {
+            emit([
+               { source: field, event: Events.Member.ValueChanging, data: change },
+               { source: field.instance, event: Events.Model.ValueChanging, data: change },
+               { source: this.project, event: Events.Model.ValueChanging, data: change }
+            ])
+      
+            updatedValue = changeValue()
+      
+            emit([
+               { source: field, event: Events.Member.ValueChanged, data: change },
+               { source: field.instance, event: Events.Model.ValueChanged, data: change },
+               { source: this.project, event: Events.Model.ValueChanged, data: change }
+            ])
+         })
+         .commit()
+
+      //@ts-ignore
+      return updatedValue
    }
 }

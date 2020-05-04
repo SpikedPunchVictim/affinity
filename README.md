@@ -109,13 +109,28 @@ project.use(redis)
 project.use(mongo)
 ```
 
+## Supported Types
+
+|    Type     | Description                       |
+| :---------: | --------------------------------- |
+|   string    |                                   |
+|    bool     |                                   |
+|     int     |                                   |
+|    uint     |                                   |
+|  array<T>   |                                   |
+|  map<K,V>   |                                   |
+|  instance   | Instance of a Model               |
+| instanceRef | Reference to an existing instance |
+|    enum     |                                   |
+|    flag     |                                   |
+
+
 # Plugins
 
 ```ts
 class Redis {
 
    setup(project, router) {
-      // events is an EventRouter
       // Handlers are added to each event route, where each event router
       // can handle multiple handlers
       router.on(ModelCreate.type, this.createTable)

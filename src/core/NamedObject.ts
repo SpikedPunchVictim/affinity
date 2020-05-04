@@ -1,7 +1,7 @@
 import { NotImplementedError } from "../errors/NotImplementedError"
 import { EventEmitter } from "events"
 
-export interface INamedObject {
+export interface INamedObject extends EventEmitter {
    readonly name: string
    rename(name: string): Promise<INamedObject>
 }

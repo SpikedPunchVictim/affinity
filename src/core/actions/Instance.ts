@@ -1,7 +1,8 @@
-import { CreateAction, DeleteAction, RenameAction, MoveAction, ReorderAction } from "./Actions"
+import { CreateAction, DeleteAction, RenameAction, MoveAction, ReorderAction, ValueChangeAction } from "./Actions"
 import { IInstance } from "../Instance"
 import { IField } from "../Field"
 import { INamespace } from "../.."
+import { IValue } from "../values/Value"
 
 export class InstanceCreateAction extends CreateAction<IInstance> {
    static readonly type: string = 'instance-create'
@@ -66,5 +67,13 @@ export class FieldReorderAction extends ReorderAction<IField> {
 
    constructor(field: IField, from: number, to: number) {
       super(FieldReorderAction.type, field, from, to)
+   }
+}
+
+export class FieldValueChangeAction extends ValueChangeAction<IField> {
+   static readonly type: string = 'field-value-change'
+
+   constructor(field: IField, oldValue: IValue, newValue: IValue) {
+      super(FieldValueChangeAction.type, field, oldValue, newValue)
    }
 }

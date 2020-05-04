@@ -1,7 +1,8 @@
-import { CreateAction, DeleteAction, MoveAction, RenameAction, ReorderAction } from "./Actions"
+import { CreateAction, DeleteAction, MoveAction, RenameAction, ReorderAction, ValueChangeAction } from "./Actions"
 import { IMember } from "../Member"
 import { IModel } from "../Model"
 import { INamespace } from "../Namespace"
+import { IValue } from "../values/Value"
 
 export class ModelCreateAction extends CreateAction<IModel> {
    static readonly type: string = 'model-create'
@@ -65,5 +66,13 @@ export class MemberReorderAction extends ReorderAction<IMember> {
 
    constructor(member: IMember, from: number, to: number) {
       super(MemberReorderAction.type, member, from, to)
+   }
+}
+
+export class MemberValueChangeAction extends ValueChangeAction<IMember> {
+   static readonly type: string = 'member-value-change'
+
+   constructor(member: IMember, oldValue: IValue, newValue: IValue) {
+      super(MemberValueChangeAction.type, member, oldValue, newValue)
    }
 }

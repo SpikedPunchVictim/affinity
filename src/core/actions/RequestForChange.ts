@@ -1,7 +1,7 @@
 import { IActionRouter } from "./ActionRouter"
 import { IRfcAction } from "./Actions"
 
-type RfcHandler = (action: IRfcAction, err?: Error) => Promise<void>
+export type RfcHandler = (action: IRfcAction, err?: Error) => Promise<void>
 
 export interface IRequestForChange {
    fulfill(handler: RfcHandler): IRequestForChange

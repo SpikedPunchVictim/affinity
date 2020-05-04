@@ -1,4 +1,4 @@
-import { IValue } from "../Value"
+import { IValue } from "../values/Value"
 import { INamespace } from "../.."
 import { IObservableCollection } from "../collections/ObservableCollection"
 

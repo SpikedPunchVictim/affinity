@@ -23,7 +23,6 @@ export interface IValue {
    readonly type: IType
    equals(other: IValue): boolean
    clone(): IValue
-   update(other: IValue): Promise<IValue>
    attach(attachment: IValueAttachment)
 }
 
@@ -47,10 +46,6 @@ export class Value implements IValue {
 
    clone(): IValue {
       throw new NotImplementedError(`clone() not implemented`)
-   }
-
-   update(other: IValue): Promise<IValue> {
-      throw new NotImplementedError(`update) not implemented`)
    }
 
    attach(attachment: IValueAttachment): void {

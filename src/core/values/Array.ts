@@ -1,7 +1,9 @@
-import { IType, IValue, Value, IArrayValue } from "./Value"
+import { IType, IValue, Value } from "./Value"
 import { ArgumentError } from "../../errors/ArgumentError"
 import { asValue, asType } from "../utils/Types"
 import { IValueAttachment } from "./ValueFactory"
+import { IndexOutOfRangeError } from "../../errors"
+import { ObservableCollection } from "../collections/ObservableCollection"
 
 export type VisitValueHandler = (value: IValue) => void
 export type PredicateValueHandler = (value: IValue) => boolean
@@ -46,10 +48,10 @@ export class ArrayType implements IType {
 }
 
 export class ArrayValue extends Value implements IArrayValue {
-   private _value: Array<IValue>
+   private _values: ObservableCollection<IValue>
 
-   get value(): Array<IValue> {
-      return this._value
+   get values(): ObservableCollection<IValue> {
+      return this._values
    }
 
    get itemType(): IType {
@@ -57,9 +59,13 @@ export class ArrayValue extends Value implements IArrayValue {
       return arrType.itemType
    }
 
-   constructor(itemType: IType, updater: IValueAttachment, values?: IValue[]) {
-      super(new ArrayType(itemType), updater)
-      this._value = new Array<IValue>()
+   get length(): number {
+      return this._values.length
+   }
+
+   constructor(itemType: IType, attachment: IValueAttachment, values?: IValue[]) {
+      super(new ArrayType(itemType), attachment)
+      this._values = new ObservableCollection<IValue>()
 
       if(values) {
          let found = values.find((v) => this.itemType.equals(v.type))
@@ -68,9 +74,23 @@ export class ArrayValue extends Value implements IArrayValue {
             throw new ArgumentError(`The values provided do not match the type for this Array`)
          }
 
+         let cloned = values.map(v => v.clone())
+
          values.forEach((value, index) => {
-            this._value.splice(index, 0, value)
+            this._values.internalAdd(cloned, (change, op) => op())
          })
+      }
+   }
+
+   [Symbol.iterator](): Iterator<IValue> {
+      let index = 0
+      let self = this
+      return {
+         next(): IteratorResult<IValue> {
+            return index == self._values.length ?
+               { value: undefined, done: true } :
+               { value: self._values[index++], done: false }
+         }
       }
    }
 
@@ -79,51 +99,207 @@ export class ArrayValue extends Value implements IArrayValue {
          throw new ArgumentError(`other value must be valid`)
       }
 
-      let otherArray = asValue<IArrayValue>(other)
+      let otherArray = asValue<ArrayValue>(other)
 
       let isEqual = this.type.equals(other.type) &&
-         (this._value.length === otherArray.length)
+         (this._values.length === otherArray.length) &&
+         (this.itemType.equals(otherArray.itemType))
 
       if(!isEqual) {
          return false
       }
+
+      for(let i = 0; i < this._values.length; ++i) {
+         if(!this.at(i).equals(otherArray.at(i))) {
+            return false
+         }
+      }
+
+      return true
    }
 
    clone(): IValue {
-      return new BoolValue(this.value, this.attachment)
+      return new ArrayValue(this.itemType, this.attachment, Array.from(this._values))
    }
 
-   async update(other: IValue): Promise<IValue> {
-      if(other == null) {
+   at(index: number): IValue {
+      return this._values[index]
+   }
+
+   async add(...values: Array<IValue>): Promise<void> {
+      if(values == null) {
          throw new ArgumentError(`other value must be valid`)
       }
 
-      if(!other.type.equals(this.type)) {
-         throw new ArgumentError(`Cannot update a BoolValue with an incompatible value`)
+      for(let value of values) {
+         if(!this.itemType.equals(value.type)) {
+            throw new ArgumentError(`Th values being added must match the itemType`)
+         }
       }
 
-      return await this.attachment.request(other, this, () => {
-         let boolVal = asValue<BoolValue>(other)
-         this._value = boolVal.value
+      let newValue = asValue<ArrayValue>(this.clone())
+      await newValue.add(...values)
+
+      await this.attachment.request(this, newValue, () => {
+         for(let value of values) {
+            this._values.add(value.clone())
+         }
+
          return this
       })
    }
 
+   async clear(): Promise<boolean> {
+      let newValue = asValue<ArrayValue>(this.clone())
+      await newValue._values.clear()
 
-   readonly length: number
-   [Symbol.iterator](): Iterator<IValue>
-   at(index: number): IValue
-   add(...value: Array<IValue>): Promise<void>
-   clear(): Promise<boolean>
-   contains(value: IValue): boolean
-   filter(visit: VisitValueHandler): Array<IValue>
-   find(visit: VisitValueHandler): IValue | undefined
-   forEach(visit: VisitValueHandler): void
-   indexOf(value: IValue): number | undefined
-   insert(index: number, value: IValue): Promise<boolean>
-   map(visit: VisitValueHandler): void[]
-   move(from: number, to: number): Promise<boolean>
-   remove(values: IValue | IValue[]): Promise<boolean>
-   removeAt(index: number): Promise<boolean>
-   removeAll(filter: PredicateValueHandler): Promise<boolean>
+      try {
+         await this.attachment.request(this, newValue, () => {
+            this._values.clear()
+            return this
+         })
+
+         return true
+      } catch(err) {
+         return false
+      }
+   }
+
+   contains(value: IValue): boolean {
+      return this._values.find(v => v.equals(value)) !== undefined
+   }
+
+   filter(visit: VisitValueHandler): Array<IValue> {
+      return this._values.filter(visit)
+   }
+
+   find(visit: VisitValueHandler): IValue | undefined{
+      return this._values.find(visit)
+   }
+
+   forEach(visit: VisitValueHandler): void {
+      this._values.forEach(visit)
+   }
+
+   indexOf(value: IValue): number | undefined {
+      for(let i = 0; i < this._values.length; ++i) {
+         if(this._values[i].equals(value)) {
+            return i
+         }
+      }
+
+      return undefined
+   }
+
+   async insert(index: number, value: IValue): Promise<boolean> {
+      if(index < 0 || index > this._values.length) {
+         throw new IndexOutOfRangeError(index)
+      }
+
+      let newValue = asValue<ArrayValue>(this.clone())
+      await newValue._values.insert(index, value.clone())
+
+      try {
+         await this.attachment.request(this, newValue, () => {
+            this._values.insert(index, value.clone())
+            return this
+         })
+
+         return true
+      } catch(err) {
+         throw err
+      }
+   }
+
+   map(visit: VisitValueHandler): void[] {
+      return this._values.map(visit)
+   }
+
+   async move(from: number, to: number): Promise<boolean> {
+      if(from < 0 || from >= this._values.length) {
+         throw new IndexOutOfRangeError(from)
+      }
+
+      if(to < 0 || to >= this._values.length) {
+         throw new IndexOutOfRangeError(to)
+      }
+
+      let newValue = asValue<ArrayValue>(this.clone())
+      await newValue._values.move(from, to)
+
+      try {
+         await this.attachment.request(this, newValue, () => {
+            this._values.move(from, to)
+            return this
+         })
+
+         return true
+      } catch(err) {
+         throw err
+      }
+   }
+
+   async remove(values: IValue | IValue[]): Promise<boolean> {
+      if(values == null) {
+         throw new ArgumentError(`values must be valid`)
+      }
+
+      if(!Array.isArray(values)) {
+         values = [values]
+      }
+
+      let newValue = asValue<ArrayValue>(this.clone())
+      await newValue.remove(values)
+
+      try {
+         await this.attachment.request(this, newValue, () => {
+            this._values.remove(values)
+            return this
+         })
+
+         return true
+      } catch(err) {
+         throw err
+      }
+   }
+
+   async removeAt(index: number): Promise<boolean> {
+      if(index < 0 || index >= this.length) {
+         throw new IndexOutOfRangeError(index)
+      }
+
+      let newValue = asValue<ArrayValue>(this.clone())
+      await newValue.removeAt(index)
+
+      try {
+         await this.attachment.request(this, newValue, () => {
+            this._values.removeAt(index)
+            return this
+         })
+
+         return true
+      } catch(err) {
+         throw err
+      }
+   }
+
+   async removeAll(filter: PredicateValueHandler): Promise<boolean> {
+      if(filter == null) {
+         throw new ArgumentError(`filter must be valid`)
+      }
+
+      let newValue = asValue<ArrayValue>(this.clone())
+      await newValue.removeAll(filter)
+
+      try {
+         await this.attachment.request(this, newValue, () => {
+            this._values.removeAll(filter)
+            return this
+         })
+
+         return true
+      } catch(err) {
+         throw err
+      }
+   }
 }

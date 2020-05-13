@@ -1,15 +1,16 @@
 import { IProjectContext } from "../Project";
 import { IModel } from "../Model";
 import { INamespace } from '../Namespace'
-import { NamedCollection, INamedCollection } from "./NamedCollection";
 import { IOrchestrator } from "../Orchestrator";
+import { QualifiedObjectCollection, IQualifiedObjectCollection } from "./QualifiedObjectCollection";
+import { QualifiedObjectType } from "../utils";
 
-export interface IModelCollection extends INamedCollection<IModel> {
+export interface IModelCollection extends IQualifiedObjectCollection<IModel> {
    create(name: string): Promise<IModel>
 }
 
 export class ModelCollection 
-   extends NamedCollection<IModel>
+   extends QualifiedObjectCollection<IModel>
    implements IModelCollection {
    
    readonly parent: INamespace
@@ -20,7 +21,7 @@ export class ModelCollection
    }
    
    constructor(parent: INamespace, context: IProjectContext) {
-      super()
+      super(QualifiedObjectType.Model, parent, context.orchestrator)
       this.parent = parent
       this.context = context
    }

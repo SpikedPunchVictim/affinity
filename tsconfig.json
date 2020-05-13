@@ -7,7 +7,6 @@
        "moduleResolution": "node",
        "downlevelIteration": true,
        "alwaysStrict": true,
-       "outDir": "dist",
        "sourceMap": false,
        "declaration": true,
        "removeComments": false,

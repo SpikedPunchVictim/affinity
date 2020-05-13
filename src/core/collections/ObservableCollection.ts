@@ -1,11 +1,9 @@
 import { IndexOutOfRangeError } from "../../errors/"
 import { EventEmitter } from 'events'
+import { IndexableItem, ItemAdd, ItemMove, ItemRemove } from './ChangeSets'
 
 export type VisitHandler<T> = (value: T, index: number, array: Array<T>) => void
 export type PredicateHandler<T> = (value: T, index: number, array: Array<T>) => boolean
-// export type ChangeRequestAddHandler<T> = (items: Array<ItemAdd<T>>, array: Array<T>) => Promise<boolean>
-// export type ChangeRequestRemoveHandler<T> = (items: Array<ItemRemove<T>>, array: Array<T>) => Promise<boolean>
-// export type ChangeRequestMoveHandler<T> = (items: Array<ItemMove<T>>, array: Array<T>) => Promise<boolean>
 export type OpHandler<T, TChange extends IndexableItem<T>> = (change: TChange[], op: OpAction) => void
 export type OpAction = () => void
 
@@ -28,51 +26,6 @@ export function sortByIndex<T>(a: IndexableItem<T>, b: IndexableItem<T>): number
    // return 0
 }
 
-abstract class IndexableItem<T> {
-   readonly item: T
-   readonly index: number
-
-   constructor(item: T, index: number) {
-      this.item = item
-      this.index = index
-   }
-}
-
-export class ItemAdd<T> extends IndexableItem<T> {
-   constructor(item: T, index: number) {
-      super(item, index)
-   }
-}
-
-export class ItemRemove<T> extends IndexableItem<T> {
-   constructor(item: T, index: number) {
-      super(item, index)
-   }
-}
-
-export class ItemMove<T> extends IndexableItem<T> {
-   readonly item: T
-   readonly from: number
-   readonly to: number
-
-   constructor(item: T, from: number, to: number) {
-      super(item, from)
-      this.item = item
-      this.from = from
-      this.to = to
-   }
-}
-
-// export class ObservableOptions {
-//    ignoreChangeRequest?: boolean
-
-//    static defaults() {
-//       options = options || {}
-//       options.ignoreChangeRequest = options.ignoreChangeRequest || false
-//       return options
-//    }
-// }
-
 export class ObservableEvents {
    static adding: string = 'adding'
    static added: string = 'added'
@@ -85,52 +38,6 @@ export class ObservableEvents {
    static removing: string = 'removing'
    static removed: string = 'removed'
 }
-
-// export class EventMap {
-//    adding: string = ObservableEvents.adding
-//    added: string = ObservableEvents.added
-//    moving: string = ObservableEvents.moving
-//    moved: string = ObservableEvents.moved
-//    movingIn: string = ObservableEvents.movingIn
-//    movedIn: string = ObservableEvents.movedIn
-//    movingOut: string = ObservableEvents.movingOut
-//    movedOut: string = ObservableEvents.movedOut
-//    removing: string = ObservableEvents.removing
-//    removed: string = ObservableEvents.removed
-
-//    constructor(values?: Partial<EventMap>) {
-//       if(values) {
-//          Object.keys(values)
-//             .forEach(k => {
-//                if(this[k]) {
-//                   this[k] = values[k]
-//                }
-//             })
-//       }
-//    }
-// }
-
-/**
- * This class holds the Change Request Handlers
- * for each type of collection edit. Each edit
- * is verified before being committed.
- */
-// export class ObservableChangeRequest<T> {
-//    add: ChangeRequestAddHandler<T> = () => Promise.resolve(true)
-//    move: ChangeRequestMoveHandler<T> = () => Promise.resolve(true)
-//    remove: ChangeRequestRemoveHandler<T> = () => Promise.resolve(true)
-
-//    constructor(handlers?: Partial<ObservableChangeRequest<T>>) {
-//       if(handlers) {
-//          Object.keys(handlers)
-//             .forEach(k => {
-//                if(this[k]) {
-//                   this[k] = handlers[k]
-//                }
-//             })
-//       }
-//    }
-// }
 
 export interface IObservableCollection<T> {
    readonly length: number
@@ -149,6 +56,7 @@ export interface IObservableCollection<T> {
    remove(items: T | T[]): Promise<boolean>
    removeAt(index: number): Promise<boolean>
    removeAll(filter: PredicateHandler<T>): Promise<boolean>
+   toArray(): T[]
 }
 
 export class ObservableChangelist {
@@ -388,6 +296,10 @@ export class ObservableCollection<T>
 
       let change = ObservableChangelist.remove(toRemove, this)
       return this._remove(change)
+   }
+
+   toArray(): T[] {
+      return this.items
    }
 
    protected async _add(items: Array<ItemAdd<T>>): Promise<boolean> {

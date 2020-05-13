@@ -2,7 +2,7 @@ import { INamedObject, NamedObject } from './NamedObject'
 import { IValue } from './values/Value';
 import { ArgumentError } from '../errors/ArgumentError';
 import { IModel } from './Model';
-import { IValueAttachment, ChangeValueHandler } from './values/ValueFactory';
+import { IValueAttachment, ChangeValueHandler } from './values/ValueAttachment';
 import { IOrchestrator } from './Orchestrator';
 
 export interface IMember extends INamedObject {

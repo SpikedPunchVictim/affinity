@@ -1,4 +1,5 @@
 import { IRfcAction } from "./Actions"
+import { ActionSet } from "./ActionSet"
 
 export type ActionHandler<T extends IRfcAction> = (action: T) => Promise<void>
 
@@ -17,7 +18,7 @@ export class ActionRouter implements IActionRouter {
       this._handlerMap = new Map<string, Array<ActionHandler<any>>>()
    }
 
-   on<T extends IRfcAction>(type: string, handler: ActionHandler<T>): void {
+   on<T extends IRfcAction>(type: ActionSet, handler: ActionHandler<T>): void {
       let found = this._handlerMap.get(type)
 
       if(found === undefined) {

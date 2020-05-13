@@ -1,6 +1,6 @@
 import { IType, IValue } from "./Value"
 import { ArgumentError } from "../../errors/ArgumentError"
-import { IValueAttachment } from "./ValueFactory"
+import { IValueAttachment } from "./ValueAttachment"
 import { SimpleValue } from "./SimpleValue"
 
 export class BoolType implements IType {

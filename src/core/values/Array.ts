@@ -1,7 +1,7 @@
 import { IType, IValue, Value } from "./Value"
 import { ArgumentError } from "../../errors/ArgumentError"
 import { asValue, asType } from "../utils/Types"
-import { IValueAttachment } from "./ValueFactory"
+import { IValueAttachment } from "./ValueAttachment"
 import { IndexOutOfRangeError } from "../../errors"
 import { ObservableCollection } from "../collections/ObservableCollection"
 

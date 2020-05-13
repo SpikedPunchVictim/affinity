@@ -1,15 +1,82 @@
 
 import {
+   ActionSet,
+   FieldCreateAction,
+   FieldDeleteAction,
+   FieldRenameAction,
+   FieldReorderAction,
+   FieldValueChangeAction,
+   IActionRouter,
    INamespace,
    INamespaceCollection,
+   InstanceCreateAction,
+   InstanceDeleteAction,
+   InstanceMoveAction,
+   InstanceRenameAction,
    IPlugin,
+   IProject,
+   MemberCreateAction,
+   MemberDeleteAction,
+   MemberRenameAction,
+   MemberReorderAction,
+   MemberValueChangeAction,
+   ModelCreateAction,
+   ModelDeleteAction,
+   ModelMoveAction,
+   ModelRenameAction,
    Namespace,
-   Project } from './core'
+   NamespaceCreateAction,
+   NamespaceDeleteAction,
+   NamespaceRenameAction,
+   NamespaceMoveAction,
+   ParentChangeAction,
+   Project,
+   ProjectOpenAction,
+   ProjectCommitAction,
+   QualifiedObjectGetAction } from './core'
+
+import {
+   Switch
+} from './core/utils'
+
+const Utils = {
+   Switch
+}
 
 export {
+   ActionSet,
+   FieldCreateAction,
+   FieldDeleteAction,
+   FieldRenameAction,
+   FieldReorderAction,
+   FieldValueChangeAction,
+   IActionRouter,
    INamespace,
    INamespaceCollection,
+   InstanceCreateAction,
+   InstanceDeleteAction,
+   InstanceMoveAction,
+   InstanceRenameAction,
    IPlugin,
+   IProject,
+   MemberCreateAction,
+   MemberDeleteAction,
+   MemberRenameAction,
+   MemberReorderAction,
+   MemberValueChangeAction,
+   ModelCreateAction,
+   ModelDeleteAction,
+   ModelMoveAction,
+   ModelRenameAction,
    Namespace,
-   Project
+   NamespaceCreateAction,
+   NamespaceDeleteAction,
+   NamespaceRenameAction,
+   NamespaceMoveAction,
+   ParentChangeAction,
+   Project,
+   ProjectOpenAction,
+   ProjectCommitAction,
+   QualifiedObjectGetAction,
+   Utils
 }

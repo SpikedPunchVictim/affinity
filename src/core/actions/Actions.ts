@@ -1,5 +1,5 @@
 import { IValue } from "../values/Value"
-import { INamespace } from "../.."
+import { INamespace } from "../Namespace"
 import { IObservableCollection } from "../collections/ObservableCollection"
 
 export interface IRfcAction {

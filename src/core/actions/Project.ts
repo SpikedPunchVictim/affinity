@@ -1,9 +1,9 @@
 import { RfcAction } from "./Actions"
 import { IProject } from "../Project"
-
+import { ActionSet } from './ActionSet'
 
 export class ProjectOpenAction extends RfcAction {
-   static readonly type: string = 'project-open'
+   static readonly type: string = ActionSet.ProjectOpen
    readonly type: string = ProjectOpenAction.type
    readonly project: IProject
 
@@ -14,7 +14,7 @@ export class ProjectOpenAction extends RfcAction {
 }
 
 export class ProjectCommitAction extends RfcAction {
-   static readonly type: string = 'project-commit'
+   static readonly type: string = ActionSet.ProjectCommit
    readonly type: string = ProjectOpenAction.type
    readonly project: IProject
 

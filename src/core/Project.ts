@@ -2,7 +2,8 @@ import {
    basename,
    parentPath,
    QualifiedObjectType,
-   Switch } from './utils'
+   Switch,
+   uuid } from './utils'
 
 import { IRequestForChangeSource, RequestForChangeSource } from './actions/RequestForChange'
 import { INamespace, RootNamespace } from './Namespace'
@@ -20,6 +21,17 @@ export interface IProjectContext {
    readonly router: IActionRouter
    readonly orchestrator: IOrchestrator
    readonly project: IProject
+   readonly uidGenerator: IUidGenerator
+}
+
+export interface IUidGenerator {
+   generate(): Promise<string>
+}
+
+class HexUidGenerator implements IUidGenerator {
+   async generate(): Promise<string> {
+      return uuid()
+   }
 }
 
 class ProjectContext implements IProjectContext {
@@ -33,21 +45,20 @@ class ProjectContext implements IProjectContext {
 
    readonly project: IProject
    readonly orchestrator: IOrchestrator
+   readonly uidGenerator: IUidGenerator
 
-   constructor(project: IProject) {
+   constructor(project: IProject, uidGenerator: IUidGenerator) {
       this.project = project
+      this.uidGenerator = uidGenerator
       this.orchestrator = new Orchestrator(project, this)
    }
-}
-
-export interface IProjectOptions {
-   rfcSource?: IRequestForChangeSource
 }
 
 export interface IProject extends EventEmitter {
    readonly root: INamespace
    readonly router: IActionRouter
    readonly rfc: IRequestForChangeSource
+   readonly name: string
 
    /**
     * Retrieves the QualifiedObject athe the provided qualified path, or undefined if not found.
@@ -71,7 +82,7 @@ export interface IProject extends EventEmitter {
     * @param qualifiedType The QualifiedType
     * @param qualifiedPath The qualified path
     */
-   delete(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<void>
+   delete(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<boolean>
 
    /**
     * Moves a QualifiedObject from one place in the Namespace tree to another
@@ -88,6 +99,12 @@ export interface IProject extends EventEmitter {
    commit(): Promise<void>
 }
 
+export interface IProjectOptions {
+   rfcSource?: IRequestForChangeSource
+   uidGenerator?: IUidGenerator
+   rootId: string
+}
+
 export class Project
    extends EventEmitter 
    implements IProject {
@@ -96,13 +113,19 @@ export class Project
    readonly context: IProjectContext
    readonly router: IActionRouter
    readonly rfc: IRequestForChangeSource
+   readonly name: string
+   readonly uidGenerator: IUidGenerator
 
-   constructor(options?: IProjectOptions) {
+   constructor(name: string, options?: IProjectOptions) {
       super()
+      this.name = name
       this.router = new ActionRouter()
       this.rfc = options?.rfcSource || new RequestForChangeSource(this.router)
-      this.context = new ProjectContext(this)
-      this.root = new RootNamespace(this.context)
+      this.uidGenerator = options?.uidGenerator || new HexUidGenerator()
+      this.context = new ProjectContext(this, this.uidGenerator)
+
+      let rootId = options?.rootId || `root_${this.name}`
+      this.root = new RootNamespace(rootId, this.context)
    }
 
    open(): Promise<void> {
@@ -113,7 +136,7 @@ export class Project
       return this.router.raise(new ProjectCommitAction(this))
    }
 
-   get<TReturn extends IQualifiedObject>(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<TReturn | undefined> {
+   async get<TReturn extends IQualifiedObject>(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<TReturn | undefined> {
       if(qualifiedPath == null) {
          throw new ArgumentError(`qualifiedPath must be valid when calling Project.get()`)
       }
@@ -121,13 +144,13 @@ export class Project
       if(qualifiedPath === '' && qualifiedType === QualifiedObjectType.Namespace) {
          // Note: For Typescript, must convert to parent class before returning as TResult
          let result = this.root as IQualifiedObject
-         return Promise.resolve(result as TReturn)
+         return (result as TReturn)
       }
       
       let parentQPath = parentPath(qualifiedPath)
 
       if(parentQPath === undefined) {
-         return Promise.resolve(undefined)
+         return undefined
       }
 
       let current: INamespace | undefined = this.root
@@ -137,25 +160,25 @@ export class Project
          .filter(it => it !== '')
 
       for(let token of tokens) {
-         current = current.children.get(token)
+         current = await current.children.get(token)
 
          if(current === undefined) {
-            return Promise.resolve(undefined)
+            return undefined
          }
       }
 
       // current is the Parent Namespace at this point
       let baseQPath = basename(qualifiedPath)
 
-      let result = Switch.onType<IQualifiedObject | undefined>(qualifiedType, {
-         Namespace: () => current?.children.get(baseQPath),
-         Model: () => current?.models.get(baseQPath),
-         Instance: () => current?.instances.get(baseQPath)
+      let result = await Switch.onType<Promise<IQualifiedObject | undefined>>(qualifiedType, {
+         Namespace: async () => current?.children.get(baseQPath),
+         Model: async () => current?.models.get(baseQPath),
+         Instance: async () => current?.instances.get(baseQPath)
       })
 
       return result === undefined ?
-         Promise.resolve(undefined) :
-         Promise.resolve(result as TReturn)
+         undefined :
+         (result as TReturn)
    }
 
    async create(qualifiedPath: string): Promise<INamespace> {
@@ -167,21 +190,21 @@ export class Project
       let tokens = qualifiedPath.split('.')
 
       for(let token of tokens) {
-         let child = current.children.get(token)
+         let child = await current.children.get(token)
 
          current = child === undefined ?
-            current = await current.children.create(token) :
+            await current.children.create(token) :
             child
       }
 
       return current
    }
 
-   async delete(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<void> {
+   async delete(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<boolean> {
       let obj = await this.get(qualifiedType, qualifiedPath)
 
       if(obj === undefined) {
-         return Promise.resolve()
+         return false
       }
 
       if(obj === this.root) {
@@ -196,11 +219,13 @@ export class Project
 
       let baseQName = basename(qualifiedPath)
 
-      return Switch.onType(qualifiedType, {
-         Namespace: () => parent?.children.delete(baseQName),
-         Model: () => parent?.models.delete(baseQName),
-         Instance: () => parent?.instances.delete(baseQName)
+      let result = await Switch.onType(qualifiedType, {
+         Namespace: async () => parent?.children.delete(baseQName),
+         Model: async () => parent?.models.delete(baseQName),
+         Instance: async () => parent?.instances.delete(baseQName)
       })
+
+      return result === undefined ? false : result
    }
    
    async move(qualifiedType: QualifiedObjectType, fromPath: string, toPath: string): Promise<IQualifiedObject | undefined> {

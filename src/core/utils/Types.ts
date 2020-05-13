@@ -1,10 +1,10 @@
 import { IQualifiedObject } from "../QualifiedObject";
-import { INamespace } from "../..";
+import { INamespace } from "../Namespace";
 import { IModel } from "../Model";
-import { IInstance, IValue } from "..";
+import { IInstance } from "../Instance";
 import { UnsupportedError } from "../../errors/UnsupportedError";
 import { IObservableCollection } from "../collections";
-import { IType } from "../values/Value";
+import { IType, IValue } from "../values/Value";
 
 export type QualifiedObjectHandler<TParam, TResult> = (obj: TParam) => TResult
 

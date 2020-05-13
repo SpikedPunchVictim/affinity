@@ -1,16 +1,16 @@
 import { INamespace } from "../Namespace";
 import { IProjectContext } from "../Project";
-import { NamedCollection, INamedCollection } from "./NamedCollection";
 import { IOrchestrator } from "../Orchestrator";
 import { IRequestForChangeSource } from "../actions";
-import { ItemRemove } from "./ObservableCollection";
+import { IQualifiedObjectCollection, QualifiedObjectCollection } from "./QualifiedObjectCollection";
+import { QualifiedObjectType } from "../utils";
 
-export interface INamespaceCollection extends INamedCollection<INamespace> {
+export interface INamespaceCollection extends IQualifiedObjectCollection<INamespace> {
    create(name: string): Promise<INamespace>
 }
 
 export class NamespaceCollection 
-   extends NamedCollection<INamespace>
+   extends QualifiedObjectCollection<INamespace>
    implements INamespaceCollection {
    
    readonly parent: INamespace
@@ -25,16 +25,12 @@ export class NamespaceCollection
    }
    
    constructor(parent: INamespace, context: IProjectContext) {
-      super()
+      super(QualifiedObjectType.Namespace, parent, context.orchestrator)
       this.parent = parent
       this.context = context
    }
 
    async create(name: string): Promise<INamespace> {
       return await this.orchestrator.createNamespace(this.parent, name)
-   }
-
-   async _remove(items: Array<ItemRemove<INamespace>>): Promise<boolean> {
-      return await this.orchestrator.delete(items.map(it => it.item))
    }
 }

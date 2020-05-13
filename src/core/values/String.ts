@@ -1,8 +1,7 @@
 import { IValue, IType } from "./Value";
 import { ArgumentError } from "../../errors";
-import { IValueAttachment } from "./ValueFactory";
+import { IValueAttachment } from "./ValueAttachment";
 import { SimpleValue } from "./SimpleValue";
-
 
 export class StringType implements IType {
    readonly name: string = "type-string"

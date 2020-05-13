@@ -1,7 +1,7 @@
-import { Value, IValue, IType } from "./Value";
 import { ArgumentError } from "../../errors/ArgumentError";
-import { IValueAttachment } from "./ValueFactory";
+import { IValueAttachment } from "./ValueAttachment";
 import { asValue } from "../utils/Types";
+import { Value, IValue, IType } from "./Value";
 
 export interface ISimpleValue<T> extends IValue {
    readonly value: T

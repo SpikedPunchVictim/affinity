@@ -1,9 +1,6 @@
-import { QualifiedObject } from './QualifiedObject'
-
-import { 
-   IQualifiedObject,
-   IProjectContext, 
-   INamedObject} from '.'
+import { IQualifiedObject, QualifiedObject } from './QualifiedObject'
+import { IProjectContext } from './Project'
+import { INamedObject } from './NamedObject'
 
 import { 
    IInstanceCollection,
@@ -26,8 +23,8 @@ export class Namespace extends QualifiedObject {
    readonly models: IModelCollection
    readonly instances: IInstanceCollection
 
-   constructor(parent: INamespace, name: string, context: IProjectContext) {
-      super(parent, name, context)
+   constructor(id: string, parent: INamespace, name: string, context: IProjectContext) {
+      super(id, parent, name, context)
       this.children = new NamespaceCollection(this, context)
       this.models = new ModelCollection(this, context)
       this.instances = new InstanceCollection(this, context)
@@ -47,12 +44,14 @@ export class RootNamespace
    models: IModelCollection
    instances: IInstanceCollection
 
+   readonly id: string
    readonly name: string = ''
    readonly qualifiedName: string = ''
    readonly parent: INamespace | null = null
 
-   constructor(context: IProjectContext) {
+   constructor(id: string, context: IProjectContext) {
       super()
+      this.id = id
       this.context = context
       this.children = new NamespaceCollection(this, context)
       this.models = new ModelCollection(this, this.context)
@@ -65,5 +64,9 @@ export class RootNamespace
 
    rename(name: string): Promise<INamedObject> {
       throw new Error(`Cannot rename the Root Namespace`)
+   }
+
+   merge(other: IQualifiedObject): void {
+      throw new Error(`Root is static an cannot be merged`)
    }
 }

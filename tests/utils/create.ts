@@ -1,4 +1,4 @@
-import { Project } from "../../src"
+import { Project } from "../../src/core"
 import { basename, parentPath } from "../../src/core/utils"
 
 /**
@@ -9,7 +9,7 @@ import { basename, parentPath } from "../../src/core/utils"
  *    - instances {Array<string>}
  */
 export async function fill(config: any): Promise<Project> {
-   let project = new Project()
+   let project = new Project('test')
 
    let namespaces = config.namespaces || []
    let models = config.models || []

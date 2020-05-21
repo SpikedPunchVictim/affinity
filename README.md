@@ -168,11 +168,18 @@ class Redis {
 
 ```
 
+# Stuffs
 
-# Improvements
+* All QualifiedObjects have Project wide unique IDs
+* Members Have Unique IDs, and Fields inherit their IDs from their associated Member
+
+
+# Improvements | TODOs
 
 ModelCollection/NamespaceCollection/InstanceCollection:
   - Change the events to: 'adding', 'added', etc instead of the gloabl Event object.
     Only use the global events object for subscribing to changes on the Project.
     It makes it easier to sub to changes, and people will remember it better. ie
       project.root.models.on('added', items => ...)
+
+* Change all Delete words to Remove (or vice versa, just be consistent)

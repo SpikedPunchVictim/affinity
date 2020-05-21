@@ -1,1 +1,0 @@
-export type EditHandler<T> = (obj: T) => T

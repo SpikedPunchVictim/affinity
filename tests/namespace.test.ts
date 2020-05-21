@@ -6,18 +6,26 @@ import { validateQualifiedPath, doesReject } from './utils/validate'
 
 import { 
    INamespace,
-   Project, 
    IModel,
    IInstance} from '../src/core'
 import { fill } from './utils/create'
 
 describe('Namespaces', function() {
    it('Should be able to create a Namespace', async function() {
-      let project = new Project()
+      let name = 'one'
 
-      let name = 'NewNamespace'
-      let ns = await project.root.children.create(name)
+      let project = await fill({
+         namespaces: [
+            'one'
+         ]
+      })
+
+      let ns = await project.get<INamespace>(QualifiedObjectType.Namespace, name)
+
+      //@ts-ignore
       expect(ns.name).to.equal(name)
+
+      //@ts-ignore
       expect(ns.qualifiedName).to.equal(name)
 
       let three = await project.create('one.two.three')
@@ -27,39 +35,59 @@ describe('Namespaces', function() {
    })
 
    it('Qualified name should be correct', async function() {
-      let project = new Project()
+      let project = await fill({
+         namespaces: [
+            'one.two'
+         ]
+      })
 
-      let subNs = await project.create('one.two')
+      let subNs = await project.get(QualifiedObjectType.Namespace, 'one.two')
       let ns = await project.get(QualifiedObjectType.Namespace, 'one')
 
       expect(ns).to.not.be.undefined
 
       // @ts-ignore
       validateQualifiedPath(ns, 'one')
+
+      //@ts-ignore
       validateQualifiedPath(subNs, 'one.two')
    })
 
    it('Can create Namespaces using child Namespaces', async function() {
-      let project = new Project()
-
-      let name = 'NewNamespace'
-      let subName = 'ChildNewNamespace'
+      let parentName = 'one'
+      let childName = 'two'
       
-      let ns = await project.root.children.create(name)
-      let subNs = await ns.children.create(subName)
+      let project = await fill({
+         namespaces: [
+            parentName
+         ]
+      })
+      
+      let parent = await project.get<INamespace>(QualifiedObjectType.Namespace, parentName)
 
-      validateQualifiedPath(ns, name)
-      validateQualifiedPath(subNs, `${name}.${subName}`)
+      expect(parent).to.not.be.undefined
+
+      //@ts-ignore
+      let child = await parent.children.create(childName)
+
+      //@ts-ignore
+      validateQualifiedPath(parent, parentName)
+      //@ts-ignore
+      validateQualifiedPath(child, `${parentName}.${childName}`)
    })
 
    it('Can rename Namespaces', async function() {
-      let project = new Project()
-
       let name = 'one'
       let subName = 'two'
       let subQName = `${name}.${subName}`
+      
+      let project = await fill({
+         namespaces: [
+            `${name}.${subName}`
+         ]
+      })
 
-      let subNs = await project.create(subQName)
+      let subNs = await project.get(QualifiedObjectType.Namespace, subQName)
       let ns = await project.get(QualifiedObjectType.Namespace, name)
 
       expect(ns).to.not.be.undefined
@@ -69,21 +97,31 @@ describe('Namespaces', function() {
 
       // @ts-ignore
       await ns.rename(renamed)
+
+      //@ts-ignore
       await subNs.rename(renamed)
 
       // @ts-ignore
       validateQualifiedPath(ns, renamed)
+      //@ts-ignore
       validateQualifiedPath(subNs, subQName)
    })
 
    it('Can move Namespaces', async function() {
-      let project = new Project()
+      let project = await fill({
+         namespaces: [
+            'one.two.three',
+            'four.five.six'
+         ]
+      })
      
       // Moving five --> one
-      let three = await project.create('one.two.three')
-      let six = await project.create('four.five.six')
+      let three = await project.get(QualifiedObjectType.Namespace, 'one.two.three')
+      let six = await project.get(QualifiedObjectType.Namespace, 'four.five.six')
 
+      //@ts-ignore
       validateQualifiedPath(three, 'one.two.three')
+      //@ts-ignore
       validateQualifiedPath(six, 'four.five.six')
 
       let five = await project.get(QualifiedObjectType.Namespace, 'four.five')
@@ -103,13 +141,20 @@ describe('Namespaces', function() {
    })
 
    it('Moving Namespaces moves its children', async function() {
-      let project = new Project()
+      let project = await fill({
+         namespaces: [
+            'one.two.three',
+            'four.five.six'
+         ]
+      })
      
       // Moving five --> one
-      let three = await project.create('one.two.three')
-      let six = await project.create('four.five.six')
+      let three = await project.get(QualifiedObjectType.Namespace, 'one.two.three')
+      let six = await project.get(QualifiedObjectType.Namespace, 'four.five.six')
 
+      //@ts-ignore
       validateQualifiedPath(three, 'one.two.three')
+      //@ts-ignore
       validateQualifiedPath(six, 'four.five.six')
 
       let five = await project.get(QualifiedObjectType.Namespace, 'four.five') as INamespace

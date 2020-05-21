@@ -139,5 +139,5 @@ export class Events {
    static readonly Namespace: NamespaceEvents = new NamespaceEvents()
    static readonly NamespaceCollection: NamespaceCollectionEvents = new NamespaceCollectionEvents()
    static readonly Project: ProjectEvents = new ProjectEvents()
-   static readonly QualifiedObjectEvents = new QualifiedObjectEvents()
+   static readonly QualifiedObject = new QualifiedObjectEvents()
 }

@@ -1,5 +1,5 @@
 export class IndexOutOfRangeError extends Error {
-   constructor(value: number) {
-      super(`${value} is out of index range`)
+   constructor(value: number, msg: string = "") {
+      super(`${value} is out of index range. ${msg}`)
    }
 }

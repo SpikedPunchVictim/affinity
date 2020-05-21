@@ -4,37 +4,42 @@ import { QualifiedObjectType, as } from "../utils/Types"
 import { IOrchestrator } from "../Orchestrator"
 import { NamedCollection } from "./NamedCollection"
 import { IndexableItem } from "./ChangeSets"
-import { sortByIndexReverse, VisitHandler, PredicateHandler } from "./ObservableCollection"
+import { sortByIndexReverse, VisitHandler, PredicateHandler, IObservableCollection } from "./ObservableCollection"
 import { ArgumentError } from "../../errors/ArgumentError"
+import { EventEmitter } from 'events'
+import { IAsyncReadableCollection } from "./Async"
 
-export interface IQualifiedObjectCollection<T extends IQualifiedObject> {
-   [Symbol.asyncIterator](): AsyncIterator<T>
-   at(index: number): Promise<T | undefined>
+export interface IQualifiedObjectCollection<T extends IQualifiedObject>
+   extends EventEmitter, IAsyncReadableCollection<T> {
+   readonly observable: IObservableCollection<T>
    clear(): Promise<boolean>
-   contains(item: T): Promise<boolean>
    delete(name: string): Promise<boolean>
-   filter(visit: VisitHandler<T>): Promise<Array<T>>
-   find(visit: VisitHandler<T>): Promise<T | undefined>
-   forEach(visit: VisitHandler<T>): Promise<void>
-   get(name: string): Promise<T | undefined>
-   indexOf(item: T): Promise<number | undefined>
-   map(visit: VisitHandler<T>): Promise<void[]>
    move(from: number, to: number): Promise<boolean>
    remove(items: T | T[]): Promise<boolean>
    removeAt(index: number): Promise<boolean>
    removeAll(filter: PredicateHandler<T>): Promise<boolean>
-   toArray(): T[]
 }
 
 export class QualifiedObjectCollection<T extends IQualifiedObject>
+   extends EventEmitter
    implements IQualifiedObjectCollection<T> {
+
    readonly type: QualifiedObjectType
    readonly parent: INamespace
    readonly orchestrator: IOrchestrator
 
    readonly items: NamedCollection<T>
 
+   get length(): number {
+      return this.items.length
+   }
+
+   get observable(): IObservableCollection<T> {
+      return this.items
+   }
+
    constructor(type: QualifiedObjectType, parent: INamespace, orchestrator: IOrchestrator) {
+      super()
       this.type = type
       this.parent = parent
       this.orchestrator = orchestrator
@@ -93,14 +98,13 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
       return this
    }
 
-   async at(index: number): Promise<T | undefined> {
+   async at(index: number): Promise<T> {
       let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, [index])
 
-      if (items === undefined) {
-         return undefined
+      if (items !== undefined) {
+         this.merge(items)
       }
 
-      this.merge(items)
       return this.items.at(index)
    }
 
@@ -125,7 +129,6 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
 
       return found === undefined ? false : this.orchestrator.delete(found)
    }
-
 
    async forEach(visit: VisitHandler<T>): Promise<void> {
       let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, undefined)
@@ -168,7 +171,7 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
       let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, undefined)
 
       if (items === undefined) {
-         return
+         return undefined
       }
 
       this.merge(items)

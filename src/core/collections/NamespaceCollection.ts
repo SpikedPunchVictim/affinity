@@ -1,11 +1,12 @@
 import { INamespace } from "../Namespace";
 import { IProjectContext } from "../Project";
-import { IOrchestrator } from "../Orchestrator";
 import { IRequestForChangeSource } from "../actions";
 import { IQualifiedObjectCollection, QualifiedObjectCollection } from "./QualifiedObjectCollection";
 import { QualifiedObjectType } from "../utils";
+import { IObservableCollection } from "./ObservableCollection";
 
 export interface INamespaceCollection extends IQualifiedObjectCollection<INamespace> {
+   readonly observable: IObservableCollection<INamespace>
    create(name: string): Promise<INamespace>
 }
 
@@ -20,10 +21,6 @@ export class NamespaceCollection
       return this.context.rfc
    }
 
-   get orchestrator(): IOrchestrator {
-      return this.context.orchestrator
-   }
-   
    constructor(parent: INamespace, context: IProjectContext) {
       super(QualifiedObjectType.Namespace, parent, context.orchestrator)
       this.parent = parent

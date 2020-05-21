@@ -37,7 +37,6 @@ import {
 
 import { ProjectOpenAction, ProjectCommitAction } from '../src/core/actions/Project';
 import { QualifiedObjectType } from '../src/core/utils';
-import { fill } from './utils/create';
 
 class TestPlugin implements IPlugin {
    readonly name: string = 'test-only-plugin'
@@ -105,7 +104,7 @@ function action(type: string, fn: () => Promise<void>) {
 describe('Plugins', function () {
    describe('# Actions', function () {
       let plugin = new TestPlugin()
-      let project = new Project()
+      let project = new Project('test')
       project.use(plugin)
 
       let tests = [
@@ -216,7 +215,7 @@ describe('Plugins', function () {
 
       this.beforeEach(function () {
          plugin = new TestPlugin()
-         project = new Project()
+         project = new Project('plugin-test')
          project.use(plugin)
       })
 

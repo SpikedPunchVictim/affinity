@@ -5,9 +5,33 @@ import { IModel } from './Model';
 import { IValueAttachment, ChangeValueHandler } from './values/ValueAttachment';
 import { IOrchestrator } from './Orchestrator';
 
+// For use in object literals
+export class MemberAdd {
+   [key: string]: IValue | any
+}
+
+/**
+ * Defines data needed to create a MEmber.
+ * Contains:
+ *    * name {string}
+ *    * value {IValue}
+ *    * index {number}
+ *    * id {string}
+ */
+export type MemberInfo = {
+   name: string
+   value: IValue
+   index?: number
+   id?: string
+}
+
+/*
+   Only Members have IDs. Fields share their Member IDs.
+*/
 export interface IMember extends INamedObject {
    readonly model: IModel
    readonly value: IValue
+   readonly id: string
 }
 
 export class Member 
@@ -16,10 +40,11 @@ export class Member
    readonly model: IModel
    readonly value: IValue
    readonly orchestrator: IOrchestrator
+   readonly id: string
 
    private attachment: IValueAttachment
 
-   constructor(model: IModel, name: string, value: IValue, orchestrator: IOrchestrator) {
+   constructor(model: IModel, name: string, value: IValue, orchestrator: IOrchestrator, id: string) {
       super(name)
 
       if(model == null) {
@@ -37,6 +62,7 @@ export class Member
       this.model = model
       this.value = value
       this.orchestrator = orchestrator
+      this.id = id
 
       this.attachment = new MemberValueAttachment(this, this.orchestrator)
       this.value.attach(this.attachment)

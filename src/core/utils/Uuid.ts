@@ -7,8 +7,6 @@ for(let i = 0; i < 256; ++i) {
    HexMap.push((i + 0x100).toString(16).substring(1))
 }
 
-console.dir(HexMap)
-
 export function uuid(): string {
    let bytes = new Uint8Array(16)
    crypto.randomFillSync(bytes)

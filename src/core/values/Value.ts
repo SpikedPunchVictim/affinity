@@ -19,9 +19,25 @@ export interface IType {
 
 export interface IValue {
    readonly type: IType
-   equals(other: IValue): boolean
-   clone(): IValue
    attach(attachment: IValueAttachment)
+   clone(): IValue
+   equals(other: IValue): boolean
+
+   /**
+    * Sets the value to the one passed in. Notifies all listeners
+    * 
+    * @param other A Value of the same type
+    */
+   set(other: IValue): Promise<IValue>
+
+
+   /**
+    * Sets the value to the one passed in. Only notifies
+    * synchronous listeners (inner-Project listeners)
+    * 
+    * @param other The value of the same type to this value to
+    */
+   setLocally(other: IValue): IValue
 }
 
 export class Value implements IValue {
@@ -38,6 +54,10 @@ export class Value implements IValue {
       this._attachment = attachment
    }
 
+   static as<TResult extends IValue>(value: IValue): TResult {
+      return value as TResult
+   }
+
    equals(other: IValue): boolean {
       throw new NotImplementedError(`equals() not implements`)
    }
@@ -48,5 +68,13 @@ export class Value implements IValue {
 
    attach(attachment: IValueAttachment): void {
       this._attachment = attachment
+   }
+
+   set(other: IValue): Promise<IValue> {
+      throw new NotImplementedError(`set() not implements`)
+   }
+
+   setLocally(other: IValue): IValue {
+      throw new NotImplementedError(`setLocally() not implements`)
    }
 }

@@ -4,8 +4,8 @@ import { IndexableItem, ItemAdd, ItemMove, ItemRemove } from './ChangeSets'
 
 export type VisitHandler<T> = (value: T, index: number, array: Array<T>) => void
 export type PredicateHandler<T> = (value: T, index: number, array: Array<T>) => boolean
-export type OpHandler<T, TChange extends IndexableItem<T>> = (change: TChange[], op: OpAction) => void
-export type OpAction = () => void
+export type OpHandler<T, TChange extends IndexableItem<T>> = (change: TChange[], op: OpAction<T, TChange>) => void
+export type OpAction<T, TChange extends IndexableItem<T>> = (change?: TChange[]) => void
 
 //------------------------------------------------------------------------
 // Sorts the event response formatted items by index in reverse. ie larger
@@ -39,20 +39,45 @@ export class ObservableEvents {
    static removed: string = 'removed'
 }
 
-export interface IObservableCollection<T> {
+export interface IObservableCollection<T> extends EventEmitter{
    readonly length: number
    [Symbol.iterator](): Iterator<T>
-   at(index: number): T | undefined
-   forEach(visit: VisitHandler<T>): void
-   map(visit: VisitHandler<T>): void[]
-   indexOf(item: T): number | undefined
-   contains(item: T): boolean
-   find(visit: VisitHandler<T>): T | undefined
-   filter(visit: VisitHandler<T>): Array<T>
-   insert(index: number, item: T): Promise<boolean>
    add(args: T | T[]): Promise<boolean>
-   move(from: number, to: number): Promise<boolean>
+   at(index: number): T
    clear(): Promise<boolean>
+   contains(item: T): boolean
+   filter(visit: VisitHandler<T>): Array<T>
+   find(visit: VisitHandler<T>): T | undefined
+   forEach(visit: VisitHandler<T>): void
+   indexOf(item: T): number | undefined
+   insert(index: number, item: T): Promise<boolean>
+   map(visit: VisitHandler<T>): void[]
+   move(from: number, to: number): Promise<boolean>
+
+   /**
+    * Adds items to the collection without raising events
+    * 
+    * @param items Items to add
+    * @param handler Handler that will perform the add
+    */
+   mutedAdd(items: T | T[], handler: OpHandler<T, ItemAdd<T>>): void
+
+   /**
+    * Removes items from the collection without raising events
+    * 
+    * @param items The items to remove
+    * @param handler Handler to perform the removal
+    */
+   mutedRemove(items: T | T[], handler: OpHandler<T, ItemRemove<T>>): void
+
+   /**
+    * Moves the items from the collection without raising events
+    * 
+    * @param from The index of the current item
+    * @param to The destination index
+    * @param handler Handler to perform the move
+    */
+   mutedMove(from: number, to: number, handler: OpHandler<T, ItemMove<T>>): void
    remove(items: T | T[]): Promise<boolean>
    removeAt(index: number): Promise<boolean>
    removeAll(filter: PredicateHandler<T>): Promise<boolean>
@@ -156,19 +181,77 @@ export class ObservableCollection<T>
       }
    }
 
-   internalAdd(items: T | Array<T>, handler: OpHandler<T, ItemAdd<T>>): void {
+   add(items: T | T[]): Promise<boolean> {
       let change = ObservableChangelist.add(items, this)
-      handler(change, () => this.performAdd(change))
+      return this._add(change);
    }
 
-   internalRemove(items: T | T[], handler: OpHandler<T, ItemRemove<T>>): void {
-      let change = ObservableChangelist.remove(items, this)
-      handler(change, () => this.performRemove(change))
+   at(index: number): T {
+      if(index < 0 || index >= this.items.length) {
+         throw new IndexOutOfRangeError(index)
+      }
+
+      return this.items[index]
    }
 
-   internalMove(from: number, to: number, handler: OpHandler<T, ItemMove<T>>): void {
+   clear(): Promise<boolean> {
+      let change = ObservableChangelist.remove(this.items, this)
+      return this._remove(change);
+   }
+
+   contains(item: T): boolean {
+      return this.items.indexOf(item) >= 0
+   }
+
+   filter(visit: VisitHandler<T>): Array<T> {
+      return this.items.filter(visit)
+   }
+
+   find(visit: VisitHandler<T>): T | undefined {
+      return this.items.find(visit)
+   }
+
+   forEach(visit: VisitHandler<T>): void {
+      return this.items.forEach(visit)
+   }
+
+   indexOf(item: T): number | undefined {
+      return this.items.indexOf(item)
+   }
+
+   insert(index: number, item: T): Promise<boolean> {
+      if (index < 0 || index > this.length) {
+         throw new IndexOutOfRangeError(index)
+      }
+
+      let change = new Array<ItemAdd<T>>()
+      change.push(new ItemAdd<T>(item, index))
+      
+      return this._add(change)
+   }
+
+   map(visit: VisitHandler<T>): void[] {
+      return this.items.map(visit)
+   }
+
+   move(from: number, to: number): Promise<boolean> {
       let change = ObservableChangelist.move(from, to, this)
-      handler(change, () => this.performRemove(change))
+      return this._move(change)
+   }
+
+   mutedAdd(items: T | T[], handler: OpHandler<T, ItemAdd<T>>): void {
+      let change = ObservableChangelist.add(items, this)
+      handler(change, (ch) => this.performAdd(ch || change))
+   }
+
+   mutedRemove(items: T | T[], handler: OpHandler<T, ItemRemove<T>>): void {
+      let change = ObservableChangelist.remove(items, this)
+      handler(change, (ch) => this.performRemove(ch || change))
+   }
+
+   mutedMove(from: number, to: number, handler: OpHandler<T, ItemMove<T>>): void {
+      let change = ObservableChangelist.move(from, to, this)
+      handler(change, (ch) => this.performRemove(ch || change))
    }
 
    performAdd(items: Array<ItemAdd<T>>): void {
@@ -203,60 +286,6 @@ export class ObservableCollection<T>
          this.items.splice(current.from, 1)
          this.items.splice(current.to, 0, current.item)
       }
-   }
-
-   at(index: number): T | undefined {
-      return this.items[index]
-   }
-
-   forEach(visit: VisitHandler<T>): void {
-      return this.items.forEach(visit)
-   }
-
-   map(visit: VisitHandler<T>): void[] {
-      return this.items.map(visit)
-   }
-
-   indexOf(item: T): number | undefined {
-      return this.items.indexOf(item)
-   }
-
-   contains(item: T): boolean {
-      return this.items.indexOf(item) >= 0
-   }
-
-   find(visit: VisitHandler<T>): T | undefined {
-      return this.items.find(visit)
-   }
-
-   filter(visit: VisitHandler<T>): Array<T> {
-      return this.items.filter(visit)
-   }
-
-   insert(index: number, item: T): Promise<boolean> {
-      if (index < 0 || index > this.length) {
-         throw new IndexOutOfRangeError(index)
-      }
-
-      let change = new Array<ItemAdd<T>>()
-      change.push(new ItemAdd<T>(item, index))
-      
-      return this._add(change)
-   }
-
-   add(items: T | T[]): Promise<boolean> {
-      let change = ObservableChangelist.add(items, this)
-      return this._add(change);
-   }
-
-   move(from: number, to: number): Promise<boolean> {
-      let change = ObservableChangelist.move(from, to, this)
-      return this._move(change)
-   }
-
-   clear(): Promise<boolean> {
-      let change = ObservableChangelist.remove(this.items, this)
-      return this._remove(change);
    }
 
    remove(items: T | T[]): Promise<boolean> {

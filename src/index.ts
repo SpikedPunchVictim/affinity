@@ -7,14 +7,12 @@ import {
    FieldReorderAction,
    FieldValueChangeAction,
    IActionRouter,
-   INamespace,
    INamespaceCollection,
    InstanceCreateAction,
    InstanceDeleteAction,
    InstanceMoveAction,
    InstanceRenameAction,
    IPlugin,
-   IProject,
    MemberCreateAction,
    MemberDeleteAction,
    MemberRenameAction,
@@ -24,16 +22,17 @@ import {
    ModelDeleteAction,
    ModelMoveAction,
    ModelRenameAction,
-   Namespace,
    NamespaceCreateAction,
    NamespaceDeleteAction,
    NamespaceRenameAction,
    NamespaceMoveAction,
    ParentChangeAction,
-   Project,
    ProjectOpenAction,
    ProjectCommitAction,
    QualifiedObjectGetAction } from './core'
+
+import { IProject, Project } from './core/Project'
+import { INamespace, Namespace } from './core/Namespace'
 
 import {
    Switch

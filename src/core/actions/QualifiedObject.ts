@@ -19,11 +19,23 @@ export class ParentChangeAction extends RfcAction {
    }
 }
 
+// export abstract class QualifiedObjectExistsAction<T extends IQualifiedObject> extends RfcAction {
+//    constructor() {
+//       super()
+//    }
+// }
+
 export abstract class QualifiedObjectGetAction<T extends IQualifiedObject> extends RfcAction {
    readonly parent: INamespace
    readonly indexes: number[] | undefined
    
    results: Array<IndexableItem<T>> | undefined = undefined
+
+   get contentsUpdated(): boolean {
+      return this._contentsUpdated
+   }
+
+   private _contentsUpdated: boolean = false
 
    constructor(type: string, parent: INamespace, indexes: number[] | undefined) {
       super(type)
@@ -33,5 +45,6 @@ export abstract class QualifiedObjectGetAction<T extends IQualifiedObject> exten
 
    set(items: IndexableItem<T>[] | undefined): void {
       this.results = items
+      this._contentsUpdated = true
    }
 }

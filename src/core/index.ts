@@ -1,6 +1,5 @@
 export * from './collections'
 export * from './actions'
-export * from './Edit'
 export * from './Field'
 export * from './Instance'
 export * from './Member'

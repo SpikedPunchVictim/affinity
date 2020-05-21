@@ -1,11 +1,12 @@
 import { IProjectContext } from "../Project";
 import { IModel } from "../Model";
 import { INamespace } from '../Namespace'
-import { IOrchestrator } from "../Orchestrator";
 import { QualifiedObjectCollection, IQualifiedObjectCollection } from "./QualifiedObjectCollection";
 import { QualifiedObjectType } from "../utils";
+import { IObservableCollection } from "./ObservableCollection";
 
 export interface IModelCollection extends IQualifiedObjectCollection<IModel> {
+   readonly observable: IObservableCollection<IModel>
    create(name: string): Promise<IModel>
 }
 
@@ -15,10 +16,6 @@ export class ModelCollection
    
    readonly parent: INamespace
    readonly context: IProjectContext
-
-   get orchestrator(): IOrchestrator {
-      return this.context.orchestrator
-   }
    
    constructor(parent: INamespace, context: IProjectContext) {
       super(QualifiedObjectType.Model, parent, context.orchestrator)

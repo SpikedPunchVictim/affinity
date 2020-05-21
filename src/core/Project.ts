@@ -2,8 +2,7 @@ import {
    basename,
    parentPath,
    QualifiedObjectType,
-   Switch,
-   uuid } from './utils'
+   Switch } from './utils'
 
 import { IRequestForChangeSource, RequestForChangeSource } from './actions/RequestForChange'
 import { INamespace, RootNamespace } from './Namespace'
@@ -15,23 +14,14 @@ import { ArgumentError } from '../errors/ArgumentError'
 import { InvalidOperationError } from '../errors/InvalidOperationError'
 import { IOrchestrator, Orchestrator } from './Orchestrator'
 import { EventEmitter } from 'events'
+import { IUidWarden, HexUidWarden } from './UidWarden'
 
 export interface IProjectContext {
    readonly rfc: IRequestForChangeSource
    readonly router: IActionRouter
    readonly orchestrator: IOrchestrator
    readonly project: IProject
-   readonly uidGenerator: IUidGenerator
-}
-
-export interface IUidGenerator {
-   generate(): Promise<string>
-}
-
-class HexUidGenerator implements IUidGenerator {
-   async generate(): Promise<string> {
-      return uuid()
-   }
+   readonly uidWarden: IUidWarden
 }
 
 class ProjectContext implements IProjectContext {
@@ -45,11 +35,11 @@ class ProjectContext implements IProjectContext {
 
    readonly project: IProject
    readonly orchestrator: IOrchestrator
-   readonly uidGenerator: IUidGenerator
+   readonly uidWarden: IUidWarden
 
-   constructor(project: IProject, uidGenerator: IUidGenerator) {
+   constructor(project: IProject, uidGenerator: IUidWarden) {
       this.project = project
-      this.uidGenerator = uidGenerator
+      this.uidWarden = uidGenerator
       this.orchestrator = new Orchestrator(project, this)
    }
 }
@@ -67,7 +57,7 @@ export interface IProject extends EventEmitter {
     * @param qualifiedPath The qualified path
     */
    get<TReturn extends IQualifiedObject>(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<TReturn | undefined>
-   
+
    /**
     * Creates all fo the Namespaces to complete the path. Returns
     * the last Namespace in the path.
@@ -94,6 +84,8 @@ export interface IProject extends EventEmitter {
    move(qualifiedType: QualifiedObjectType, fromPath: string, toPath: string): Promise<IQualifiedObject | undefined>
    
    // readonly search: ISearch
+
+   // Custom plugin receives all Actions
    use(plugin: IPlugin): Promise<void>
    open(): Promise<void>
    commit(): Promise<void>
@@ -101,7 +93,7 @@ export interface IProject extends EventEmitter {
 
 export interface IProjectOptions {
    rfcSource?: IRequestForChangeSource
-   uidGenerator?: IUidGenerator
+   uidGenerator?: IUidWarden
    rootId: string
 }
 
@@ -114,14 +106,14 @@ export class Project
    readonly router: IActionRouter
    readonly rfc: IRequestForChangeSource
    readonly name: string
-   readonly uidGenerator: IUidGenerator
+   readonly uidGenerator: IUidWarden
 
    constructor(name: string, options?: IProjectOptions) {
       super()
       this.name = name
       this.router = new ActionRouter()
       this.rfc = options?.rfcSource || new RequestForChangeSource(this.router)
-      this.uidGenerator = options?.uidGenerator || new HexUidGenerator()
+      this.uidGenerator = options?.uidGenerator || new HexUidWarden()
       this.context = new ProjectContext(this, this.uidGenerator)
 
       let rootId = options?.rootId || `root_${this.name}`

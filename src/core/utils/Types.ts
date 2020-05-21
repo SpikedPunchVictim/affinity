@@ -21,10 +21,10 @@ export type QualifiedTypeMap<TResult> = {
 }
 
 export enum QualifiedObjectType {
-   None = 0,
-   Namespace,
-   Model,
-   Instance
+   None = 'None',
+   Namespace = 'Namespace',
+   Model = 'Model',
+   Instance = 'Instance'
 }
 
 export function getType(obj: IQualifiedObject): QualifiedObjectType {

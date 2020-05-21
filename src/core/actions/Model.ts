@@ -1,10 +1,11 @@
-import { CreateAction, DeleteAction, MoveAction, RenameAction, ReorderAction, ValueChangeAction } from "./Actions"
-import { IMember } from "../Member"
+import { CreateAction, DeleteAction, MoveAction, RenameAction, ReorderAction, ValueChangeAction, RfcAction } from "./Actions"
+import { IMember, MemberInfo } from "../Member"
 import { IModel } from "../Model"
 import { INamespace } from "../Namespace"
 import { IValue } from "../values/Value"
 import { ActionSet } from './ActionSet'
 import { QualifiedObjectGetAction } from "./QualifiedObject"
+import { IndexableItem } from "../collections/ChangeSets"
 
 export class ModelCreateAction extends CreateAction<IModel> {
    static readonly type: string = ActionSet.ModelCreate
@@ -57,9 +58,13 @@ export class ModelReorderAction extends ReorderAction<IModel> {
 
 export class MemberCreateAction extends CreateAction<IMember> {
    static readonly type: string = ActionSet.MemberCreate
+   readonly model: IModel
+   readonly index: number
 
-   constructor(member: IMember) {
+   constructor(model: IModel, member: IMember, index: number) {
       super(MemberCreateAction.type, member)
+      this.model = model
+      this.index = index
    }
 }
 
@@ -68,6 +73,29 @@ export class MemberDeleteAction extends DeleteAction<IMember> {
 
    constructor(member: IMember) {
       super(MemberDeleteAction.type, member)
+   }
+}
+
+export class MemberGetAction extends RfcAction {
+   static readonly type: string = ActionSet.MemberGet
+   readonly model: IModel
+
+   results: Array<IndexableItem<MemberInfo>> = new Array<IndexableItem<MemberInfo>>()
+
+   get contentsUpdated(): boolean {
+      return this._contentsUpdated
+   }
+
+   private _contentsUpdated: boolean = false
+
+   constructor(model: IModel) {
+      super(MemberGetAction.type)
+      this.model = model
+   }
+
+   set(items: IndexableItem<MemberInfo>[]): void {
+      this.results = items
+      this._contentsUpdated = true
    }
 }
 
@@ -81,6 +109,10 @@ export class MemberRenameAction extends RenameAction<IMember> {
 
 export class MemberReorderAction extends ReorderAction<IMember> {
    static readonly type: string = ActionSet.MemberReorder
+
+   get model(): IModel {
+      return this.source.model
+   }
 
    constructor(member: IMember, from: number, to: number) {
       super(MemberReorderAction.type, member, from, to)

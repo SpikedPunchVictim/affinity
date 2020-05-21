@@ -1,10 +1,11 @@
-import { CreateAction, DeleteAction, RenameAction, MoveAction, ReorderAction, ValueChangeAction } from "./Actions"
+import { CreateAction, DeleteAction, RenameAction, MoveAction, ReorderAction, ValueChangeAction, RfcAction } from "./Actions"
 import { IInstance } from "../Instance"
-import { IField } from "../Field"
+import { IField, FieldInfo } from "../Field"
 import { INamespace } from "../Namespace"
 import { IValue } from "../values/Value"
 import { ActionSet } from './ActionSet'
 import { QualifiedObjectGetAction } from "./QualifiedObject"
+import { IndexableItem } from "../collections/ChangeSets"
 
 export class InstanceCreateAction extends CreateAction<IInstance> {
    static readonly type: string = ActionSet.InstanceCreate
@@ -72,11 +73,45 @@ export class FieldDeleteAction extends DeleteAction<IField> {
    }
 }
 
+export class FieldGetAction extends RfcAction {
+   static readonly type: string = ActionSet.FieldGet
+   readonly instance: IInstance
+
+   results: Array<IndexableItem<FieldInfo>> = new Array<IndexableItem<FieldInfo>>()
+
+   get contentsUpdated(): boolean {
+      return this._contentsUpdated
+   }
+
+   private _contentsUpdated: boolean = false
+
+   constructor(instance: IInstance) {
+      super(FieldGetAction.type)
+      this.instance = instance
+   }
+
+   set(items: IndexableItem<FieldInfo>[]): void {
+      this.results = items
+      this._contentsUpdated = true
+   }
+}
+
 export class FieldRenameAction extends RenameAction<IField> {
    static readonly type: string = ActionSet.FieldRename
 
    constructor(field: IField, from: string, to: string) {
       super(InstanceRenameAction.type, field, from, to)
+   }
+}
+
+export class FieldResetAction extends RfcAction {
+   static readonly type: string = ActionSet.FieldReset
+
+   readonly field: IField
+
+   constructor(field: IField) {
+      super(FieldResetAction.type)
+      this.field = field
    }
 }
 

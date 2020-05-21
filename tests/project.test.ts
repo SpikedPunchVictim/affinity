@@ -12,11 +12,25 @@ import { IInstance, INamespace } from '../src/core'
          * For every type of value, the correct update events are generated
          * Test forUInt andInt positive/negative should throw erros if not correct
          * Array type and sub types have to equal in order for them to be equal
+      qualifiedobject.test.ts
+         * When a plugin fails to retrieve QualifiedObjects, (map(), filter(), forEach()), an Error should be raised
+      namespace/model/instance.test.ts:
+         * Test moving them to another namespace, and having it fail when it does the add. It should "recover" and
+           put the moving object back into its original collection
+      namespace.test.ts
+         * Creating a Namespace outside of the Project (ie new Namespace(...)), populating it several deep,
+           and addingit to a Namespace that is already a part of the Project, should generate IDs for
+           all children, verify that the NAmesapce name is unique, and attach it to the project.
+      model.test.ts
+         * Reorder members
+         * Reordeing members at indexes that don't exist should throw an error
+         * Adding members with the same name should fail
+
 */
 
 describe('Projects', function() {
    it('Project create() creates Namespaces', async function() {
-      let project = new Project()
+      let project = new Project('test')
 
       let one = await project.create('one')
       let two = await project.create('one.two')
@@ -29,7 +43,7 @@ describe('Projects', function() {
    })
 
    it('Project get() gets Namespaces', async function() {
-      let project = new Project()
+      let project = new Project('test')
 
       let two = await project.create('one.two')
       let twoGot = await project.get(QualifiedObjectType.Namespace, 'one.two')
@@ -38,7 +52,7 @@ describe('Projects', function() {
    })
 
    it('Project get() gets Models', async function() {
-      let project = new Project()
+      let project = new Project('test')
 
       let two = await project.create('one.two')
       let model = await two.models.create('model')
@@ -53,7 +67,7 @@ describe('Projects', function() {
    })
 
    it('Project get() gets Instances', async function() {
-      let project = new Project()
+      let project = new Project('test')
 
       let two = await project.create('one.two')
       let model = await two.models.create('model')
@@ -68,7 +82,7 @@ describe('Projects', function() {
    })
 
    it('Project delete() deletes Namespaces', async function() {
-      let project = new Project()
+      let project = new Project('test')
 
       let two = await project.create('one.two')
 

@@ -5,29 +5,23 @@ import { ArgumentError } from '../errors/'
 import { IOrchestrator } from './Orchestrator'
 import { Events } from './Events'
 import { EventEmitter } from 'events'
-
-export class ParentChange {
-   readonly oldParent: INamespace
-   readonly newParent: INamespace
-
-   constructor(oldParent: INamespace, newParent: INamespace) {
-      this.oldParent = oldParent
-      this.newParent = newParent
-   }
-}
+import { ParentChangeAction } from './actions/QualifiedObject'
 
 export interface IQualifiedObject extends INamedObject, EventEmitter {
    readonly id: string
    readonly qualifiedName: string
    readonly parent: INamespace | null
+   attach(parent: INamespace, context: IProjectContext): void
    move(to: INamespace): Promise<IQualifiedObject>
    merge(other: IQualifiedObject): void
 }
 
-export class QualifiedObject extends NamedObject {
+export class QualifiedObject
+   extends NamedObject
+   implements IQualifiedObject {
 
    readonly id: string
-   readonly context: IProjectContext
+   private _context: IProjectContext
 
    private _parent: INamespace | null
 
@@ -49,6 +43,10 @@ export class QualifiedObject extends NamedObject {
       return results.join('.')
    }
 
+   get context(): IProjectContext {
+      return this._context
+   }
+
    get parent(): INamespace | null {
       return this._parent
    }
@@ -61,10 +59,10 @@ export class QualifiedObject extends NamedObject {
       return this.context.orchestrator
    }
 
-   constructor(id: string, parent: INamespace, name: string, context: IProjectContext) {
+   constructor(name: string, parent: INamespace, context: IProjectContext, id: string) {
       super(name)
 
-      if(id == null) {
+      if (id == null) {
          throw new ArgumentError(`id must be valid`)
       }
 
@@ -73,11 +71,17 @@ export class QualifiedObject extends NamedObject {
       }
 
       this.id = id
-      this.context = context
+      this._context = context
       this._parent = parent
    }
 
-   async rename(name: string) : Promise<INamedObject> {
+   attach(parent: INamespace, context: IProjectContext): void {
+      this.setParent(parent)
+      this._context = context
+   }
+
+
+   async rename(name: string): Promise<INamedObject> {
       return this.orchestrator.rename(this, name)
    }
 
@@ -95,10 +99,10 @@ export class QualifiedObject extends NamedObject {
 
    setParent(parent: INamespace): void {
       //@ts-ignore
-      let change = new ParentChange(this._parent, parent)
-      this.emit(Events.QualifiedObjectEvents.ParentChanging, change)
+      let change = new ParentChangeAction(this, this._parent, parent)
+      this.emit(Events.QualifiedObject.ParentChanging, change)
       this._parent = parent
-      this.emit(Events.QualifiedObjectEvents.ParentChanged, change)
+      this.emit(Events.QualifiedObject.ParentChanged, change)
    }
 
    setName(name: string): void {
@@ -106,7 +110,7 @@ export class QualifiedObject extends NamedObject {
    }
 
    merge(other: IQualifiedObject): void {
-      if(other.id !== this.id) {
+      if (other.id !== this.id) {
          throw new ArgumentError(`The ids must be the same`)
       }
    }

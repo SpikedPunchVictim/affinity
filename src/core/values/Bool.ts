@@ -1,7 +1,7 @@
 import { IType, IValue } from "./Value"
 import { ArgumentError } from "../../errors/ArgumentError"
-import { IValueAttachment } from "./ValueAttachment"
-import { SimpleValue } from "./SimpleValue"
+import { IValueAttachment, EmptyValueAttachment } from "./ValueAttachment"
+import { SimpleValue, SimpleValueSource } from "./SimpleValue"
 
 export class BoolType implements IType {
    readonly name: string = "type-bool"
@@ -29,5 +29,11 @@ export class BoolValue extends SimpleValue<boolean> {
 
    clone(): IValue {
       return new BoolValue(this.value, this.attachment)
+   }
+}
+
+export class BoolValueSource extends SimpleValueSource<boolean> {
+   constructor() {
+      super(SingletonBoolType, (val: boolean) => new BoolValue(val, new EmptyValueAttachment()))
    }
 }

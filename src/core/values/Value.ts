@@ -78,3 +78,7 @@ export class Value implements IValue {
       throw new NotImplementedError(`setLocally() not implements`)
    }
 }
+
+export interface IValueSource {
+   
+}

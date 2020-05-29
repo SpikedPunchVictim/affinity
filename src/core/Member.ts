@@ -3,7 +3,8 @@ import { IValue } from './values/Value';
 import { ArgumentError } from '../errors/ArgumentError';
 import { IModel } from './Model';
 import { IValueAttachment, ChangeValueHandler } from './values/ValueAttachment';
-import { IOrchestrator } from './Orchestrator';
+import { IOrchestrator } from './orchestrator/Orchestrator';
+import { RestoreInfo } from './Restore'
 
 // For use in object literals
 export class MemberAdd {
@@ -18,11 +19,27 @@ export class MemberAdd {
  *    * index {number}
  *    * id {string}
  */
-export type MemberInfo = {
+export type MemberCreateInfo = {
    name: string
    value: IValue
-   index?: number
-   id?: string
+   index?: number // Unknown/optional during creation time, and assumed to be appended to the end
+}
+
+/**
+ * Used for restoring a Member from a data store
+ */
+export class MemberRestoreInfo extends RestoreInfo {
+   name: string = ""
+   value: IValue
+   index: number = -1
+   id: string = ""
+   modelId: string
+
+   constructor(name: string, value: IValue, id: string, modelId: string, index: number) {
+      super(name, "", id, modelId, index)
+      this.value = value
+      this.modelId = modelId
+   }
 }
 
 /*

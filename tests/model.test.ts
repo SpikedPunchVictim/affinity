@@ -106,6 +106,8 @@ describe('Models', function() {
          })
 
          let model = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model')
+
+         //@ts-ignore
          await model.append({
             string: '#1',
             string2: '#2'

@@ -1,7 +1,7 @@
 import { IType, IValue } from "./Value"
 import { ArgumentError } from "../../errors/ArgumentError"
-import { IValueAttachment } from "./ValueAttachment"
-import { SimpleValue } from "./SimpleValue"
+import { IValueAttachment, EmptyValueAttachment } from "./ValueAttachment"
+import { SimpleValue, SimpleValueSource } from "./SimpleValue"
 
 export class UIntType implements IType {
    readonly name: string = "type-uint"
@@ -32,5 +32,11 @@ export class UIntValue extends SimpleValue<number> {
 
    clone(): IValue {
       return new UIntValue(this.value, this.attachment)
+   }
+}
+
+export class UIntValueSource extends SimpleValueSource<number> {
+   constructor() {
+      super(SingletonUIntType, (val: number) => new UIntValue(val, new EmptyValueAttachment()))
    }
 }

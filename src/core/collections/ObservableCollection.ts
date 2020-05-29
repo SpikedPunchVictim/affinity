@@ -48,6 +48,7 @@ export interface IObservableCollection<T> extends EventEmitter{
    contains(item: T): boolean
    filter(visit: VisitHandler<T>): Array<T>
    find(visit: VisitHandler<T>): T | undefined
+   findIndex(visit: VisitHandler<T>): number
    forEach(visit: VisitHandler<T>): void
    indexOf(item: T): number | undefined
    insert(index: number, item: T): Promise<boolean>
@@ -60,7 +61,7 @@ export interface IObservableCollection<T> extends EventEmitter{
     * @param items Items to add
     * @param handler Handler that will perform the add
     */
-   mutedAdd(items: T | T[], handler: OpHandler<T, ItemAdd<T>>): void
+   customAdd(items: T | T[], handler: OpHandler<T, ItemAdd<T>>): void
 
    /**
     * Removes items from the collection without raising events
@@ -68,7 +69,7 @@ export interface IObservableCollection<T> extends EventEmitter{
     * @param items The items to remove
     * @param handler Handler to perform the removal
     */
-   mutedRemove(items: T | T[], handler: OpHandler<T, ItemRemove<T>>): void
+   customRemove(items: T | T[], handler: OpHandler<T, ItemRemove<T>>): void
 
    /**
     * Moves the items from the collection without raising events
@@ -77,7 +78,7 @@ export interface IObservableCollection<T> extends EventEmitter{
     * @param to The destination index
     * @param handler Handler to perform the move
     */
-   mutedMove(from: number, to: number, handler: OpHandler<T, ItemMove<T>>): void
+   customMove(from: number, to: number, handler: OpHandler<T, ItemMove<T>>): void
    remove(items: T | T[]): Promise<boolean>
    removeAt(index: number): Promise<boolean>
    removeAll(filter: PredicateHandler<T>): Promise<boolean>
@@ -160,9 +161,9 @@ export class ObservableCollection<T>
 
    protected items: Array<T>
 
-   constructor() {
+   constructor(...items: T[]) {
       super()
-      this.items = new Array<T>()
+      this.items = new Array<T>(...items)
    }
 
    get length(): number {
@@ -211,6 +212,10 @@ export class ObservableCollection<T>
       return this.items.find(visit)
    }
 
+   findIndex(visit: VisitHandler<T>): number {
+      return this.items.findIndex(visit)
+   }
+
    forEach(visit: VisitHandler<T>): void {
       return this.items.forEach(visit)
    }
@@ -239,17 +244,17 @@ export class ObservableCollection<T>
       return this._move(change)
    }
 
-   mutedAdd(items: T | T[], handler: OpHandler<T, ItemAdd<T>>): void {
+   customAdd(items: T | T[], handler: OpHandler<T, ItemAdd<T>>): void {
       let change = ObservableChangelist.add(items, this)
       handler(change, (ch) => this.performAdd(ch || change))
    }
 
-   mutedRemove(items: T | T[], handler: OpHandler<T, ItemRemove<T>>): void {
+   customRemove(items: T | T[], handler: OpHandler<T, ItemRemove<T>>): void {
       let change = ObservableChangelist.remove(items, this)
       handler(change, (ch) => this.performRemove(ch || change))
    }
 
-   mutedMove(from: number, to: number, handler: OpHandler<T, ItemMove<T>>): void {
+   customMove(from: number, to: number, handler: OpHandler<T, ItemMove<T>>): void {
       let change = ObservableChangelist.move(from, to, this)
       handler(change, (ch) => this.performRemove(ch || change))
    }

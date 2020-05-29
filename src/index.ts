@@ -26,10 +26,9 @@ import {
    NamespaceDeleteAction,
    NamespaceRenameAction,
    NamespaceMoveAction,
-   ParentChangeAction,
    ProjectOpenAction,
    ProjectCommitAction,
-   QualifiedObjectGetAction } from './core'
+   QualifiedObjectGetChildrenAction } from './core'
 
 import { IProject, Project } from './core/Project'
 import { INamespace, Namespace } from './core/Namespace'
@@ -72,10 +71,9 @@ export {
    NamespaceDeleteAction,
    NamespaceRenameAction,
    NamespaceMoveAction,
-   ParentChangeAction,
    Project,
    ProjectOpenAction,
    ProjectCommitAction,
-   QualifiedObjectGetAction,
+   QualifiedObjectGetChildrenAction as QualifiedObjectGetAction,
    Utils
 }

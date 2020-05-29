@@ -1,23 +1,6 @@
 import { RfcAction } from "./Actions"
-import { IQualifiedObject } from "../QualifiedObject"
 import { INamespace } from "../Namespace"
-import { ActionSet } from './ActionSet'
-import { IndexableItem } from "../collections/ChangeSets"
-
-
-export class ParentChangeAction extends RfcAction {
-   static readonly type: string = ActionSet.ParentChange
-   readonly source: IQualifiedObject
-   readonly from: INamespace
-   readonly to: INamespace
-
-   constructor(source: IQualifiedObject, from: INamespace, to: INamespace) {
-      super(ParentChangeAction.type)
-      this.source = source
-      this.from = from
-      this.to = to
-   }
-}
+import { RestoreInfo } from '../Restore'
 
 // export abstract class QualifiedObjectExistsAction<T extends IQualifiedObject> extends RfcAction {
 //    constructor() {
@@ -25,26 +8,27 @@ export class ParentChangeAction extends RfcAction {
 //    }
 // }
 
-export abstract class QualifiedObjectGetAction<T extends IQualifiedObject> extends RfcAction {
+export abstract class QualifiedObjectGetChildrenAction<TRestore extends RestoreInfo> extends RfcAction {
    readonly parent: INamespace
-   readonly indexes: number[] | undefined
    
-   results: Array<IndexableItem<T>> | undefined = undefined
+   get restore(): Array<TRestore> | undefined {
+      return this._restore
+   }
+
+   set restore(val: Array<TRestore> | undefined) {
+      this._restore = val
+      this._contentsUpdated = val !== undefined
+   }
 
    get contentsUpdated(): boolean {
       return this._contentsUpdated
    }
 
    private _contentsUpdated: boolean = false
+   private _restore: Array<TRestore> | undefined = undefined
 
-   constructor(type: string, parent: INamespace, indexes: number[] | undefined) {
+   constructor(type: string, parent: INamespace) {
       super(type)
       this.parent = parent
-      this.indexes = indexes
-   }
-
-   set(items: IndexableItem<T>[] | undefined): void {
-      this.results = items
-      this._contentsUpdated = true
    }
 }

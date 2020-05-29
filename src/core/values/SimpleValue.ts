@@ -1,7 +1,7 @@
 import { ArgumentError } from "../../errors/ArgumentError";
 import { IValueAttachment } from "./ValueAttachment";
 import { asValue } from "../utils/Types";
-import { Value, IValue, IType } from "./Value";
+import { Value, IValue, IType, IValueSource } from "./Value";
 
 export interface ISimpleValue<T> extends IValue {
    readonly value: T
@@ -61,5 +61,24 @@ export class SimpleValue<T> extends Value implements ISimpleValue<T> {
 
       this._value = simple.value
       return this
+   }
+}
+
+export class SimpleValueSource<T> implements IValueSource {
+   readonly singletonType: IType
+   readonly create: (val: T) => IValue
+
+   constructor(singleton: IType, create: (val: T) => IValue) {
+      this.singletonType = singleton
+      this.create = create
+
+   }
+
+   type(): IType {
+      return this.singletonType
+   }
+
+   value(val: T): IValue {
+      return this.create(val)
    }
 }

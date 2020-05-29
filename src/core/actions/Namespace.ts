@@ -1,15 +1,13 @@
-import { RfcAction, RenameAction, MoveAction, DeleteAction, ReorderAction } from "./Actions"
-import { INamespace } from "../Namespace"
+import { CreateAction, RenameAction, MoveAction, DeleteAction, ReorderAction, UpdateAction, GetByIdAction } from "./Actions"
+import { INamespace, NamespaceFullRestoreInfo, NamespaceLazyRestoreInfo } from "../Namespace"
 import { ActionSet } from './ActionSet'
-import { QualifiedObjectGetAction } from "./QualifiedObject"
+import { QualifiedObjectGetChildrenAction } from "./QualifiedObject"
 
-export class NamespaceCreateAction extends RfcAction {
+export class NamespaceCreateAction extends CreateAction<INamespace> {
    static readonly type: string = ActionSet.NamespaceCreate
-   readonly namespace: INamespace
 
-   constructor(namespace: INamespace) {
-      super(NamespaceCreateAction.type)
-      this.namespace = namespace
+   constructor(namespace: INamespace, index: number) {
+      super(NamespaceCreateAction.type, namespace, index)
    }
 }
 
@@ -21,11 +19,29 @@ export class NamespaceDeleteAction extends DeleteAction<INamespace> {
    }
 }
 
-export class NamespaceGetAction extends QualifiedObjectGetAction<INamespace> {
-   static readonly type: string = ActionSet.NamespaceGet
+export class NamespaceGetByIdAction extends GetByIdAction {
+   static readonly type: string = ActionSet.NamespaceGetById
 
-   constructor(parent: INamespace, indexes: number[] | undefined) {
-      super(NamespaceGetAction.type, parent, indexes)
+   get restore(): NamespaceLazyRestoreInfo | undefined {
+      return this._restore
+   }
+
+   private _restore: NamespaceLazyRestoreInfo | undefined = undefined
+
+   constructor(id: string) {
+      super(NamespaceGetByIdAction.type, id)
+   }
+   
+   set(restore: NamespaceLazyRestoreInfo): void {
+      this._restore = restore
+   }
+}
+
+export class NamespaceGetChildrenAction extends QualifiedObjectGetChildrenAction<NamespaceLazyRestoreInfo> {
+   static readonly type: string = ActionSet.NamespaceGetChildren
+
+   constructor(parent: INamespace) {
+      super(NamespaceGetChildrenAction.type, parent)
    }
 }
 
@@ -53,3 +69,10 @@ export class NamespaceReorderAction extends ReorderAction<INamespace> {
    }
 }
 
+export class NamespaceUpdateAction extends UpdateAction<INamespace, NamespaceFullRestoreInfo> {
+   static readonly type: string = ActionSet.NamespaceUpdate
+
+   constructor(namespace: INamespace) {
+      super(NamespaceUpdateAction.type, namespace)
+   }
+}

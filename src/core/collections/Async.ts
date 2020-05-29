@@ -8,6 +8,7 @@ export interface IAsyncReadableCollection<T> {
    //exists(name: string): Promise<boolean> // Add one day
    filter(visit: VisitHandler<T>): Promise<Array<T>>
    find(visit: VisitHandler<T>): Promise<T | undefined>
+   findIndex(visit: VisitHandler<T>): Promise<number>
    forEach(visit: VisitHandler<T>): Promise<void>
    get(name: string): Promise<T | undefined>
    indexOf(item: T): Promise<number | undefined>

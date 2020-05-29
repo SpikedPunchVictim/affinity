@@ -15,11 +15,11 @@ export class ProjectOpenAction extends RfcAction {
 
 export class ProjectCommitAction extends RfcAction {
    static readonly type: string = ActionSet.ProjectCommit
-   readonly type: string = ProjectOpenAction.type
+   readonly type: string = ProjectCommitAction.type
    readonly project: IProject
 
    constructor(project: IProject) {
-      super(ProjectOpenAction.type)
+      super(ProjectCommitAction.type)
       this.project = project
    }
 }

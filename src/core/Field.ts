@@ -6,13 +6,14 @@ import { IInstance } from '.';
 
 export enum FieldAttachment {
    Attached = 'attached',
-   Detached ='detahced'
+   Detached = 'detahced'
 }
 
-export type FieldInfo = {
-   name: string
-   value: IValue
-   member: IMember
+export class FieldRestoreInfo {
+   name: string = ""
+   value: IValue | null = null
+   index: number = -1
+   attached: FieldAttachment = FieldAttachment.Attached
 }
 
 export interface IField extends INamedObject {
@@ -42,7 +43,7 @@ export class Field extends NamedObject implements IField {
    constructor(instance: IInstance, member: IMember, value: IValue) {
       super(member.name)
 
-      if(value == null) {
+      if (value == null) {
          throw new ArgumentError(`value must be valid`)
       }
 
@@ -52,7 +53,7 @@ export class Field extends NamedObject implements IField {
    }
 
    async reset(): Promise<void> {
-      if(this._attachment === FieldAttachment.Attached) {
+      if (this._attachment === FieldAttachment.Attached) {
          return
       }
 

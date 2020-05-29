@@ -7,6 +7,99 @@ import { IQualifiedObject } from "./QualifiedObject";
 import { IModel } from "./Model";
 import { IInstance } from "./Instance";
 import { INamespace } from "./Namespace";
+import { IProject } from "..";
+
+export type SearchVisitHandler<T> = (obj: T) => void
+export type SearchFilter<T> = (obj: T) => boolean
+/**
+ * An internal in-memory search
+ */
+export class Search {
+   readonly project: IProject
+
+   private objectIdCache: Map<string, IQualifiedObject> = new Map<string, IQualifiedObject>()
+   
+   constructor(project: IProject) {
+      this.project = project
+   }
+
+   breadthFirst(start: INamespace, visit: SearchVisitHandler<IQualifiedObject>): void {
+      let cacheVisit = (obj: IQualifiedObject) => {
+         visit(obj)
+         this.objectCacheVisit(obj)
+      }
+
+      for(let ns of start.children.observable) {
+         cacheVisit(ns)
+      }
+
+      for(let model of start.models.observable) {
+         cacheVisit(model)
+      }
+
+      for(let inst of start.instances.observable) {
+         cacheVisit(inst)
+      }
+
+      for(let ns of start.children.observable) {
+         this.breadthFirst(ns, visit)
+      }
+   }
+
+   findObjectById(id: string): IQualifiedObject | undefined {
+      let found = this.objectIdCache.get(id)
+
+      if(found) {
+         return found
+      }
+
+      let cacheVisit = (obj: IQualifiedObject): boolean => {
+         this.objectCacheVisit(obj)
+         
+         if(obj.id === id) {
+            return true
+         }
+
+         return false
+      }
+
+      return this.visitUntil(this.project.root, cacheVisit)
+   }
+
+   visitUntil(start: INamespace, predicate: SearchFilter<IQualifiedObject>): IQualifiedObject | undefined {
+      if(predicate(start)) {
+         return start
+      }
+      
+      for(let ns of start.children.observable) {
+         if(predicate(ns)) {
+            return ns
+         }
+      }
+
+      for(let model of start.models.observable) {
+         if(predicate(model)) {
+            return model
+         }
+      }
+
+      for(let inst of start.instances.observable) {
+         if(predicate(inst)) {
+            return inst
+         }
+      }
+
+      for(let ns of start.children.observable) {
+         return this.visitUntil(ns, predicate)
+      }
+
+      return undefined
+   }
+
+   private objectCacheVisit(obj: IQualifiedObject): void {
+      this.objectIdCache.set(obj.id, obj)
+   }
+}
 
 export interface IModelAccessor extends IQualifiedObjectAccessor<IModel> {
 

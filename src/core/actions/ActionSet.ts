@@ -3,13 +3,17 @@ Notes:
    * GetActions retrieve QualifiedObjects under the provided parent
 */
 
+
 export enum ActionSet {
+   Batched = 'rfc-batched-actions',
    InstanceCreate = 'instance-create',
    InstanceDelete = 'instance-delete',
-   InstanceGet = 'instance-get',
+   InstanceGetById = 'instance-get-by-id',
+   InstanceGetChildren = 'instance-get-children',
    InstanceMove = 'instance-move',
    InstanceRename = 'instance-rename',
    InstanceReorder = 'instance-reoder',
+   InstanceUpdate = 'instance-update',
    FieldCreate = 'field-create',
    FieldDelete = 'field-delete',
    FieldGet = 'field-get',
@@ -19,10 +23,12 @@ export enum ActionSet {
    FieldValueChange = 'field-value-change',
    ModelCreate = 'model-create',
    ModelDelete = 'model-delete',
-   ModelGet = 'model-get',
+   ModelGetById = 'model-get-by-id',
+   ModelGetChildren = 'model-get-children',
    ModelMove = 'model-move',
    ModelRename = 'model-rename',
    ModelReorder = 'model-reorder',
+   ModelUpdate = 'model-update',
    MemberCreate = 'member-create',
    MemberDelete = 'member-delete',
    MemberGet = 'member-get',
@@ -31,11 +37,14 @@ export enum ActionSet {
    MemberValueChange = 'member-value-change',
    NamespaceCreate = 'namespace-create',
    NamespaceDelete = 'namespace-delete',
-   NamespaceGet = 'namespace-get',
+   NamespaceGetById = 'namespace-get-by-id',
+   NamespaceGetChildren = 'namespace-get-children',
    NamespaceMove = 'namespace-move',
    NamespaceRename = 'namespace-rename',
    NamespaceReorder = 'namespace-reorder',
+   NamespaceUpdate = 'namespace-update',
    ParentChange = 'qualifiedobject-parent-change',
    ProjectCommit = 'project-commit',
-   ProjectOpen = 'project-open'
+   ProjectOpen = 'project-open',
+   ObjectGetById = 'object-get-by-id'
 }

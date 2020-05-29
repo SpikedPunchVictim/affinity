@@ -1,26 +1,33 @@
-import { INamedObject, NamedObject } from './NamedObject'
-import { INamespace } from './Namespace'
 import { IProjectContext } from './Project'
 import { ArgumentError } from '../errors/'
-import { IOrchestrator } from './Orchestrator'
+import { IOrchestrator } from './orchestrator/Orchestrator'
 import { Events } from './Events'
 import { EventEmitter } from 'events'
-import { ParentChangeAction } from './actions/QualifiedObject'
+import { QualifiedObjectType, Switch } from './utils'
+import { IIDCarrier } from './UidWarden'
+import { NamespaceRenameAction, NamespaceMoveAction } from './actions/Namespace'
+import { ModelRenameAction, ModelMoveAction } from './actions/Model'
+import { InstanceMoveAction, InstanceRenameAction } from './actions/Instance'
+import { INamedObject, NamedObject } from './NamedObject'
+import { INamespace } from './Namespace'
 
 export interface IQualifiedObject extends INamedObject, EventEmitter {
    readonly id: string
    readonly qualifiedName: string
+   readonly type: QualifiedObjectType
    readonly parent: INamespace | null
    attach(parent: INamespace, context: IProjectContext): void
    move(to: INamespace): Promise<IQualifiedObject>
-   merge(other: IQualifiedObject): void
+   update(): Promise<void>
 }
 
 export class QualifiedObject
    extends NamedObject
-   implements IQualifiedObject {
+   implements IQualifiedObject, IIDCarrier {
 
    readonly id: string
+   readonly type: QualifiedObjectType
+
    private _context: IProjectContext
 
    private _parent: INamespace | null
@@ -59,7 +66,7 @@ export class QualifiedObject
       return this.context.orchestrator
    }
 
-   constructor(name: string, parent: INamespace, context: IProjectContext, id: string) {
+   constructor(name: string, parent: INamespace, type: QualifiedObjectType, context: IProjectContext, id: string) {
       super(name)
 
       if (id == null) {
@@ -73,6 +80,7 @@ export class QualifiedObject
       this.id = id
       this._context = context
       this._parent = parent
+      this.type = type
    }
 
    attach(parent: INamespace, context: IProjectContext): void {
@@ -82,11 +90,19 @@ export class QualifiedObject
 
 
    async rename(name: string): Promise<INamedObject> {
+      if(name === this.name) {
+         return this
+      }
+
       return this.orchestrator.rename(this, name)
    }
 
    async move(to: INamespace): Promise<IQualifiedObject> {
       return this.orchestrator.move(this, to)
+   }
+
+   async update(): Promise<void> {
+      return this.orchestrator.updateQualifiedObject(this)
    }
 
    /**
@@ -98,20 +114,41 @@ export class QualifiedObject
    }
 
    setParent(parent: INamespace): void {
+      if(this.parent && this.parent.id === parent.id) {
+         return
+      }
+
       //@ts-ignore
-      let change = new ParentChangeAction(this, this._parent, parent)
+      let change = Switch.case(this, {
+         //@ts-ignore
+         Namespace: (ns) => new NamespaceMoveAction(ns, ns.parent, parent),
+         //@ts-ignore
+         Model: (model) => new ModelMoveAction(model, model.parent, parent),
+         //@ts-ignore
+         Instance: (inst) => new InstanceMoveAction(inst, inst.parent, parent)
+      })
+
       this.emit(Events.QualifiedObject.ParentChanging, change)
       this._parent = parent
       this.emit(Events.QualifiedObject.ParentChanged, change)
    }
 
    setName(name: string): void {
-      this._name = name
-   }
-
-   merge(other: IQualifiedObject): void {
-      if (other.id !== this.id) {
-         throw new ArgumentError(`The ids must be the same`)
+      if(this.name === name) {
+         return
       }
+      
+      let action = Switch.onType(this.type, {
+         //@ts-ignore
+         Namespace: () => new NamespaceRenameAction(this, this.name, name),
+         //@ts-ignore
+         Model: () => new ModelRenameAction(this, this.name, name),
+         //@ts-ignore
+         Instance: () => new InstanceRenameAction(this, this.name, name)
+      })
+
+      this.emit(Events.QualifiedObject.NameChanging, action)
+      this._name = name
+      this.emit(Events.QualifiedObject.NameChanged, action)
    }
 }

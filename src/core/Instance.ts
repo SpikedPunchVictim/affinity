@@ -3,7 +3,7 @@ import {
    FieldCollection, 
    ObservableEvents} from "./collections";
 
-import { IField, Field } from './Field'
+import { IField, Field, FieldRestoreInfo } from './Field'
 import { IModel } from './Model'
 import { INamespace } from './Namespace'
 import { IQualifiedObject, QualifiedObject } from './QualifiedObject'
@@ -14,6 +14,37 @@ import { FieldCreateAction, FieldDeleteAction, FieldReorderAction } from "..";
 import { ItemAdd } from "./collections/ChangeSets";
 import { syncToMaster } from "./utils/Collections";
 import { IMember } from "./Member";
+import { QualifiedObjectType } from "./utils";
+import { RestoreInfo } from './Restore'
+
+export class InstanceLazyRestoreInfo extends RestoreInfo {
+   modelId: string = ""      // QualifiedName of the Model
+
+   constructor(
+      name: string = "",
+      qualifiedName: string = "",
+      id: string = "",
+      modelId: string = "",
+      parentId: string = "",
+      index: number = -1) {
+      super(name, qualifiedName, id, parentId, index)
+      this.modelId = modelId
+   }
+}
+
+export class InstanceFullRestoreInfo extends InstanceLazyRestoreInfo {
+   fields: Array<FieldRestoreInfo> = new Array<FieldRestoreInfo>()
+
+   constructor(
+      name: string = "",
+      qualifiedName: string = "",
+      id: string = "",
+      modelId: string = "",
+      parentId: string = "",
+      index: number = -1) {
+         super(name, qualifiedName, id, modelId, parentId, index)
+      }
+}
 
 export interface IInstance extends IQualifiedObject {
    readonly model: IModel
@@ -30,14 +61,14 @@ export class Instance
    readonly fields: IFieldCollection
 
    constructor(name: string, parent: INamespace, model: IModel, context: IProjectContext, id: string) {
-      super(name, parent, context, id)
+      super(name, parent, QualifiedObjectType.Instance, context, id)
       this.model = model
       this.fields = new FieldCollection(this, this.context)
 
-      this.model.on(Events.Model.MemberAdded, this.onSyncFields)
-      this.model.on(Events.Model.MemberRemoved, this.onSyncFields)
-      this.model.on(Events.Model.MemberMoved, this.onSyncFields)
-      this.model.on(Events.Model.ValueChanged, this.onSyncFields)
+      this.model.on(Events.Model.MemberAdded, this.onSyncFields.bind(this))
+      this.model.on(Events.Model.MemberRemoved, this.onSyncFields.bind(this))
+      this.model.on(Events.Model.MemberMoved, this.onSyncFields.bind(this))
+      this.model.on(Events.Model.ValueChanged, this.onSyncFields.bind(this))
    }
 
    async get(name: string): Promise<IField | undefined> {
@@ -50,7 +81,7 @@ export class Instance
          this.fields.observable, {
             equal: (member, field) => member.id === field.id,
             add: (member, index, fields) => this.onSyncFieldAdd(new Field(this, member, member.value.clone()), index),
-            remove: (member, field, index, fields) => this.onSyncFieldRemove(field),
+            remove: (field, index, fields) => this.onSyncFieldRemove(field),
             move: (field, from, to, fields) => this.onSyncFieldMove(field, from, to)
          })
    }
@@ -58,7 +89,7 @@ export class Instance
    onSyncFieldAdd(field: IField, index: number): void {
       let fields = this.fields
 
-      fields.observable.mutedAdd(field, (change, add) => {
+      fields.observable.customAdd(field, (change, add) => {
          let action = new FieldCreateAction(field)
 
          let ch = new ItemAdd<IField>(field, index)
@@ -85,7 +116,7 @@ export class Instance
    onSyncFieldRemove(field: IField): void {
       let fields = this.fields
 
-      fields.observable.mutedRemove(field, (change, remove) => {
+      fields.observable.customRemove(field, (change, remove) => {
          let action = new FieldDeleteAction(field)
 
          emit([
@@ -109,7 +140,7 @@ export class Instance
    onSyncFieldMove(field: IField, from: number, to: number): void {
       let fields = this.fields
 
-      fields.observable.mutedMove(from, to, (change, move) => {
+      fields.observable.customMove(from, to, (change, move) => {
          let action = new FieldReorderAction(field, from, to)
 
          emit([
@@ -119,7 +150,7 @@ export class Instance
             { source: this.context.project, event: Events.Instance.FieldMoving, data: action }
          ])
 
-         remove()
+         move()
 
          emit([
             { source: fields.observable, event: ObservableEvents.moved, data: change },

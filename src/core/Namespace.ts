@@ -1,19 +1,44 @@
-import { IQualifiedObject, QualifiedObject } from './QualifiedObject'
 import { IProjectContext } from './Project'
 import { INamedObject } from './NamedObject'
+import { RestoreInfo } from './Restore'
 
-import {
-   IInstanceCollection,
-   IModelCollection,
-   InstanceCollection,
-   ModelCollection,
-   NamespaceCollection,
-   INamespaceCollection,
-   ObservableEvents
-} from './collections'
+import { IInstanceCollection, InstanceCollection } from './collections/InstanceCollection'
+import { IModelCollection, ModelCollection } from './collections/ModelCollection'
+import { INamespaceCollection, NamespaceCollection } from './collections/NamespaceCollection'
+import { ObservableEvents } from './collections/ObservableCollection'
 
 import { EventEmitter } from 'events'
 import { ItemAdd } from './collections/ChangeSets'
+import { QualifiedObjectType } from './utils'
+import { ModelLazyRestoreInfo } from './Model'
+import { InstanceLazyRestoreInfo } from './Instance'
+import { IQualifiedObject, QualifiedObject } from './QualifiedObject'
+
+export class NamespaceLazyRestoreInfo extends RestoreInfo {
+   constructor(
+      name: string = "",
+      qualifiedName: string = "",
+      id: string = "",
+      parentId: string = "",
+      index: number = -1) {
+      super(name, qualifiedName, id, parentId, index)
+   }
+}
+
+export class NamespaceFullRestoreInfo extends NamespaceLazyRestoreInfo {
+   children: Array<NamespaceLazyRestoreInfo> = new Array<NamespaceLazyRestoreInfo>()
+   models: Array<ModelLazyRestoreInfo> = new Array<ModelLazyRestoreInfo>()
+   instances: Array<InstanceLazyRestoreInfo> = new Array<InstanceLazyRestoreInfo>()
+
+   constructor(
+      name: string = "",
+      qualifiedName: string = "",
+      id: string = "",
+      parentId: string = "",
+      index: number = -1) {
+      super(name, qualifiedName, id, parentId, index)
+   }
+}
 
 export interface INamespace extends IQualifiedObject {
    readonly children: INamespaceCollection
@@ -32,10 +57,22 @@ export class Namespace extends QualifiedObject {
       context: IProjectContext,
       id: string
    ) {
-      super(name, parent, context, id)
+      super(name, parent, QualifiedObjectType.Namespace, context, id)
       this.children = new NamespaceCollection(this, context)
       this.models = new ModelCollection(this, context)
       this.instances = new InstanceCollection(this, context)
+
+      this.children.on(ObservableEvents.added, this.onQualifiedObjectAdded.bind(this))
+      this.models.on(ObservableEvents.added, this.onQualifiedObjectAdded.bind(this))
+      this.instances.on(ObservableEvents.added, this.onQualifiedObjectAdded.bind(this))
+   }
+
+   onQualifiedObjectAdded<T extends IQualifiedObject>(change: ItemAdd<T>[]): void {
+      change.forEach(ch => {
+         //@ts-ignore
+         let obj = <QualifiedObject>ch.item
+         obj.setParent(this)
+      })
    }
 
    protected async onRename(newName: string): Promise<void> {
@@ -56,6 +93,7 @@ export class RootNamespace
    readonly name: string = ''
    readonly qualifiedName: string = ''
    readonly parent: INamespace | null = null
+   readonly type: QualifiedObjectType = QualifiedObjectType.Namespace
 
    constructor(id: string, context: IProjectContext) {
       super()
@@ -82,8 +120,8 @@ export class RootNamespace
       throw new Error(`Cannot rename the Root Namespace`)
    }
 
-   merge(other: IQualifiedObject): void {
-      throw new Error(`Root is static an cannot be merged`)
+   async update(): Promise<void> {
+      return this.context.orchestrator.updateQualifiedObject(this)
    }
 
    _onQualifiedObjectAdded<T extends IQualifiedObject>(changes: ItemAdd<T>[]): void {
@@ -94,6 +132,8 @@ export class RootNamespace
 }
 
 export class OrphanedNamespace implements INamespace {
+   readonly type: QualifiedObjectType = QualifiedObjectType.Namespace
+
    get children(): INamespaceCollection {
       throw new Error(`Orphaned Namespaces have no children`)
    }
@@ -135,12 +175,12 @@ export class OrphanedNamespace implements INamespace {
       throw new Error("Cannot move orphaned Namespaces.")
    }
 
-   merge(other: IQualifiedObject): void {
-      throw new Error("Cannot attach merge Namespaces")
-   }
-
    rename(name: string): Promise<INamedObject> {
       throw new Error("Cannot rename orphaned Namespaces")
+   }
+
+   update(): Promise<void> {
+      throw new Error("Cannot move orphaned Namespaces.")
    }
 
    addListener(event: string | symbol, listener: (...args: any[]) => void): this {

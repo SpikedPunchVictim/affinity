@@ -5,6 +5,21 @@
    "version": "0.2.0",
    "configurations": [
       {
+         "name": "Current TS File",
+         "type": "node",
+         "request": "launch",
+         "args": ["${relativeFile}"],
+         "runtimeArgs": ["--nolazy", "-r", "ts-node/register"],
+         "sourceMaps": true,
+         "cwd": "${workspaceRoot}",
+         "protocol": "inspector",
+         "skipFiles": [
+            "<node_internals>/**", 
+            "core/utils/Types.*",
+            "core/utils/QualifiedPath*"
+         ],
+     },
+      {
          "type": "node",
          "request": "launch",
          "name": "Launch Program",
@@ -31,7 +46,11 @@
          ],
          "console": "integratedTerminal",
          "sourceMaps": true,
-         "skipFiles": ["<node_internals>/**"],
+         "skipFiles": [
+            "<node_internals>/**", 
+            "core/utils/Types.*",
+            "core/utils/QualifiedPath*"
+         ],
          "internalConsoleOptions": "neverOpen"
    }
    ]

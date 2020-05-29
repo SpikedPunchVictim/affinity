@@ -7,6 +7,13 @@ import { IInstance, INamespace } from '../src/core'
 
 /*
    TODO Tests:
+      project.test.ts
+         * getById() should work correctly. If the QualifiedObject is not yet in the Project, it should
+           be added. If it is in theProject, it should be updated (maybe pass in an option to update?).
+         * Test moving QualifiedObjects outside of the project (ie using a plugin) to simulate
+           external state changes. When collections are updated, any objects that still exist in the Project,
+           but not in the collection, should be moved to the collection. And any objects that no longer exist 
+           in the Project should be deleted.
       value.test.ts
          * Every value can be updated
          * For every type of value, the correct update events are generated

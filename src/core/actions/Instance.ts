@@ -1,18 +1,17 @@
-import { CreateAction, DeleteAction, RenameAction, MoveAction, ReorderAction, ValueChangeAction, RfcAction } from "./Actions"
-import { IInstance } from "../Instance"
-import { IField, FieldInfo } from "../Field"
+import { CreateAction, DeleteAction, RenameAction, MoveAction, ReorderAction, ValueChangeAction, RfcAction, UpdateAction, GetByIdAction } from "./Actions"
+import { IInstance, InstanceFullRestoreInfo, InstanceLazyRestoreInfo } from "../Instance"
+import { IField, FieldRestoreInfo } from "../Field"
 import { INamespace } from "../Namespace"
 import { IValue } from "../values/Value"
 import { ActionSet } from './ActionSet'
-import { QualifiedObjectGetAction } from "./QualifiedObject"
+import { QualifiedObjectGetChildrenAction } from "./QualifiedObject"
 import { IndexableItem } from "../collections/ChangeSets"
 
 export class InstanceCreateAction extends CreateAction<IInstance> {
    static readonly type: string = ActionSet.InstanceCreate
-   readonly type: string = InstanceCreateAction.type
 
-   constructor(instance: IInstance) {
-      super(InstanceCreateAction.type, instance)
+   constructor(instance: IInstance, index: number) {
+      super(InstanceCreateAction.type, instance, index)
    }
 }
 
@@ -24,11 +23,29 @@ export class InstanceDeleteAction extends DeleteAction<IInstance> {
    }
 }
 
-export class InstanceGetAction extends QualifiedObjectGetAction<IInstance> {
-   static readonly type: string = ActionSet.InstanceGet
+export class InstanceGetByIdAction extends GetByIdAction {
+   static readonly type: string = ActionSet.NamespaceGetById
 
-   constructor(parent: INamespace, indexes: number[] | undefined) {
-      super(InstanceGetAction.type, parent, indexes)
+   get restore(): InstanceLazyRestoreInfo | undefined {
+      return this._restore
+   }
+
+   private _restore: InstanceLazyRestoreInfo | undefined = undefined
+
+   constructor(id: string) {
+      super(InstanceGetByIdAction.type, id)
+   }
+   
+   set(restore: InstanceLazyRestoreInfo): void {
+      this._restore = restore
+   }
+}
+
+export class InstanceGetChildrenAction extends QualifiedObjectGetChildrenAction<InstanceLazyRestoreInfo> {
+   static readonly type: string = ActionSet.InstanceGetChildren
+
+   constructor(parent: INamespace) {
+      super(InstanceGetChildrenAction.type, parent)
    }
 }
 
@@ -56,12 +73,33 @@ export class InstanceReorderAction extends ReorderAction<IInstance> {
    }
 }
 
+export class InstanceUpdateAction extends UpdateAction<IInstance, InstanceFullRestoreInfo> {
+   static readonly type: string = ActionSet.InstanceUpdate
+
+   constructor(model: IInstance) {
+      super(InstanceUpdateAction.type, model)
+   }
+}
+
+/*
+The following Field Actions only get raised on the Project level. They
+don't need to make their way to the Plugin:
+   * FieldCreateAction
+   * FieldDeleteAction
+   * FieldRenameAction
+   * FieldReorderAction
+
+The ones that make it to the plugins are:
+   * FieldGetAction
+   * FieldResetAction
+   * FieldValueChangeAction
+*/
 export class FieldCreateAction extends CreateAction<IField> {
    static readonly type: string = ActionSet.FieldCreate
-   readonly type: string = FieldCreateAction.type
 
+   // index is ignored for the Field. It shares its index with its Member
    constructor(field: IField) {
-      super(FieldCreateAction.type, field)
+      super(FieldCreateAction.type, field, -1)
    }
 }
 
@@ -77,7 +115,7 @@ export class FieldGetAction extends RfcAction {
    static readonly type: string = ActionSet.FieldGet
    readonly instance: IInstance
 
-   results: Array<IndexableItem<FieldInfo>> = new Array<IndexableItem<FieldInfo>>()
+   results: Array<IndexableItem<FieldRestoreInfo>> = new Array<IndexableItem<FieldRestoreInfo>>()
 
    get contentsUpdated(): boolean {
       return this._contentsUpdated
@@ -90,7 +128,7 @@ export class FieldGetAction extends RfcAction {
       this.instance = instance
    }
 
-   set(items: IndexableItem<FieldInfo>[]): void {
+   set(items: IndexableItem<FieldRestoreInfo>[]): void {
       this.results = items
       this._contentsUpdated = true
    }

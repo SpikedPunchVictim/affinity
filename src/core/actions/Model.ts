@@ -1,18 +1,17 @@
-import { CreateAction, DeleteAction, MoveAction, RenameAction, ReorderAction, ValueChangeAction, RfcAction } from "./Actions"
-import { IMember, MemberInfo } from "../Member"
-import { IModel } from "../Model"
+import { CreateAction, DeleteAction, MoveAction, RenameAction, ReorderAction, ValueChangeAction, RfcAction, UpdateAction, GetByIdAction } from "./Actions"
+import { IMember, MemberRestoreInfo } from "../Member"
+import { IModel, ModelFullRestoreInfo, ModelLazyRestoreInfo } from "../Model"
 import { INamespace } from "../Namespace"
 import { IValue } from "../values/Value"
 import { ActionSet } from './ActionSet'
-import { QualifiedObjectGetAction } from "./QualifiedObject"
+import { QualifiedObjectGetChildrenAction } from "./QualifiedObject"
 import { IndexableItem } from "../collections/ChangeSets"
 
 export class ModelCreateAction extends CreateAction<IModel> {
    static readonly type: string = ActionSet.ModelCreate
-   readonly type: string = ModelCreateAction.type
 
-   constructor(model: IModel) {
-      super(ModelCreateAction.type, model)
+   constructor(model: IModel, index: number) {
+      super(ModelCreateAction.type, model, index)
    }
 }
 
@@ -24,11 +23,29 @@ export class ModelDeleteAction extends DeleteAction<IModel> {
    }
 }
 
-export class ModelGetAction extends QualifiedObjectGetAction<IModel> {
-   static readonly type: string = ActionSet.ModelGet
+export class ModelGetByIdAction extends GetByIdAction {
+   static readonly type: string = ActionSet.NamespaceGetById
 
-   constructor(parent: INamespace, indexes: number[] | undefined) {
-      super(ModelGetAction.type, parent, indexes)
+   get restore(): ModelLazyRestoreInfo | undefined {
+      return this._restore
+   }
+
+   private _restore: ModelLazyRestoreInfo | undefined = undefined
+
+   constructor(id: string) {
+      super(ModelGetByIdAction.type, id)
+   }
+   
+   set(restore: ModelLazyRestoreInfo): void {
+      this._restore = restore
+   }
+}
+
+export class ModelGetChildrenAction extends QualifiedObjectGetChildrenAction<ModelLazyRestoreInfo> {
+   static readonly type: string = ActionSet.ModelGetChildren
+
+   constructor(parent: INamespace) {
+      super(ModelGetChildrenAction.type, parent)
    }
 }
 
@@ -56,15 +73,21 @@ export class ModelReorderAction extends ReorderAction<IModel> {
    }
 }
 
+export class ModelUpdateAction extends UpdateAction<IModel, ModelFullRestoreInfo> {
+   static readonly type: string = ActionSet.ModelUpdate
+
+   constructor(model: IModel) {
+      super(ModelUpdateAction.type, model)
+   }
+}
+
 export class MemberCreateAction extends CreateAction<IMember> {
    static readonly type: string = ActionSet.MemberCreate
    readonly model: IModel
-   readonly index: number
 
    constructor(model: IModel, member: IMember, index: number) {
-      super(MemberCreateAction.type, member)
+      super(MemberCreateAction.type, member, index)
       this.model = model
-      this.index = index
    }
 }
 
@@ -76,11 +99,14 @@ export class MemberDeleteAction extends DeleteAction<IMember> {
    }
 }
 
+/**
+ * Retrieves all Members for a Model
+ */
 export class MemberGetAction extends RfcAction {
    static readonly type: string = ActionSet.MemberGet
    readonly model: IModel
 
-   results: Array<IndexableItem<MemberInfo>> = new Array<IndexableItem<MemberInfo>>()
+   results: Array<IndexableItem<MemberRestoreInfo>> = new Array<IndexableItem<MemberRestoreInfo>>()
 
    get contentsUpdated(): boolean {
       return this._contentsUpdated
@@ -93,7 +119,7 @@ export class MemberGetAction extends RfcAction {
       this.model = model
    }
 
-   set(items: IndexableItem<MemberInfo>[]): void {
+   set(items: IndexableItem<MemberRestoreInfo>[]): void {
       this.results = items
       this._contentsUpdated = true
    }

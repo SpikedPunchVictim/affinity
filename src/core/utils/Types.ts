@@ -61,13 +61,13 @@ export class Switch {
    static onType<TReturn>(type: QualifiedObjectType, map: QualifiedTypeMap<TReturn>): TReturn {
       switch(type) {
          case QualifiedObjectType.Namespace: {
-            return map.Namespace(type)
+            return map.Namespace(type) as TReturn
          }
          case QualifiedObjectType.Model: {
-            return map.Model(type)
+            return map.Model(type) as TReturn
          }
          case QualifiedObjectType.Instance: {
-            return map.Instance(type)
+            return map.Instance(type) as TReturn
          }
          default: {
             throw new Error(`Unsupported QualifiedObject Type`)

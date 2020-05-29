@@ -9,7 +9,7 @@ export interface IActionRouter {
 }
 
 export class ActionRouter implements IActionRouter {
-   
+
    // Key: Event name
    // Value: The ActionHandler<T>
    private _handlerMap: Map<string, Array<ActionHandler<any>>>
@@ -21,7 +21,7 @@ export class ActionRouter implements IActionRouter {
    on<T extends IRfcAction>(type: ActionSet, handler: ActionHandler<T>): void {
       let found = this._handlerMap.get(type)
 
-      if(found === undefined) {
+      if (found === undefined) {
          let array = new Array<ActionHandler<T>>()
          array.push(handler)
          this._handlerMap.set(type, array)
@@ -30,26 +30,25 @@ export class ActionRouter implements IActionRouter {
       }
    }
 
-   raise<T extends IRfcAction>(action: IRfcAction): Promise<void> {
-      return new Promise(async (resolve, reject) => {
+   async raise<T extends IRfcAction>(action: IRfcAction): Promise<void> {
+      try {
          let found = this._handlerMap.get(action.type)
 
-         if(found === undefined) {
-            return resolve()
+         if (found === undefined) {
+            return
          }
-   
+
          let promises = new Array<Promise<void>>()
-   
-         for(let handler of found) {
+
+         for (let handler of found) {
             promises.push(handler(action))
          }
-   
-         try {
-            await Promise.all(promises)
-            resolve()
-         } catch(err) {
-            reject(err)
-         }
-      })
+
+         await Promise.all(promises)
+      } catch (err) {
+         console.log(`REMOVE THESE LOGS AFTER DEVELOPMENT`)
+         console.error(err)
+         throw err
+      }
    }
 }

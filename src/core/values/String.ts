@@ -1,7 +1,7 @@
 import { IValue, IType } from "./Value";
 import { ArgumentError } from "../../errors";
-import { IValueAttachment } from "./ValueAttachment";
-import { SimpleValue } from "./SimpleValue";
+import { IValueAttachment, EmptyValueAttachment } from "./ValueAttachment";
+import { SimpleValue, SimpleValueSource } from "./SimpleValue";
 
 export class StringType implements IType {
    readonly name: string = "type-string"
@@ -28,5 +28,11 @@ export class StringValue extends SimpleValue<string> {
 
    clone(): IValue {
       return new StringValue(this.value, this.attachment)
+   }
+}
+
+export class StringValueSource extends SimpleValueSource<string> {
+   constructor() {
+      super(SingletonStringType, (val: string) => new StringValue(val, new EmptyValueAttachment()))
    }
 }

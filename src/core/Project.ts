@@ -1,8 +1,9 @@
-import { 
+import {
    basename,
    parentPath,
    QualifiedObjectType,
-   Switch } from './utils'
+   Switch
+} from './utils'
 
 import { IRequestForChangeSource, RequestForChangeSource } from './actions/RequestForChange'
 import { INamespace, RootNamespace } from './Namespace'
@@ -12,9 +13,12 @@ import { ActionRouter, IActionRouter } from './actions/ActionRouter'
 import { ProjectOpenAction, ProjectCommitAction } from './actions/Project'
 import { ArgumentError } from '../errors/ArgumentError'
 import { InvalidOperationError } from '../errors/InvalidOperationError'
-import { IOrchestrator, Orchestrator } from './Orchestrator'
+import { IOrchestrator, Orchestrator } from './orchestrator/Orchestrator'
 import { EventEmitter } from 'events'
 import { IUidWarden, HexUidWarden } from './UidWarden'
+import { IValueFactory, ValueFactory } from './values/ValueFactory'
+import { EmptyValueAttachment } from './values/ValueAttachment'
+import { Search } from './Search'
 
 export interface IProjectContext {
    readonly rfc: IRequestForChangeSource
@@ -22,6 +26,8 @@ export interface IProjectContext {
    readonly orchestrator: IOrchestrator
    readonly project: IProject
    readonly uidWarden: IUidWarden
+   readonly valueFactory: IValueFactory
+   readonly search: Search
 }
 
 class ProjectContext implements IProjectContext {
@@ -36,11 +42,19 @@ class ProjectContext implements IProjectContext {
    readonly project: IProject
    readonly orchestrator: IOrchestrator
    readonly uidWarden: IUidWarden
+   readonly valueFactory: IValueFactory
+   readonly search: Search
 
-   constructor(project: IProject, uidGenerator: IUidWarden) {
+   constructor(
+      project: IProject,
+      uidWarden: IUidWarden,
+      valueFactory: IValueFactory = new ValueFactory(new EmptyValueAttachment())
+   ) {
       this.project = project
-      this.uidWarden = uidGenerator
+      this.uidWarden = uidWarden
       this.orchestrator = new Orchestrator(project, this)
+      this.valueFactory = valueFactory
+      this.search = new Search(project)
    }
 }
 
@@ -49,6 +63,7 @@ export interface IProject extends EventEmitter {
    readonly router: IActionRouter
    readonly rfc: IRequestForChangeSource
    readonly name: string
+   readonly uidWarden: IUidWarden
 
    /**
     * Retrieves the QualifiedObject athe the provided qualified path, or undefined if not found.
@@ -57,6 +72,13 @@ export interface IProject extends EventEmitter {
     * @param qualifiedPath The qualified path
     */
    get<TReturn extends IQualifiedObject>(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<TReturn | undefined>
+
+   /**
+    * Retrieves a QualifiedObject by ID
+    * 
+    * @param id ID of the QualifiedObject to retrieve
+    */
+   getById<TReturn extends IQualifiedObject>(type: QualifiedObjectType, id: string): Promise<TReturn>
 
    /**
     * Creates all fo the Namespaces to complete the path. Returns
@@ -82,7 +104,7 @@ export interface IProject extends EventEmitter {
     * @param toPath The qualified path to the destination
     */
    move(qualifiedType: QualifiedObjectType, fromPath: string, toPath: string): Promise<IQualifiedObject | undefined>
-   
+
    // readonly search: ISearch
 
    // Custom plugin receives all Actions
@@ -93,28 +115,32 @@ export interface IProject extends EventEmitter {
 
 export interface IProjectOptions {
    rfcSource?: IRequestForChangeSource
-   uidGenerator?: IUidWarden
-   rootId: string
+   uidWarden?: IUidWarden
+   rootId?: string
 }
 
 export class Project
-   extends EventEmitter 
+   extends EventEmitter
    implements IProject {
-   
+
    readonly root: INamespace
    readonly context: IProjectContext
    readonly router: IActionRouter
    readonly rfc: IRequestForChangeSource
    readonly name: string
-   readonly uidGenerator: IUidWarden
+   readonly uidWarden: IUidWarden
+
+   get orchestrator(): IOrchestrator {
+      return this.context.orchestrator
+   }
 
    constructor(name: string, options?: IProjectOptions) {
       super()
       this.name = name
       this.router = new ActionRouter()
       this.rfc = options?.rfcSource || new RequestForChangeSource(this.router)
-      this.uidGenerator = options?.uidGenerator || new HexUidWarden()
-      this.context = new ProjectContext(this, this.uidGenerator)
+      this.uidWarden = options?.uidWarden || new HexUidWarden()
+      this.context = new ProjectContext(this, this.uidWarden)
 
       let rootId = options?.rootId || `root_${this.name}`
       this.root = new RootNamespace(rootId, this.context)
@@ -129,19 +155,19 @@ export class Project
    }
 
    async get<TReturn extends IQualifiedObject>(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<TReturn | undefined> {
-      if(qualifiedPath == null) {
+      if (qualifiedPath == null) {
          throw new ArgumentError(`qualifiedPath must be valid when calling Project.get()`)
       }
-      
-      if(qualifiedPath === '' && qualifiedType === QualifiedObjectType.Namespace) {
+
+      if (qualifiedPath === '' && qualifiedType === QualifiedObjectType.Namespace) {
          // Note: For Typescript, must convert to parent class before returning as TResult
          let result = this.root as IQualifiedObject
          return (result as TReturn)
       }
-      
+
       let parentQPath = parentPath(qualifiedPath)
 
-      if(parentQPath === undefined) {
+      if (parentQPath === undefined) {
          return undefined
       }
 
@@ -151,10 +177,10 @@ export class Project
          .split('.')
          .filter(it => it !== '')
 
-      for(let token of tokens) {
+      for (let token of tokens) {
          current = await current.children.get(token)
 
-         if(current === undefined) {
+         if (current === undefined) {
             return undefined
          }
       }
@@ -163,25 +189,39 @@ export class Project
       let baseQPath = basename(qualifiedPath)
 
       let result = await Switch.onType<Promise<IQualifiedObject | undefined>>(qualifiedType, {
-         Namespace: async () => current?.children.get(baseQPath),
-         Model: async () => current?.models.get(baseQPath),
-         Instance: async () => current?.instances.get(baseQPath)
+         Namespace: async () => await current?.children.get(baseQPath),
+         Model: async () => await current?.models.get(baseQPath),
+         Instance: async () => await current?.instances.get(baseQPath)
       })
+
+      if(result !== undefined) {
+         await result.update()
+      }
 
       return result === undefined ?
          undefined :
          (result as TReturn)
    }
 
+   async getById<TReturn extends IQualifiedObject>(type: QualifiedObjectType, id: string): Promise<TReturn> {
+      let obj = await this.orchestrator.getById(type, id)
+
+      if(obj === undefined) {
+         throw new Error(`No Object was found with ID ${id}`)
+      }
+
+      return obj as TReturn
+   }
+
    async create(qualifiedPath: string): Promise<INamespace> {
-      if(!qualifiedPath) {
+      if (!qualifiedPath) {
          throw new ArgumentError(`qualifiedPath must be valid`)
       }
 
       let current = this.root
       let tokens = qualifiedPath.split('.')
 
-      for(let token of tokens) {
+      for (let token of tokens) {
          let child = await current.children.get(token)
 
          current = child === undefined ?
@@ -195,17 +235,17 @@ export class Project
    async delete(qualifiedType: QualifiedObjectType, qualifiedPath: string): Promise<boolean> {
       let obj = await this.get(qualifiedType, qualifiedPath)
 
-      if(obj === undefined) {
+      if (obj === undefined) {
          return false
       }
 
-      if(obj === this.root) {
+      if (obj === this.root) {
          throw new Error(`Cannot delete the Root Namespace`)
       }
 
       let parent = obj.parent
 
-      if(parent == null) {
+      if (parent == null) {
          throw new Error(`The QualifiedObject's parent is not valid. Validate the project is in the correct state. This should never happen, and may be a bug with the system.`)
       }
 
@@ -219,17 +259,17 @@ export class Project
 
       return result === undefined ? false : result
    }
-   
+
    async move(qualifiedType: QualifiedObjectType, fromPath: string, toPath: string): Promise<IQualifiedObject | undefined> {
       let obj = await this.get(qualifiedType, fromPath)
 
-      if(obj === undefined) {
+      if (obj === undefined) {
          return Promise.resolve(undefined)
       }
 
       let to = await this.get(QualifiedObjectType.Namespace, toPath)
 
-      if(to === undefined) {
+      if (to === undefined) {
          throw new InvalidOperationError(`Cannot move a QualifiedObject to a Namespace that does not exist. Ensure it's created before moving to it.`)
       }
 

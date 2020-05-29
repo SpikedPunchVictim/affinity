@@ -77,7 +77,7 @@ export class ArrayValue extends Value implements IArrayValue {
          let cloned = values.map(v => v.clone())
 
          values.forEach((value, index) => {
-            this._values.internalAdd(cloned, (change, op) => op())
+            this._values.customAdd(cloned, (change, op) => op())
          })
       }
    }

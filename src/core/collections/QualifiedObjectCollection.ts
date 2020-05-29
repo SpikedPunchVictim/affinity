@@ -1,10 +1,9 @@
 import { IQualifiedObject } from "../QualifiedObject"
 import { INamespace } from "../Namespace"
-import { QualifiedObjectType, as } from "../utils/Types"
-import { IOrchestrator } from "../Orchestrator"
+import { QualifiedObjectType } from "../utils/Types"
+import { IOrchestrator } from "../orchestrator/Orchestrator"
 import { NamedCollection } from "./NamedCollection"
-import { IndexableItem } from "./ChangeSets"
-import { sortByIndexReverse, VisitHandler, PredicateHandler, IObservableCollection } from "./ObservableCollection"
+import { VisitHandler, PredicateHandler, IObservableCollection } from "./ObservableCollection"
 import { ArgumentError } from "../../errors/ArgumentError"
 import { EventEmitter } from 'events'
 import { IAsyncReadableCollection } from "./Async"
@@ -50,23 +49,6 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
       return collection as QualifiedObjectCollection<T>
    }
 
-   merge(items: Array<IndexableItem<IQualifiedObject>>): void {
-      // Sort them from highest index to lowest. This allows
-      // us to add the entries without affecting the item's
-      // intended index in this collection
-      items.sort(sortByIndexReverse)
-
-      for (let item of items) {
-         let found = this.getById(item.item.id)
-
-         if (!found) {
-            this.items.insert(item.index, as<T>(item.item))
-         } else {
-            found.merge(item.item)
-         }
-      }
-   }
-
    getById(id: string): T | undefined {
       for (let item of this.items) {
          if (item.id === id) {
@@ -78,13 +60,7 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async next(): Promise<IteratorResult<T>> {
-      let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, undefined)
-
-      if (items === undefined) {
-         return { value: undefined, done: true }
-      }
-
-      this.merge(items)
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
 
       let self = this
       let index = 0
@@ -99,12 +75,7 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async at(index: number): Promise<T> {
-      let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, [index])
-
-      if (items !== undefined) {
-         this.merge(items)
-      }
-
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
       return this.items.at(index)
    }
 
@@ -117,13 +88,7 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async delete(name: string): Promise<boolean> {
-      let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, undefined)
-
-      if (items === undefined) {
-         return false
-      }
-
-      this.merge(items)
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
 
       let found = this.items.find(item => item.name === name)
 
@@ -131,60 +96,33 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async forEach(visit: VisitHandler<T>): Promise<void> {
-      let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, undefined)
-
-      if (items === undefined) {
-         return
-      }
-
-      this.merge(items)
-
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
       this.items.forEach(visit)
       return
    }
 
    async filter(visit: VisitHandler<T>): Promise<Array<T>> {
-      let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, undefined)
-
-      if (items === undefined) {
-         return []
-      }
-
-      this.merge(items)
-
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
       return this.items.filter(visit)
    }
 
    async find(visit: VisitHandler<T>): Promise<T | undefined> {
-      let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, undefined)
-
-      if (items === undefined) {
-         return undefined
-      }
-
-      this.merge(items)
-
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
       return this.items.find(visit)
    }
 
+   async findIndex(visit: VisitHandler<T>): Promise<number> {
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      return this.items.findIndex(visit)
+   }
+
    async get(name: string): Promise<T | undefined> {
-      let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, undefined)
-
-      if (items === undefined) {
-         return undefined
-      }
-
-      this.merge(items)
-
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
       return this.items.find(item => item.name === name)
    }
 
    async indexOf(item: T): Promise<number | undefined> {
-      let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, undefined)
-
-      if (items === undefined) {
-         return undefined
-      }
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
 
       let found = this.getById(item.id)
 
@@ -197,19 +135,12 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async map(visit: VisitHandler<T>): Promise<void[]> {
-      let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, undefined)
-
-      if (items === undefined) {
-         return []
-      }
-
-      this.merge(items)
-
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
       return this.items.map(visit)
    }
 
    async move(from: number, to: number): Promise<boolean> {
-      await this.orchestrator.reorder(this.items[from], from, to)
+      await this.orchestrator.reorder(this.items.at(from), from, to)
       return true
    }
 
@@ -228,13 +159,7 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async removeAll(filter: PredicateHandler<T>): Promise<boolean> {
-      let items = await this.orchestrator.getQualifiedObjects(this.type, this.parent, undefined)
-
-      if (items === undefined) {
-         return false
-      }
-
-      this.merge(items)
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
 
       let toRemove = new Array<T>()
 

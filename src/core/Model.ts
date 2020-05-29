@@ -2,13 +2,32 @@ import { IQualifiedObject, QualifiedObject } from './QualifiedObject'
 import { INamespace } from './Namespace';
 import { MemberCollection, IMemberCollection } from './collections/MemberCollection';
 import { IProjectContext } from './Project';
-import { MemberAdd, IMember } from './Member';
+import { MemberAdd, IMember, MemberRestoreInfo } from './Member';
 import { IndexableItem } from './collections/ChangeSets';
+import { QualifiedObjectType } from './utils';
+import { RestoreInfo } from './Restore'
 
+export class ModelLazyRestoreInfo extends RestoreInfo {
+   constructor(
+      name: string = "",
+      qualifiedName: string = "",
+      id: string = "",
+      parentId: string = "",
+      index: number = -1) {
+      super(name, qualifiedName, id, parentId, index)
+   }
+}
 
-export interface IModelListener {
-   valueChanging(handler: any): void
-   valueChanged(handler: any): void
+export class ModelFullRestoreInfo extends ModelLazyRestoreInfo {
+   members: Array<MemberRestoreInfo> = new Array<MemberRestoreInfo>()
+
+   constructor(
+      name: string = "",
+      qualifiedName: string = "",
+      id: string = "",
+      parentId: string = "" ) {
+         super(name, qualifiedName, id, parentId)
+      }
 }
 
 export interface IModel extends IQualifiedObject {
@@ -43,7 +62,7 @@ export class Model extends QualifiedObject implements IModel {
    readonly members: IMemberCollection
 
    constructor(name: string, parent: INamespace, context: IProjectContext, id: string) {
-      super(name, parent, context, id)
+      super(name, parent, QualifiedObjectType.Model, context, id)
       this.members = new MemberCollection(this, this.context)
    }
 
@@ -74,21 +93,12 @@ export class Model extends QualifiedObject implements IModel {
       return this.members.removeAt(index)
    }
 
+   async update(): Promise<void> {
+      //this.orchestrator.
+      this.orchestrator.updateMembers(this)
+   }
+
    protected async onRename(newName: string): Promise<void> {
       await this.orchestrator.rename(this, newName)
    }
 }
-
-/*
-let rfc = model.rfc()
-
-model.members
-
-model.add({
-   cost: 0,
-   size: 3,
-   name: ''
-})
-
-
-*/

@@ -1,9 +1,11 @@
 import 'mocha'
 import { expect } from 'chai'
-import { Project } from '../src'
+import { Project } from '../src/core/Project'
 import { validateQualifiedPath } from './utils/validate'
-import { QualifiedObjectType } from '../src/core/utils'
-import { IInstance, INamespace } from '../src/core'
+import { fullTest } from './utils/test'
+import { QualifiedObjectType } from '../src/core/utils/Types'
+import { IInstance } from '../src/core/Instance'
+import { INamespace } from '../src/core/Namespace'
 
 /*
    TODO Tests:
@@ -101,6 +103,19 @@ describe('Projects', function() {
 
       expect(found).to.be.undefined
    })
+
+   fullTest(
+      `getById() Should update if it doesn't exist locally`,
+      async (source, { namespace } => {
+
+      }),
+      async (project, { namespace }) => {
+
+      },
+      async (project, { namespace }) => {
+
+      }
+      )
 
    
    // it('Project delete() deletes Models', async function() {

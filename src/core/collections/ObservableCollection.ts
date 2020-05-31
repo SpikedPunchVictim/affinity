@@ -256,7 +256,7 @@ export class ObservableCollection<T>
 
    customMove(from: number, to: number, handler: OpHandler<T, ItemMove<T>>): void {
       let change = ObservableChangelist.move(from, to, this)
-      handler(change, (ch) => this.performRemove(ch || change))
+      handler(change, (ch) => this.performMove(ch || change))
    }
 
    performAdd(items: Array<ItemAdd<T>>): void {

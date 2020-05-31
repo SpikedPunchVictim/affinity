@@ -30,11 +30,9 @@ import {
 } from '../src/core/actions';
 
 import { ProjectOpenAction, ProjectCommitAction } from '../src/core/actions/Project';
-import { QualifiedObjectType, Switch } from '../src/core/utils';
+import { QualifiedObjectType, Switch } from '../src/core/utils/Types';
 import { TestPlugin, DataPlugin, DebugPlugin } from './utils/plugin';
-import { create, populate } from './utils/create';
-import { IQualifiedObject } from '../src/core';
-import { IQualifiedObjectCollection } from '../src/core/collections/QualifiedObjectCollection';
+import { create } from './utils/create';
 
 function action(type: string, fn: () => Promise<void>) {
    return {
@@ -256,310 +254,622 @@ describe('Plugins', function () {
          
       */
 
-      function testNewAdd<TQualifiedObject extends IQualifiedObject>(description: string, type: QualifiedObjectType): void {
+      type ParentNamespaces = {
+         namespace: INamespace
+         model: INamespace
+         instance: INamespace
+      }
+
+      type OnUpdateProjectHandler = (project: IProject, parents: ParentNamespaces) => Promise<void>
+
+      function test(
+         description: string,
+         updateSource: OnUpdateProjectHandler,
+         updateProject: OnUpdateProjectHandler,
+         testProject: OnUpdateProjectHandler): void {
          it(description, async function () {
-            let config = Switch.onType<any>(type, {
-               Namespace: () => {
-                  return {
-                     namespaces: [
-                        { path: 'one', id: '1' },
-                        { path: 'one.two', id: '2' }
-                     ]
-                  }
-               },
-               Model: () => {
-                  return {
-                     models: [
-                        { path: 'one', id: '1' },
-                        { path: 'one.two', id: '2' }
-                     ]
-                  }
-               },
-               Instance: () => {
-                  return {
-                     instances: [
-                        { path: 'one', id: '1' },
-                        { path: 'one.two', id: '2' }
-                     ]
-                  }
-               }
-            })
-
-            let { project, source } = await setup(config)
-
-            let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
-
-            // Need to do this to avoid placing ts-ignore on every line
-            if (one === undefined) {
-               expect(one).to.not.be.undefined
-               return
+            let cfg = {
+               namespaces: [
+                  { path: 'namespace', id: 'namespace' },
+                  { path: 'model', id: 'model' },
+                  { path: 'instance', id: 'instance' },
+                  { path: 'namespace.one', id: 'n1' },
+                  { path: 'namespace.two', id: 'n2' },
+                  { path: 'namespace.three', id: 'n3' },
+                  { path: 'namespace.four', id: 'n4' },
+                  { path: 'namespace.five', id: 'n5' },
+                  { path: 'namespace.six', id: 'n6' }
+               ],
+               models: [
+                  { path: 'model.one', id: 'm1' },
+                  { path: 'model.two', id: 'm2' },
+                  { path: 'model.three', id: 'm3' },
+                  { path: 'model.four', id: 'm4' },
+                  { path: 'model.five', id: 'm5' },
+                  { path: 'model.six', id: 'm6' }
+               ],
+               instances: [
+                  { path: 'instance.one', id: 'i1' },
+                  { path: 'instance.two', id: 'i2' },
+                  { path: 'instance.three', id: 'i3' },
+                  { path: 'instance.four', id: 'i4' },
+                  { path: 'instance.five', id: 'i5' },
+                  { path: 'instance.six', id: 'i6' }
+               ]
             }
 
-            let collection: IQualifiedObjectCollection<TQualifiedObject>
+            let { project, source } = await setup(cfg)
 
-            collection = await Switch.onType<IQualifiedObjectCollection<TQualifiedObject>>(type, {
+            let sourceNamespace = await source.get<INamespace>(QualifiedObjectType.Namespace, 'namespace')
+            let sourceModel = await source.get<INamespace>(QualifiedObjectType.Namespace, 'model')
+            let sourceInstance = await source.get<INamespace>(QualifiedObjectType.Namespace, 'instance')
+
+            let projectNamespace = await project.get<INamespace>(QualifiedObjectType.Namespace, 'namespace')
+            let projectModel = await project.get<INamespace>(QualifiedObjectType.Namespace, 'model')
+            let projectInstance = await project.get<INamespace>(QualifiedObjectType.Namespace, 'instance')
+
+            let sourceParents: ParentNamespaces = {
                //@ts-ignore
-               Namespace: async () => {
-                  await populate(source, {
-                     namespaces: [
-                        { path: 'one.three' },
-                        { path: 'one.four' }
-                     ]
-                  })
-
-                  //@ts-ignore
-                  return one.children
-               },
+               namespace: sourceNamespace,
                //@ts-ignore
-               Model: async () => {
-                  await populate(source, {
-                     models: [
-                        { path: 'one.three' },
-                        { path: 'one.four' }
-                     ]
-                  })
-
-                  //@ts-ignore
-                  return one.models
-               },
+               model: sourceModel,
                //@ts-ignore
-               Instance: async () => {
-                  await populate(source, {
-                     instances: [
-                        { path: 'one.three' },
-                        { path: 'one.four' }
-                     ]
-                  })
-
-                  //@ts-ignore
-                  return one.instances
-               }
-            })
+               instance: sourceInstance
+            }
 
             //@ts-ignore
-            let three = await collection.get('three')
-            //@ts-ignore
-            let four = await collection.get('four')
+            let projectParents: ParentNamespaces = {
+               //@ts-ignore
+               namespace: projectNamespace,
+               //@ts-ignore
+               model: projectModel,
+               //@ts-ignore
+               instance: projectInstance
+            }
 
-            expect(three).to.not.be.undefined
-            expect(four).to.not.be.undefined
-            //@ts-ignore
-            expect(three.qualifiedName).to.equal("one.three")
-            //@ts-ignore
-            expect(four.qualifiedName).to.equal("one.four")
+            await updateSource(source, sourceParents)
+            await updateProject(project, projectParents)
+            await testProject(project, projectParents)
          })
       }
 
-      testNewAdd<INamespace>('Added Namespace updates correctly', QualifiedObjectType.Namespace)
-      testNewAdd<INamespace>('Added Model updates correctly', QualifiedObjectType.Model)
-      testNewAdd<INamespace>('Added Instance updates correctly', QualifiedObjectType.Instance)
+      function testType(type: QualifiedObjectType): void {
+         test(
+            `${type} Add: collection.get()`,
+            async (source, { namespace, model, instance }) => {
+               await Switch.onType(type, {
+                  Namespace: async () => {
+                     await namespace.children.create('ten')
+                  },
+                  Model: async () => {
+                     await model.models.create('ten')
+                  },
+                  Instance: async () => {
+                     let modelOne = await model.models.get('one')
+                     //@ts-ignore
+                     await instance.instances.create('ten', modelOne)
+                  }
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               return await Switch.onType(type, {
+                  Namespace: async () => {
+                     await namespace.children.get('ten')
+                  },
+                  Model: async () => {
+                     await model.models.get('ten')
+                  },
+                  Instance: async () => {
+                     await instance.instances.get('ten')
+                  }
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-      // it('Retrieve new Namespace', async function () {
-      //    let { project, source } = await setup({
-      //       namespaces: [
-      //          { path: 'one', id: '1' },
-      //          { path: 'one.two', id: '2' }
-      //       ]
-      //    })
+               expect(collection).to.have.lengthOf(7)
+               let ten = await collection.get('ten')
+               //@ts-ignore
+               expect(ten).to.not.be.undefined
+            })
 
-      //    await source.create('one.three')
-      //    await source.create('one.four')
+         test(
+            `${type} Add: object.update()`,
+            async (source, { namespace, model, instance }) => {
+               await Switch.onType(type, {
+                  Namespace: async () => {
+                     await namespace.children.create('ten')
+                  },
+                  Model: async () => {
+                     await model.models.create('ten')
+                  },
+                  Instance: async () => {
+                     let modelOne = await model.models.get('one')
+                     //@ts-ignore
+                     await instance.instances.create('ten', modelOne)
+                  }
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               return await Switch.onType(type, {
+                  Namespace: async () => {
+                     await namespace.update()
+                  },
+                  Model: async () => {
+                     await model.update()
+                  },
+                  Instance: async () => {
+                     await instance.update()
+                  }
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-      //    let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
+               expect(collection).to.have.lengthOf(7)
+               let ten = await collection.get('ten')
+               //@ts-ignore
+               expect(ten).to.not.be.undefined
+            })
 
-      //    expect(one).to.not.be.undefined
+         test(
+            `${type} Move: children.get()`,
+            /*
+               starting:[ one, two, three, four, five, six ]
+               ends with:[ two, three, six, five, one, four ]
+            */
+            async (source, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-      //    //@ts-ignore
-      //    let three = await one.children.get('three')
-      //    //@ts-ignore
-      //    let four = await one.children.get('four')
+               await collection.move(1, 0)
+               // two, one, three, four, five six
+               await collection.move(2, 1)
+               // two, three, one, four, five, six
+               await collection.move(5, 2)
+               // two, three, six, one, four, five
+               await collection.move(5, 3)
+               // two, three, six, five, one, four
+            },
+            async (project, { namespace, model, instance }) => {
+               await Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: async () => await namespace.children.get('one'),
+                  //@ts-ignore
+                  Model: async () => await model.models.get('one'),
+                  //@ts-ignore
+                  Instance: async () => await instance.instances.get('one')
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-      //    expect(three).to.not.be.undefined
-      //    expect(four).to.not.be.undefined
-      //    //@ts-ignore
-      //    expect(three.name).to.equal("three")
-      //    //@ts-ignore
-      //    expect(three.qualifiedName).to.equal("one.three")
-      //    //@ts-ignore
-      //    expect(four.qualifiedName).to.equal("one.four")
-      // })
+               expect(collection).to.have.lengthOf(6)
+               expect(collection.observable.at(0).name).to.equal('two')
+               expect(collection.observable.at(1).name).to.equal('three')
+               expect(collection.observable.at(2).name).to.equal('six')
+               expect(collection.observable.at(3).name).to.equal('five')
+               expect(collection.observable.at(4).name).to.equal('one')
+               expect(collection.observable.at(5).name).to.equal('four')
+            })
 
-      // it('Retrieve new Model', async function () {
-      //    let { project, source } = await setup({
-      //       namespaces: [
-      //          { path: 'one', id: '1' },
-      //       ],
-      //       models: [
-      //          { path: 'one.model1', id: '2' }
-      //       ]
-      //    })
+         test(
+            `${type} Move: object.update()`,
+            /*
+               starting:[ one, two, three, four, five, six ]
+               ends with:[ two, three, six, five, one, four ]
+            */
+            async (source, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-      //    let sourceOne = await source.get<INamespace>(QualifiedObjectType.Namespace, 'one')
-      //    //@ts-ignore
-      //    await sourceOne.models.create('model2')
-      //    //@ts-ignore
-      //    await sourceOne.models.create('model3')
+               await collection.move(1, 0)
+               // two, one, three, four, five six
+               await collection.move(2, 1)
+               // two, three, one, four, five, six
+               await collection.move(5, 2)
+               // two, three, six, one, four, five
+               await collection.move(5, 3)
+               // two, three, six, five, one, four
+            },
+            async (project, { namespace, model, instance }) => {
+               await Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: async () => await namespace.update('one'),
+                  //@ts-ignore
+                  Model: async () => await model.update('one'),
+                  //@ts-ignore
+                  Instance: async () => await instance.update('one')
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-      //    let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
+               expect(collection).to.have.lengthOf(6)
+               expect(collection.observable.at(0).name).to.equal('two')
+               expect(collection.observable.at(1).name).to.equal('three')
+               expect(collection.observable.at(2).name).to.equal('six')
+               expect(collection.observable.at(3).name).to.equal('five')
+               expect(collection.observable.at(4).name).to.equal('one')
+               expect(collection.observable.at(5).name).to.equal('four')
+            })
 
-      //    expect(one).to.not.be.undefined
+         test(
+            `${type} Delete: collection.get()`,
+            async (source, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-      //    //@ts-ignore
-      //    let three = await one.models.get('model2')
-      //    //@ts-ignore
-      //    let four = await one.models.get('model3')
+               await collection.delete('three')
+            },
+            async (project, { namespace, model, instance }) => {
+               await Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: async () => namespace.children.get('one'),
+                  //@ts-ignore
+                  Model: async () => model.models.get('one'),
+                  //@ts-ignore
+                  Instance: async () => instance.instances.get('one')
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-      //    expect(three).to.not.be.undefined
-      //    expect(four).to.not.be.undefined
-      //    //@ts-ignore
-      //    expect(three.name).to.equal("model2")
-      //    //@ts-ignore
-      //    expect(three.qualifiedName).to.equal("one.model2")
-      //    //@ts-ignore
-      //    expect(four.qualifiedName).to.equal("one.model3")
-      // })
+               expect(collection).to.have.lengthOf(5)
+               expect(collection.observable.at(0).name).to.equal('one')
+               expect(collection.observable.at(1).name).to.equal('two')
+               expect(collection.observable.at(2).name).to.equal('four')
+               expect(collection.observable.at(3).name).to.equal('five')
+               expect(collection.observable.at(4).name).to.equal('six')
+            })
 
-      // it('Retrieve new Instance', async function () {
-      //    let { project, source } = await setup({
-      //       namespaces: [
-      //          { path: 'one', id: '1' },
-      //       ],
-      //       models: [
-      //          { path: 'one.model1', id: '2' }
-      //       ],
-      //       instances: [
-      //          { path: 'one.inst1', id: '3' }
-      //       ]
-      //    })
+         test(
+            `${type} Delete: object.update()`,
+            async (source, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-      //    let sourceOne = await source.get<INamespace>(QualifiedObjectType.Namespace, 'one')
-      //    let sourceModel = await source.get<IModel>(QualifiedObjectType.Model, 'one.model1')
-      //    //@ts-ignore
-      //    await sourceOne.instances.create('inst2', sourceModel)
-      //    //@ts-ignore
-      //    await sourceOne.instances.create('inst3', sourceModel)
+               await collection.delete('three')
+            },
+            async (project, { namespace, model, instance }) => {
+               await Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: async () => namespace.update(),
+                  //@ts-ignore
+                  Model: async () => model.update(),
+                  //@ts-ignore
+                  Instance: async () => instance.update()
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-      //    let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
+               expect(collection).to.have.lengthOf(5)
+               expect(collection.observable.at(0).name).to.equal('one')
+               expect(collection.observable.at(1).name).to.equal('two')
+               expect(collection.observable.at(2).name).to.equal('four')
+               expect(collection.observable.at(3).name).to.equal('five')
+               expect(collection.observable.at(4).name).to.equal('six')
+            })
 
-      //    if (one === undefined) {
-      //       expect(one).to.not.be.undefined
-      //    }
+         test(
+            `${type} Move from another collection and Delete Parent: collection.get()`,
+            async (source, { namespace, model, instance }) => {
+               let newParent = await source.create('testparent')
 
-      //    //@ts-ignore
-      //    let two = await one.instances.get('inst2')
-      //    //@ts-ignore
-      //    let three = await one.instances.get('inst3')
+               await Switch.onType(type, {
+                  Namespace: async () => {
+                     let ns = await newParent.children.create('new')
+                     await ns.move(namespace)
+                  },
+                  Model: async () => {
+                     let mdl = await newParent.models.create('new')
+                     await mdl.move(model)
+                  },
+                  Instance: async () => {
+                     let modelOne = await model.models.get('one')
+                     //@ts-ignore
+                     let inst = await newParent.instances.create('new', modelOne)
+                     await inst.move(instance)
+                  }
+               })
 
-      //    expect(two).to.not.be.undefined
-      //    expect(three).to.not.be.undefined
-      //    //@ts-ignore
-      //    expect(two.name).to.equal("inst2")
-      //    //@ts-ignore
-      //    expect(two.qualifiedName).to.equal("one.inst2")
-      //    //@ts-ignore
-      //    expect(three.qualifiedName).to.equal("one.inst3")
-      // })
+               //@ts-ignore
+               await newParent.parent.children.delete(newParent.name)
+            },
+            async (project, { namespace, model, instance }) => {
+               await Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: async () => namespace.children.get('one'),
+                  //@ts-ignore
+                  Model: async () => model.models.get('one'),
+                  //@ts-ignore
+                  Instance: async () => instance.instances.get('one')
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => {
+                     expect(namespace.children).to.have.lengthOf(6)
+                     //@ts-ignore
+                     let found = namespace.children.observable.find(it => it.name === 'new')
+                     //@ts-ignore
+                     expect(found.parent.id).to.equal(namespace.id)
+                  },
+                  //@ts-ignore
+                  Model: () => {
+                     expect(model.models).to.have.lengthOf(6)
+                     let found = model.models.observable.find(it => it.name === 'new')
+                     //@ts-ignore
+                     expect(found.parent.id).to.equal(model.id)
+                  },
+                  //@ts-ignore
+                  Instance: () => {
+                     expect(instance.instances).to.have.lengthOf(6)
+                     let found = instance.instances.observable.find(it => it.name === 'new')
+                     //@ts-ignore
+                     expect(found.parent.id).to.equal(instance.id)
+                  }
+               })
+            })
 
-      it('Namespace Should update correctly when moved', async function () {
-         let { project, source } = await setup({
-            namespaces: [
-               { path: 'one', id: '1' },
-               { path: 'one.two', id: '2' },
-               { path: 'one.three', id: '3' },
-               { path: 'one.four', id: '4' },
-               { path: 'one.five', id: '5' },
-               { path: 'one.six', id: '6' },
-            ]
-         })
+         test(
+            `${type} Move from another collection and Delete Parent: object.update()`,
+            async (source, { namespace, model, instance }) => {
+               let newParent = await source.create('testparent')
 
-         let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
+               await Switch.onType(type, {
+                  Namespace: async () => {
+                     let ns = await newParent.children.create('new')
+                     await ns.move(namespace)
+                  },
+                  Model: async () => {
+                     let mdl = await newParent.models.create('new')
+                     await mdl.move(model)
+                  },
+                  Instance: async () => {
+                     let modelOne = await model.models.get('one')
+                     //@ts-ignore
+                     let inst = await newParent.instances.create('new', modelOne)
+                     await inst.move(instance)
+                  }
+               })
 
-         if (one === undefined) {
-            expect(one).to.not.be.undefined
-            return
-         }
+               //@ts-ignore
+               await newParent.parent.children.delete(newParent.name)
+            },
+            async (project, { namespace, model, instance }) => {
+               await Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: async () => namespace.update(),
+                  //@ts-ignore
+                  Model: async () => model.update(),
+                  //@ts-ignore
+                  Instance: async () => instance.update()
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => {
+                     expect(namespace.children).to.have.lengthOf(6)
+                     //@ts-ignore
+                     let found = namespace.children.observable.find(it => it.name === 'new')
+                     //@ts-ignore
+                     expect(found.parent.id).to.equal(namespace.id)
+                  },
+                  //@ts-ignore
+                  Model: () => {
+                     expect(model.models).to.have.lengthOf(6)
+                     let found = model.models.observable.find(it => it.name === 'new')
+                     //@ts-ignore
+                     expect(found.parent.id).to.equal(model.id)
+                  },
+                  //@ts-ignore
+                  Instance: () => {
+                     expect(instance.instances).to.have.lengthOf(6)
+                     let found = instance.instances.observable.find(it => it.name === 'new')
+                     //@ts-ignore
+                     expect(found.parent.id).to.equal(instance.id)
+                  }
+               })
+            })
 
-         expect(one.children).to.have.lengthOf(5)
-         expect(one.children.observable.at(0).name).to.equal('two')
-         expect(one.children.observable.at(1).name).to.equal('three')
-         expect(one.children.observable.at(2).name).to.equal('four')
-         expect(one.children.observable.at(3).name).to.equal('five')
-         expect(one.children.observable.at(4).name).to.equal('six')
+         test(
+            `${type} Reorder in Collection and Rename: collection.get()`,
+            /*
+               starting:[ one, two, three, four, five, six ]
+               ends with:[ two, three, six, five, one, four ]
+            */
+            async (source, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-         /*
-             starting:[ two, three, four, five, six ]
-            ends with:[ four, two, five, six, three ]
-         */
-         let sourceOne = await source.get<INamespace>(QualifiedObjectType.Namespace, 'one')
+               await collection.move(1, 0)
+               // two, one, three, four, five six
+               await collection.move(2, 1)
+               // two, three, one, four, five, six
+               await collection.move(5, 2)
+               // two, three, six, one, four, five
+               await collection.move(5, 3)
+               // two, three, six, five, one, four
 
-         if (sourceOne === undefined) {
-            expect(sourceOne).to.not.be.undefined
-            return
-         }
+               // Rename them
+               await (await collection.at(0)).rename('six')
+               await (await collection.at(1)).rename('five')
+               await (await collection.at(2)).rename('four')
+               await (await collection.at(3)).rename('three')
+               await (await collection.at(4)).rename('two')
+               await (await collection.at(5)).rename('one')
+            },
+            async (project, { namespace, model, instance }) => {
+               await Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: async () => namespace.children.get('one'),
+                  //@ts-ignore
+                  Model: async () => model.models.get('one'),
+                  //@ts-ignore
+                  Instance: async () => instance.instances.get('one')
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-         await sourceOne.children.move(2, 0)
-         await sourceOne.children.move(1, 4)
+               expect(collection).to.have.lengthOf(6)
+               expect(collection.observable.at(0).name).to.equal('six')
+               expect(collection.observable.at(1).name).to.equal('five')
+               expect(collection.observable.at(2).name).to.equal('four')
+               expect(collection.observable.at(3).name).to.equal('three')
+               expect(collection.observable.at(4).name).to.equal('two')
+               expect(collection.observable.at(5).name).to.equal('one')
+            })
 
-         await one.update()
+         test(
+            `${type} Reorder in Collection and Rename: object.update()`,
+            /*
+               starting:[ one, two, three, four, five, six ]
+               ends with:[ two, three, six, five, one, four ]
+            */
+            async (source, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-         expect(one.children).to.have.lengthOf(5)
-         expect(one.children.observable.at(0).name).to.equal('two')
-         expect(one.children.observable.at(1).name).to.equal('three')
-         expect(one.children.observable.at(2).name).to.equal('four')
-         expect(one.children.observable.at(3).name).to.equal('five')
-         expect(one.children.observable.at(4).name).to.equal('six')
-      })
+               await collection.move(1, 0)
+               // two, one, three, four, five six
+               await collection.move(2, 1)
+               // two, three, one, four, five, six
+               await collection.move(5, 2)
+               // two, three, six, one, four, five
+               await collection.move(5, 3)
+               // two, three, six, five, one, four
 
-      it('Namespace Should update correctly when some of its children have been deleted', async function () {
-         let { project, source } = await setup({
-            namespaces: [
-               { path: 'one', id: '1' },
-               { path: 'one.two', id: '2' },
-               { path: 'one.three', id: '3' },
-               { path: 'one.four', id: '4' },
-               { path: 'one.five', id: '5' },
-               { path: 'one.six', id: '6' },
-            ]
-         })
+               // Rename them
+               await (await collection.at(0)).rename('six')
+               await (await collection.at(1)).rename('five')
+               await (await collection.at(2)).rename('four')
+               await (await collection.at(3)).rename('three')
+               await (await collection.at(4)).rename('two')
+               await (await collection.at(5)).rename('one')
+            },
+            async (project, { namespace, model, instance }) => {
+               await Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: async () => namespace.update(),
+                  //@ts-ignore
+                  Model: async () => model.update(),
+                  //@ts-ignore
+                  Instance: async () => instance.update()
+               })
+            },
+            async (project, { namespace, model, instance }) => {
+               let collection = Switch.onType(type, {
+                  //@ts-ignore
+                  Namespace: () => namespace.children,
+                  //@ts-ignore
+                  Model: () => model.models,
+                  //@ts-ignore
+                  Instance: () => instance.instances
+               })
 
-         let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
+               expect(collection).to.have.lengthOf(6)
+               expect(collection.observable.at(0).name).to.equal('six')
+               expect(collection.observable.at(1).name).to.equal('five')
+               expect(collection.observable.at(2).name).to.equal('four')
+               expect(collection.observable.at(3).name).to.equal('three')
+               expect(collection.observable.at(4).name).to.equal('two')
+               expect(collection.observable.at(5).name).to.equal('one')
+            })
+      }
 
-         // This is done to avoid adding @ts-ignore to every line
-         if (one === undefined) {
-            expect(one).to.not.be.undefined
-            return
-         }
-
-         expect(one.children).to.have.lengthOf(5)
-         expect(one.children.observable.at(0).name).to.equal('two')
-         expect(one.children.observable.at(1).name).to.equal('three')
-         expect(one.children.observable.at(2).name).to.equal('four')
-         expect(one.children.observable.at(3).name).to.equal('five')
-         expect(one.children.observable.at(4).name).to.equal('six')
-
-         /*
-             starting:[ two, three, four, five, six ]
-            ends with:[ two, four, five, six ]
-         */
-         let sourceOne = await source.get<INamespace>(QualifiedObjectType.Namespace, 'one')
-
-         if (sourceOne === undefined) {
-            expect(sourceOne).to.not.be.undefined
-            return
-         }
-
-         await sourceOne.children.delete('three')
-
-         await one.update()
-
-         expect(one.children).to.have.lengthOf(5)
-         expect(one.children.observable.at(0).name).to.equal('two')
-         expect(one.children.observable.at(1).name).to.equal('four')
-         expect(one.children.observable.at(2).name).to.equal('five')
-         expect(one.children.observable.at(3).name).to.equal('six')
-      })
-
-
+      testType(QualifiedObjectType.Namespace)
+      testType(QualifiedObjectType.Model)
+      testType(QualifiedObjectType.Instance)
    })
 
 

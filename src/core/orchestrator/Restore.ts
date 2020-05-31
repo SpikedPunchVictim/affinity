@@ -45,7 +45,7 @@ export class Restore {
    async namespace(namespace: INamespace, restore: NamespaceLazyRestoreInfo | NamespaceFullRestoreInfo): Promise<void> {
       let ns = namespace as Namespace
 
-      if(restore.id !== ns.id) {
+      if (restore.id !== ns.id) {
          throw new Error(`Restore information does not represent the same object being updated. Source ID: ${ns.id}   Restore ID: ${restore.id}`)
       }
 
@@ -53,28 +53,28 @@ export class Restore {
 
       let parentQualifiedPath = parentPath(restore.qualifiedPath)
 
-      if(parentQualifiedPath === undefined) {
+      if (parentQualifiedPath === undefined) {
          throw new Error(`Encountered invalid parent Qualified Path When restoring a Namespace`)
       }
 
       let parent = await this.project.get<INamespace>(QualifiedObjectType.Namespace, parentQualifiedPath)
 
-      if(parent === undefined) {
+      if (parent === undefined) {
          throw new Error(`Failed to retrieve the parent Namespace when restoring a Namespace`)
       }
 
       // Does it need to be moved?
-      if(ns.parent == null) {
+      if (ns.parent == null) {
          // Has no Parent (no idea how we would get here)
          // TODO: Revisit this action type here
          this.composer.add(ns, parent, restore.index, new NamespaceCreateAction(ns, restore.index))
-      } else if(parent.id !== ns.parent.id) {
+      } else if (parent.id !== ns.parent.id) {
          this.composer.move(ns, parent, restore.index, new NamespaceMoveAction(ns, ns.parent, parent))
       } else {
          // Does it need to be moved?
          let currentIndex = parent.children.observable.findIndex(n => n.id === ns.id)
 
-         if(currentIndex !== restore.index) {
+         if (currentIndex !== restore.index) {
             let action = new NamespaceReorderAction(ns, currentIndex, restore.index)
             this.composer.reorder(ns, parent.children, action.from, action.to, action)
          }
@@ -82,7 +82,7 @@ export class Restore {
 
       let isFullRestore = (restore instanceof NamespaceFullRestoreInfo)
 
-      if(!isFullRestore) {
+      if (!isFullRestore) {
          // We're done
          return
       }
@@ -91,29 +91,29 @@ export class Restore {
 
       try {
 
-      // Update the Namespace collections
-      await this.collection<INamespace, NamespaceLazyRestoreInfo>(
-         namespace,
-         namespace.children.observable,
-         new ObservableCollection(...full.children),
-         async (restore) => new Namespace(restore.name, namespace, this.context, restore.id))
-      
-      await this.collection<IModel, ModelLazyRestoreInfo>(
-         namespace,
-         namespace.models.observable,
-         new ObservableCollection(...full.models), 
-         async (restore: ModelLazyRestoreInfo) => new Model(restore.name, namespace, this.context, restore.id))
+         // Update the Namespace collections
+         await this.collection<INamespace, NamespaceLazyRestoreInfo>(
+            namespace,
+            namespace.children.observable,
+            new ObservableCollection(...full.children),
+            async (restore) => new Namespace(restore.name, namespace, this.context, restore.id))
 
-      await this.collection<IInstance, InstanceLazyRestoreInfo>(
-         namespace,
-         namespace.instances.observable,
-         new ObservableCollection(...full.instances), 
-         async (restore) => {
-            let model = await this.project.getById<IModel>(QualifiedObjectType.Model, restore.modelId)
-            return new Instance(restore.name, namespace, model, this.context, restore.id)
-         })
+         await this.collection<IModel, ModelLazyRestoreInfo>(
+            namespace,
+            namespace.models.observable,
+            new ObservableCollection(...full.models),
+            async (restore: ModelLazyRestoreInfo) => new Model(restore.name, namespace, this.context, restore.id))
 
-      } catch(err) {
+         await this.collection<IInstance, InstanceLazyRestoreInfo>(
+            namespace,
+            namespace.instances.observable,
+            new ObservableCollection(...full.instances),
+            async (restore) => {
+               let model = await this.project.getById<IModel>(QualifiedObjectType.Model, restore.modelId)
+               return new Instance(restore.name, namespace, model, this.context, restore.id)
+            })
+
+      } catch (err) {
          console.error(err)
       }
    }
@@ -138,13 +138,12 @@ export class Restore {
          collection,
          {
             equal: async (master: TRestoreInfo, other: TQualifiedObject): Promise<boolean> => {
-               try {
-               if(master.id !== other.id) {
+               if (master.id !== other.id) {
                   return false
                }
 
                // If they're equal, ensure the other properties are equal
-               if(other.name !== master.name) {
+               if (other.name !== master.name) {
                   //@ts-ignore
                   let obj = other as QualifiedObject
                   obj.setName(master.name)
@@ -152,22 +151,18 @@ export class Restore {
 
                // Ensure the parent is set correctly
                //@ts-ignore
-               if(other.parent.id !== parent.id) {
+               if (other.parent.id !== parent.id) {
                   //@ts-ignore
                   let obj = other as QualifiedObject
                   obj.setParent(parent)
                }
 
                return true
-            } catch(err) {
-               console.error(err)
-               return false
-            }
             },
             add: async (master: TRestoreInfo, index: number, collection: IObservableCollection<TQualifiedObject>): Promise<void> => {
                let found = this.search.findObjectById(master.id)
 
-               if(found !== undefined) {
+               if (found !== undefined) {
                   // TODO: If found is not a Namespace, delete it
                   let foundObj = found as TQualifiedObject
                   //@ts-ignore
@@ -193,7 +188,7 @@ export class Restore {
                      Model: (model) => ({ notifying: Events.Namespace.ModelMoving, notified: Events.Namespace.ModelMoved }),
                      Instance: (inst) => ({ notifying: Events.Namespace.InstanceMoving, notified: Events.Namespace.InstanceMoved })
                   })
-                  
+
                   emit([
                      { source: collection, event: ObservableEvents.moving, data: change },
                      { source: parent.children, event: ObservableEvents.moving, data: change },

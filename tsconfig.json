@@ -2,10 +2,12 @@
    "compilerOptions": {
        "rootDir": "src",
        "outDir": "./dist",
-       "target": "es6",
+       "target": "es2017",
        "module": "commonjs",
        "moduleResolution": "node",
        "downlevelIteration": true,
+       "inlineSources": true,
+       "inlineSourceMap": true,
        "alwaysStrict": true,
        "sourceMap": true,
        "declaration": true,
@@ -17,7 +19,7 @@
        "noImplicitAny": false,
        "noImplicitThis": false,
        "experimentalDecorators": true,
-       "lib": ["es6"]
+       "lib": ["es2017"]
    },
    "include": ["src/**/*.ts"]
 }

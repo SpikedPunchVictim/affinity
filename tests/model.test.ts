@@ -1,117 +1,101 @@
 import 'mocha'
 import { expect } from 'chai'
-import { Model, INamespace, IModel } from '../src/core'
-import { validateQualifiedPath } from './utils/validate'
+import { INamespace } from '../src/core'
 import { QualifiedObjectType } from '../src/core/utils'
-import { fill } from './utils/create'
+import { projectTest } from './utils/test'
+import { IValue } from '../src/core/values/Value'
+import { IValueSource } from '../src/core/values/ValueFactory'
 
 describe('Models', function() {
-   it('Can be created', async function() {
-      let project = await fill({
-         models: [
-            'one.two.model'
-         ]
+   projectTest(
+      `Can be created`,
+      async (project, { model }) => { },
+      async (project) => {
+         let ns = await project.create('parent')
+         //@ts-ignore
+         await ns.models.create('newmodel')
+         //@ts-ignore
+         let model = await project.get(QualifiedObjectType.Model, `parent.newmodel`)
+         //@ts-ignore
+         expect(model).to.not.be.undefined
+      }
+   )
+
+   projectTest(
+      `Can be deleted`,
+      async (project, { model }) => { },
+      async (project, { model }) => {
+         expect(model.models).to.have.lengthOf(6)
+         await model.models.delete('one')
+
+         let one = await model.models.get('one')
+         expect(model.models).to.have.lengthOf(5)
+         //@ts-ignore
+         expect(one).to.be.undefined
       })
 
-      let two = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one.two')
+   projectTest(
+      `Can be renamed`,
+      async (project, { model }) => { },
+      async (project, { model }) => {
+         let one = await model.models.get('one')
+         //@ts-ignore
+         await one.rename('seventeen')
+         //@ts-ignore
+         expect(one.name).to.equal('seventeen')
+      }
+   )
 
-      expect(two).to.not.be.undefined
-
-      //@ts-ignore
-      let model = await two.models.get('model')
-
-      expect(model).to.not.be.undefined
-      expect(model).to.be.an.instanceOf(Model)
-   })
-
-   it('Can be deleted', async function() {
-      let project = await fill({
-         models: [
-            'one.two.model'
-         ]
-      })
-
-      let two = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one.two')
-      expect(two).to.not.be.undefined
-
-      //@ts-ignore
-      let model = await two.models.get('model')
-
-      expect(model).to.not.be.undefined
-      expect(model).to.be.an.instanceOf(Model)
-   })
-
-   it('Can be renamed', async function() {
-      let before = 'model-before-rename'
-      let after = 'model-after-rename'
-
-      let project = await fill({
-         models: [
-            `one.two.${before}`
-         ]
-      })
-
-      let two = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one.two')
-      expect(two).to.not.be.undefined
-
-      //@ts-ignore
-      let model = await two.models.get(before)
-
-      expect(model).to.not.be.undefined
-
-      //@ts-ignore
-      expect(model.name).to.equal(before)
-
-      //@ts-ignore
-      await model.rename(after)
-
-      //@ts-ignore
-      expect(model.name).to.equal(after)
-   })
-
-   it('Can be moved', async function() {
-      let project = await fill({
-         models: [
-            'one.two.three.model'
-         ]
-      })
-      
-      let model = await project.get(QualifiedObjectType.Model, 'one.two.three.model')
-
-      expect(model).to.not.be.undefined
-
-      // @ts-ignore
-      validateQualifiedPath(model, 'one.two.three.model')
-
-      let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
-
-      expect(one).to.not.be.undefined
-
-      // @ts-ignore
-      let oneModel = await model.move(one)
-
-      // @ts-ignore
-      validateQualifiedPath(model, 'one.model')
-
-      expect(oneModel, `The model was not moved into the collection`).to.not.be.undefined
-      expect(model).to.be.equal(oneModel)
-   })
+   projectTest(
+      `Can be moved`,
+      async (project, { model }) => { 
+         await project.create('new-namespace')
+      },
+      async (project, { model }) => {
+         let one = await model.models.get('one')
+         let newParent = await project.get<INamespace>(QualifiedObjectType.Namespace, 'new-namespace')
+         //@ts-ignore
+         await one.move(newParent)
+         //@ts-ignore
+         expect(one.qualifiedName).to.equal(`${newParent.qualifiedName}.${one.name}`)
+         //@ts-ignore
+         expect(newParent.models).to.have.lengthOf(1)
+         expect(model.models).to.have.lengthOf(5)
+      }
+   )
 
    describe('# Members', function() {
-      it('Add string', async function() {
-         let project = await fill({
-            models: [
-               'one.two.model'
-            ]
-         })
+      type CreateValueHandler = (values: IValueSource) => IValue
 
-         let model = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model')
+      type MemberTest = {
+         description: string
+         name: string
+         value: CreateValueHandler
+      }
 
-         //@ts-ignore
-         await model.append({
-            string: '#1',
-            string2: '#2'
-         })
-      })
+      let tests: MemberTest[] = [
+         { description: `bool`, name: 'bool', value: values => values.bool.value(true) },
+         { description: `int`, name: 'int', value: values => values.int.value(-3) },
+         { description: `string`, name: 'string', value: values => values.string.value('new') },
+         { description: `uint`, name: 'uint', value: values => values.uint.value(12) },
+         { description: `list`, name: 'list', value: values => values.list.value(values.string.type()) }
+      ]
+
+      for(let test of tests) {
+         projectTest(
+            test.description,
+            async (project) => {},
+            async (project, { model }) => {
+               let { values } = project
+
+               let one = await model.models.get('one')
+               
+               //@ts-ignore
+               await one.members.add({ name: test.name, value: values.string.value(values) })
+               //@ts-ignore
+               expect(one.members).to.have.lengthOf(1)
+            }
+         )
+      }
    })
 })

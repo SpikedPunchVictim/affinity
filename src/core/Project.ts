@@ -16,7 +16,7 @@ import { InvalidOperationError } from '../errors/InvalidOperationError'
 import { IOrchestrator, Orchestrator } from './orchestrator/Orchestrator'
 import { EventEmitter } from 'events'
 import { IUidWarden, HexUidWarden } from './UidWarden'
-import { IValueFactory, ValueFactory } from './values/ValueFactory'
+import { IValueFactory, ValueFactory, IValueSource, ValueSource } from './values/ValueFactory'
 import { EmptyValueAttachment } from './values/ValueAttachment'
 import { Search } from './Search'
 
@@ -64,6 +64,7 @@ export interface IProject extends EventEmitter {
    readonly rfc: IRequestForChangeSource
    readonly name: string
    readonly uidWarden: IUidWarden
+   readonly values: IValueSource
 
    /**
     * Retrieves the QualifiedObject athe the provided qualified path, or undefined if not found.
@@ -129,6 +130,7 @@ export class Project
    readonly rfc: IRequestForChangeSource
    readonly name: string
    readonly uidWarden: IUidWarden
+   readonly values: IValueSource
 
    get orchestrator(): IOrchestrator {
       return this.context.orchestrator
@@ -140,6 +142,7 @@ export class Project
       this.router = new ActionRouter()
       this.rfc = options?.rfcSource || new RequestForChangeSource(this.router)
       this.uidWarden = options?.uidWarden || new HexUidWarden()
+      this.values = new ValueSource()
       this.context = new ProjectContext(this, this.uidWarden)
 
       let rootId = options?.rootId || `root_${this.name}`

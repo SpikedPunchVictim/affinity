@@ -3,6 +3,7 @@ import { IProject } from "../../src/core/Project"
 import { INamespace } from "../../src/core/Namespace"
 import { QualifiedObjectType } from "../../src/core/utils/Types"
 import { full } from './setup'
+import { create } from './create'
 
 type ParentNamespaces = {
    namespace: INamespace
@@ -23,11 +24,11 @@ type OnUpdateProjectHandler = (project: IProject, parents: ParentNamespaces) => 
  * @param updateProject Function to update the project data
  * @param testProject Function to test the changes
  */
-export async function fullTest(
+export async function backendTest(
    description: string,
    updateSource: OnUpdateProjectHandler,
    updateProject: OnUpdateProjectHandler,
-   testProject: OnUpdateProjectHandler): void {
+   testProject: OnUpdateProjectHandler): Promise<void> {
    it(description, async function () {
       let cfg = {
          namespaces: [
@@ -91,5 +92,60 @@ export async function fullTest(
       await updateSource(source, sourceParents)
       await updateProject(project, projectParents)
       await testProject(project, projectParents)
+   })
+}
+
+export async function projectTest(
+   description: string,
+   updateProject: OnUpdateProjectHandler,
+   testProject: OnUpdateProjectHandler): Promise<void> {
+   it(description, async function() {
+      let cfg = {
+         namespaces: [
+            { path: 'namespace', id: 'namespace' },
+            { path: 'model', id: 'model' },
+            { path: 'instance', id: 'instance' },
+            { path: 'namespace.one', id: 'n1' },
+            { path: 'namespace.two', id: 'n2' },
+            { path: 'namespace.three', id: 'n3' },
+            { path: 'namespace.four', id: 'n4' },
+            { path: 'namespace.five', id: 'n5' },
+            { path: 'namespace.six', id: 'n6' }
+         ],
+         models: [
+            { path: 'model.one', id: 'm1' },
+            { path: 'model.two', id: 'm2' },
+            { path: 'model.three', id: 'm3' },
+            { path: 'model.four', id: 'm4' },
+            { path: 'model.five', id: 'm5' },
+            { path: 'model.six', id: 'm6' }
+         ],
+         instances: [
+            { path: 'instance.one', id: 'i1' },
+            { path: 'instance.two', id: 'i2' },
+            { path: 'instance.three', id: 'i3' },
+            { path: 'instance.four', id: 'i4' },
+            { path: 'instance.five', id: 'i5' },
+            { path: 'instance.six', id: 'i6' }
+         ]
+      }
+
+      let project = await create(cfg)
+
+      let namespace = await project.get<INamespace>(QualifiedObjectType.Namespace, 'namespace')
+      let model = await project.get<INamespace>(QualifiedObjectType.Namespace, 'model')
+      let instance = await project.get<INamespace>(QualifiedObjectType.Namespace, 'instance')
+
+      let parents: ParentNamespaces = {
+         //@ts-ignore
+         namespace,
+         //@ts-ignore
+         model,
+         //@ts-ignore
+         instance
+      }
+
+      await updateProject(project, parents)
+      await testProject(project, parents)
    })
 }

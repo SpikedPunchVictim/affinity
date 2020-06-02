@@ -80,45 +80,32 @@ export async function create(config: any, name: string = 'test'): Promise<IProje
       uidWarden: warden
    })
 
-   let namespaces = config.namespaces || []
-   let models = config.models || []
-   let instances = config.instances || []
-
-   for(let item of namespaces) {
-      warden.add(QualifiedObjectType.Namespace, item.path, item.id)
-      await project.create(item.path)
-   }
-
-   for(let item of models) {
-      warden.add(QualifiedObjectType.Model, item.path, item.id)
-      let base = basename(item.path)
-      let pPath = parentPath(item.path)
-
-      if(pPath === undefined) {
-         throw new Error(`pPath is undefined`)
-      }
-
-      let nspace = await project.create(pPath)
-      await nspace.models.create(base)
-   }
-
-   for(let item of instances) {
-      warden.add(QualifiedObjectType.Instance, item.path, item.id)
-      let base = basename(item.path)
-      let pPath = parentPath(item.path)
-
-      if(pPath === undefined) {
-         throw new Error(`pPath is undefined`)
-      }
-
-      let nspace = await project.create(pPath)
-      let model = await nspace.models.create(base)
-      await nspace.instances.create(base, model)
-   }
+   await populate(project, config)
 
    return project
 }
 
+/**
+ * Populates a Project with QualifiedObjects and custom ids
+ * 
+ *  * Example:
+ * 
+ *    let project = await populate({
+ *       namespaces: [
+ *          { path: 'one.two', id: "2" },
+ *          { path: 'three.four.five', id: "5" }
+ *       ],
+ *       models: [
+ *          { path: 'one.model', id: "3" }
+ *       ],
+ *       instances: [
+ *          { path: 'one.instance', id: "4" }
+ *       ] 
+ *    })
+ * 
+ * @param project 
+ * @param config 
+ */
 export async function populate(project: IProject, config: any): Promise<void> {
    let warden = project.uidWarden as TestUidWarden
 

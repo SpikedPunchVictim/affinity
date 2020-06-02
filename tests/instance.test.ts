@@ -1,88 +1,89 @@
 import 'mocha'
 import { expect } from 'chai'
-import { fill } from './utils/create'
 import { QualifiedObjectType } from '../src/core/utils'
 import { INamespace } from '../src/core/Namespace'
-import { validateQualifiedPath } from './utils/validate'
+import { projectTest } from './utils/test'
+import { IInstance } from '../src/core/Instance'
 
-describe('Instances', function() {
-   it('Can be created', async function() {
-      let project = await fill({
-         namespaces: [
-            'one'
-         ]
+describe('Instances', function () {
+   projectTest(
+      `Can be created`,
+      async (project, { model }) => { },
+      async (project) => {
+         let ns = await project.create('parent')
+         //@ts-ignore
+         let mdl = await ns.models.create('newmodel')
+         let inst = await ns.instances.create('newinst', mdl)
+         //@ts-ignore
+         expect(inst).to.not.be.undefined
+      }
+   )
+
+   projectTest(
+      `Can be deleted`,
+      async (project, { instance }) => { },
+      async (project, { instance }) => {
+         expect(instance.instances).to.have.lengthOf(6)
+         await instance.instances.delete('one')
+
+         let one = await instance.instances.get('one')
+         expect(instance.instances).to.have.lengthOf(5)
+         //@ts-ignore
+         expect(one).to.be.undefined
       })
 
-      let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
-      //@ts-ignore
-      let model = await one.models.create('model')
-      //@ts-ignore
-      let inst = await one.instances.create('inst', model)
-
-      //@ts-ignore
-      validateQualifiedPath(inst, 'one.inst')
-      expect(inst).to.exist
-   })
-
-   describe('# Fields', function() {
-      it('Fields are created when Members are created', async function() {
-         let project = await fill({
-            namespaces: [
-               'one'
-            ]
-         })
-   
-         let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
+   projectTest(
+      `Can be renamed`,
+      async (project, { instance }) => { },
+      async (project, { instance }) => {
+         let one = await instance.instances.get('one')
          //@ts-ignore
-         let model = await one.models.create('model')
+         await one.rename('seventeen')
          //@ts-ignore
-         let inst = await one.instances.create('inst', model)
+         expect(one.name).to.equal('seventeen')
+      }
+   )
 
-         expect(model.members).to.have.lengthOf(0)
-         expect(inst.fields).to.have.lengthOf(0)
-
-         await model.members.append({
-            name: 'string',
-            index: 3,
-            negative: -3,
-            bool: false
-         })
-
-         expect(model.members).to.have.lengthOf(4)
-         expect(inst.fields).to.have.lengthOf(4)
-      })
-
-      it('Fields are created when Members are created', async function() {
-         let project = await fill({
-            namespaces: [
-               'one'
-            ],
-            instances: [
-               'one.two'
-            ]
-         })
-   
-         //let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
+   projectTest(
+      `Can be moved`,
+      async (project, { instance }) => {
+         await project.create('new-namespace')
+      },
+      async (project, { instance }) => {
+         let one = await instance.instances.get('one')
+         let newParent = await project.get<INamespace>(QualifiedObjectType.Namespace, 'new-namespace')
          //@ts-ignore
-         let model = await project.get<IModel>(QualifiedObjectType.Model, 'one.two')
+         await one.move(newParent)
          //@ts-ignore
-         let inst = await project.get<IInstance>(QualifiedObjectType.Instance, 'one.two')
+         expect(one.qualifiedName).to.equal(`${newParent.qualifiedName}.${one.name}`)
+         //@ts-ignore
+         expect(newParent.instances).to.have.lengthOf(1)
+         expect(instance.instances).to.have.lengthOf(5)
+      }
+   )
 
-         expect(model.members).to.have.lengthOf(0)
-         expect(inst.fields).to.have.lengthOf(0)
+   describe('# Fields', function () {
+      projectTest(
+         `Are created when members are created`,
+         async (project, { model, instance }) => { },
+         async (project, { model, instance }) => {
+            let { values } = project
 
-         await model.members.append({
-            name: 'string',
-            index: 3,
-            negative: -3,
-            bool: false
-         })
+            let inst = await project.get<IInstance>(QualifiedObjectType.Instance, 'instance.one')
+            //@ts-ignore
+            expect(inst.fields).to.have.lengthOf(0)
+           
+            //@ts-ignore
+            await inst.model.append({
+               string: values.string.value('new')
+            })
 
-         expect(model.members).to.have.lengthOf(4)
-         expect(inst.fields).to.have.lengthOf(4)
+            //@ts-ignore
+            expect(inst.fields).to.have.lengthOf(1)
+         }
+      )
 
-         await inst.update()
-      })
+      
 
       // it('Fields are merged together correctly when updated', function() {
 

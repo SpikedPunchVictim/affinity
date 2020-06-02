@@ -1,14 +1,14 @@
-import { IType, IValue, Value } from "./Value"
+import { IType, IValue, Value, IValueSource } from "./Value"
 import { ArgumentError } from "../../errors/ArgumentError"
 import { asValue, asType } from "../utils/Types"
-import { IValueAttachment } from "./ValueAttachment"
+import { IValueAttachment, EmptyValueAttachment } from "./ValueAttachment"
 import { IndexOutOfRangeError } from "../../errors"
 import { ObservableCollection } from "../collections/ObservableCollection"
 
 export type VisitValueHandler = (value: IValue) => void
 export type PredicateValueHandler = (value: IValue) => boolean
 
-export interface IArrayValue extends IValue {
+export interface IListValue extends IValue {
    readonly length: number
 
    [Symbol.iterator](): Iterator<IValue>
@@ -28,7 +28,7 @@ export interface IArrayValue extends IValue {
    removeAll(filter: PredicateValueHandler): Promise<boolean>
 }
 
-export class ArrayType implements IType {
+export class ListType implements IType {
    readonly name: string = "type-array"
    readonly itemType: IType
 
@@ -41,13 +41,13 @@ export class ArrayType implements IType {
          throw new ArgumentError(`other value must be valid`)
       }
 
-      let arrayType = asType<ArrayType>(other)
+      let arrayType = asType<ListType>(other)
 
       return other.name === this.name && arrayType.itemType.equals(this.itemType)
    }
 }
 
-export class ArrayValue extends Value implements IArrayValue {
+export class ListValue extends Value implements IListValue {
    private _values: ObservableCollection<IValue>
 
    get values(): ObservableCollection<IValue> {
@@ -55,7 +55,7 @@ export class ArrayValue extends Value implements IArrayValue {
    }
 
    get itemType(): IType {
-      let arrType = asType<ArrayType>(this.type)
+      let arrType = asType<ListType>(this.type)
       return arrType.itemType
    }
 
@@ -64,7 +64,7 @@ export class ArrayValue extends Value implements IArrayValue {
    }
 
    constructor(itemType: IType, attachment: IValueAttachment, values?: IValue[]) {
-      super(new ArrayType(itemType), attachment)
+      super(new ListType(itemType), attachment)
       this._values = new ObservableCollection<IValue>()
 
       if(values) {
@@ -99,7 +99,7 @@ export class ArrayValue extends Value implements IArrayValue {
          throw new ArgumentError(`other value must be valid`)
       }
 
-      let otherArray = asValue<ArrayValue>(other)
+      let otherArray = asValue<ListValue>(other)
 
       let isEqual = this.type.equals(other.type) &&
          (this._values.length === otherArray.length) &&
@@ -119,7 +119,7 @@ export class ArrayValue extends Value implements IArrayValue {
    }
 
    clone(): IValue {
-      return new ArrayValue(this.itemType, this.attachment, Array.from(this._values))
+      return new ListValue(this.itemType, this.attachment, Array.from(this._values))
    }
 
    at(index: number): IValue {
@@ -137,7 +137,7 @@ export class ArrayValue extends Value implements IArrayValue {
          }
       }
 
-      let newValue = asValue<ArrayValue>(this.clone())
+      let newValue = asValue<ListValue>(this.clone())
       await newValue.add(...values)
 
       await this.attachment.request(this, newValue, () => {
@@ -150,7 +150,7 @@ export class ArrayValue extends Value implements IArrayValue {
    }
 
    async clear(): Promise<boolean> {
-      let newValue = asValue<ArrayValue>(this.clone())
+      let newValue = asValue<ListValue>(this.clone())
       await newValue._values.clear()
 
       try {
@@ -196,7 +196,7 @@ export class ArrayValue extends Value implements IArrayValue {
          throw new IndexOutOfRangeError(index)
       }
 
-      let newValue = asValue<ArrayValue>(this.clone())
+      let newValue = asValue<ListValue>(this.clone())
       await newValue._values.insert(index, value.clone())
 
       try {
@@ -224,7 +224,7 @@ export class ArrayValue extends Value implements IArrayValue {
          throw new IndexOutOfRangeError(to)
       }
 
-      let newValue = asValue<ArrayValue>(this.clone())
+      let newValue = asValue<ListValue>(this.clone())
       await newValue._values.move(from, to)
 
       try {
@@ -248,7 +248,7 @@ export class ArrayValue extends Value implements IArrayValue {
          values = [values]
       }
 
-      let newValue = asValue<ArrayValue>(this.clone())
+      let newValue = asValue<ListValue>(this.clone())
       await newValue.remove(values)
 
       try {
@@ -268,7 +268,7 @@ export class ArrayValue extends Value implements IArrayValue {
          throw new IndexOutOfRangeError(index)
       }
 
-      let newValue = asValue<ArrayValue>(this.clone())
+      let newValue = asValue<ListValue>(this.clone())
       await newValue.removeAt(index)
 
       try {
@@ -288,7 +288,7 @@ export class ArrayValue extends Value implements IArrayValue {
          throw new ArgumentError(`filter must be valid`)
       }
 
-      let newValue = asValue<ArrayValue>(this.clone())
+      let newValue = asValue<ListValue>(this.clone())
       await newValue.removeAll(filter)
 
       try {
@@ -301,5 +301,15 @@ export class ArrayValue extends Value implements IArrayValue {
       } catch(err) {
          throw err
       }
+   }
+}
+
+export class ListValueSource implements IValueSource {
+   type(itemType: IType): IType {
+      return new ListType(itemType)
+   }
+
+   value(itemType: IType): IValue {
+      return new ListValue(itemType, new EmptyValueAttachment())
    }
 }

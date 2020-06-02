@@ -2,10 +2,11 @@ import 'mocha'
 import { expect } from 'chai'
 import { Project } from '../src/core/Project'
 import { validateQualifiedPath } from './utils/validate'
-import { fullTest } from './utils/test'
+import { backendTest } from './utils/test'
 import { QualifiedObjectType } from '../src/core/utils/Types'
 import { IInstance } from '../src/core/Instance'
 import { INamespace } from '../src/core/Namespace'
+import { populate } from './utils/create'
 
 /*
    TODO Tests:
@@ -37,8 +38,8 @@ import { INamespace } from '../src/core/Namespace'
 
 */
 
-describe('Projects', function() {
-   it('Project create() creates Namespaces', async function() {
+describe('Projects', function () {
+   it('Project create() creates Namespaces', async function () {
       let project = new Project('test')
 
       let one = await project.create('one')
@@ -51,7 +52,7 @@ describe('Projects', function() {
       validateQualifiedPath(two, 'one.two')
    })
 
-   it('Project get() gets Namespaces', async function() {
+   it('Project get() gets Namespaces', async function () {
       let project = new Project('test')
 
       let two = await project.create('one.two')
@@ -60,7 +61,7 @@ describe('Projects', function() {
       expect(two).to.equal(twoGot)
    })
 
-   it('Project get() gets Models', async function() {
+   it('Project get() gets Models', async function () {
       let project = new Project('test')
 
       let two = await project.create('one.two')
@@ -75,7 +76,7 @@ describe('Projects', function() {
       expect(model).to.not.equal(ns)
    })
 
-   it('Project get() gets Instances', async function() {
+   it('Project get() gets Instances', async function () {
       let project = new Project('test')
 
       let two = await project.create('one.two')
@@ -90,7 +91,7 @@ describe('Projects', function() {
       expect(instGot).to.not.equal(ns)
    })
 
-   it('Project delete() deletes Namespaces', async function() {
+   it('Project delete() deletes Namespaces', async function () {
       let project = new Project('test')
 
       let two = await project.create('one.two')
@@ -104,26 +105,30 @@ describe('Projects', function() {
       expect(found).to.be.undefined
    })
 
-   fullTest(
+   backendTest(
       `getById() Should update if it doesn't exist locally`,
-      async (source, { namespace } => {
-
-      }),
-      async (project, { namespace }) => {
-
+      async (source) => {
+         await populate(source, {
+            instances: [{ path: 'test.instance', id: 'test-inst' }]
+         })
       },
       async (project, { namespace }) => {
-
+         await project.getById(QualifiedObjectType.Instance, 'test-inst')
+      },
+      async (project, { namespace }) => {
+         let inst = await project.getById(QualifiedObjectType.Instance, 'test-inst')
+         expect(inst, 'The instance returned undefined').to.not.be.undefined
+         expect(inst.qualifiedName).to.equal(`test.instance`, 'The qualifiedName is wrong')
       }
-      )
+   )
 
-   
+
    // it('Project delete() deletes Models', async function() {
    //    let project = new Project()
 
    //    let name = 'NewNamespace'
    //    let subName = 'ChildNewNamespace'
-      
+
 
    //    let ns = await project.root.children.create(name)
    //    let subNs = await ns.children.create(subName)
@@ -142,7 +147,7 @@ describe('Projects', function() {
 
    //    let name = 'NewNamespace'
    //    let subName = 'ChildNewNamespace'
-      
+
 
    //    let ns = await project.root.children.create(name)
    //    let subNs = await ns.children.create(subName)
@@ -161,7 +166,7 @@ describe('Projects', function() {
 
    //    let name = 'NewNamespace'
    //    let subName = 'ChildNewNamespace'
-      
+
 
    //    let ns = await project.root.children.create(name)
    //    let subNs = await ns.children.create(subName)
@@ -180,7 +185,7 @@ describe('Projects', function() {
 
    //    let name = 'NewNamespace'
    //    let subName = 'ChildNewNamespace'
-      
+
 
    //    let ns = await project.root.children.create(name)
    //    let subNs = await ns.children.create(subName)

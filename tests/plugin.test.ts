@@ -33,6 +33,8 @@ import { ProjectOpenAction, ProjectCommitAction } from '../src/core/actions/Proj
 import { QualifiedObjectType, Switch } from '../src/core/utils/Types';
 import { TestPlugin, DataPlugin, DebugPlugin } from './utils/plugin';
 import { create } from './utils/create';
+import { backendTest } from './utils/test';
+import { IInstance } from '../src/core/Instance';
 
 function action(type: string, fn: () => Promise<void>) {
    return {
@@ -870,6 +872,31 @@ describe('Plugins', function () {
       testType(QualifiedObjectType.Namespace)
       testType(QualifiedObjectType.Model)
       testType(QualifiedObjectType.Instance)
+
+      backendTest(
+         `Creating members updates fields`,
+         async (source, { instance }) => {
+            let inst = await source.get<IInstance>(QualifiedObjectType.Instance, 'instance.one')
+            let { values } = source
+
+            //@ts-ignore
+            inst.model.members.append({
+               string: values.string.value('new'),
+               int: values.int.value(2)
+            })
+         },
+         async (project) => { },
+         async (project) => {
+            let inst = await project.get<IInstance>(QualifiedObjectType.Instance, 'instance.one')
+
+            //@ts-ignore
+            expect(inst.fields).to.have.lengthOf(2)
+            //@ts-ignore
+            expect(inst.fields.observable.at(0).name).equals('string')
+            //@ts-ignore
+            expect(inst.fields.observable.at(1).name).equals('int')
+         }
+      )
    })
 
 

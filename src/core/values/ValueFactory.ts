@@ -4,7 +4,7 @@ import { IValue, IType } from "./Value"
 import { UIntValue, UIntValueSource } from "./UInt"
 import { IntValue, IntValueSource } from "./Int"
 import { BoolValue, BoolValueSource } from "./Bool"
-import { ArrayValue } from "./Array"
+import { ListValue, ListValueSource } from "./List"
 
 /*
 types.string.type()
@@ -13,17 +13,22 @@ types.string.value(val: string)
 */
 
 export interface IValueSource {
-
+   readonly bool: BoolValueSource
+   readonly int: IntValueSource
+   readonly list: ListValueSource
+   readonly string: StringValueSource
+   readonly uint: UIntValueSource
 }
 
 /*
 This is intended to be the main way for developers to create values
 */
-export type ValueSource = {
-   bool: BoolValueSource
-   string: StringValueSource
-   int: IntValueSource
-   uint: UIntValueSource
+export class ValueSource implements IValueSource {
+   readonly bool: BoolValueSource = new BoolValueSource()
+   readonly int: IntValueSource = new IntValueSource()
+   readonly list: ListValueSource = new ListValueSource()
+   readonly string: StringValueSource = new StringValueSource()
+   readonly uint: UIntValueSource = new UIntValueSource()
 }
 
 export interface IValueFactory {
@@ -32,7 +37,7 @@ export interface IValueFactory {
    bool(value: boolean): BoolValue
    uint(value: number): UIntValue
    int(value: number): IntValue
-   array(itemType: IType): ArrayValue
+   array(itemType: IType): ListValue
 }
 
 export class ValueFactory implements IValueFactory {
@@ -78,7 +83,7 @@ export class ValueFactory implements IValueFactory {
       return new IntValue(value, this.attachment)
    }
 
-   array(itemType: IType): ArrayValue {
-      return new ArrayValue(itemType, this.attachment)
+   array(itemType: IType): ListValue {
+      return new ListValue(itemType, this.attachment)
    }
 }

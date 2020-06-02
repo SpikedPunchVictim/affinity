@@ -176,8 +176,8 @@ describe('Namespaces', function() {
       // @ts-ignore
       validateQualifiedPath(five, 'one.five')
 
-      let foundModel = five.models.get('five-model')
-      let foundInst = five.instances.get('five-instance')
+      let foundModel = await five.models.get('five-model')
+      let foundInst = await five.instances.get('five-instance')
 
       expect(foundModel).to.not.be.undefined
       expect(foundInst).to.not.be.undefined

@@ -370,7 +370,7 @@ export async function syncToMasterAsync<TMaster, TOther>(
       let masterItem = master.at(i)
       let otherItem = other.at(i)
 
-      if(handlers.equal(masterItem, otherItem)) {
+      if(await handlers.equal(masterItem, otherItem)) {
          continue
       }
 

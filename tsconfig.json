@@ -9,7 +9,6 @@
        "inlineSources": true,
        "inlineSourceMap": true,
        "alwaysStrict": true,
-       "sourceMap": true,
        "declaration": true,
        "removeComments": false,
        "strict": true,

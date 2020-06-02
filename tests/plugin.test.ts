@@ -41,8 +41,8 @@ function action(type: string, fn: () => Promise<void>) {
    }
 }
 
-describe('Plugins', function () {
-   describe('# Actions', function () {
+describe('Plugins', async function () {
+   describe('# Actions', async function () {
       let plugin = new TestPlugin()
       let project = new Project('test')
       project.use(plugin)
@@ -234,37 +234,43 @@ describe('Plugins', function () {
       //-- Add
       async function addData(type: QualifiedObjectType): Promise<void> {
          let updates = [
-            async (project, { namespace, model, instance }) => {
-               return await Switch.onType(type, {
-                  Namespace: async () => {
-                     await namespace.children.get('ten')
-                  },
-                  Model: async () => {
-                     await model.models.get('ten')
-                  },
-                  Instance: async () => {
-                     await instance.instances.get('ten')
-                  }
-               })
+            {
+               name: 'children.get()',
+               fn: async (project, { namespace, model, instance }) => {
+                  return await Switch.onType(type, {
+                     Namespace: async () => {
+                        await namespace.children.get('ten')
+                     },
+                     Model: async () => {
+                        await model.models.get('ten')
+                     },
+                     Instance: async () => {
+                        await instance.instances.get('ten')
+                     }
+                  })
+               }
             },
-            async (project, { namespace, model, instance }) => {
-               return await Switch.onType(type, {
-                  Namespace: async () => {
-                     await namespace.update()
-                  },
-                  Model: async () => {
-                     await model.update()
-                  },
-                  Instance: async () => {
-                     await instance.update()
-                  }
-               })
+            {
+               name: 'object.update()',
+               fn: async (project, { namespace, model, instance }) => {
+                  return await Switch.onType(type, {
+                     Namespace: async () => {
+                        await namespace.update()
+                     },
+                     Model: async () => {
+                        await model.update()
+                     },
+                     Instance: async () => {
+                        await instance.update()
+                     }
+                  })
+               }
             }
          ]
 
-         for(let update of updates) {
-            backendTest(
-               `${type} Add: collection.get()`,
+         for (let update of updates) {
+            await backendTest(
+               `${type} Add: ${update.name}`,
                async (source, { namespace, model, instance }) => {
                   await Switch.onType(type, {
                      Namespace: async () => {
@@ -281,7 +287,7 @@ describe('Plugins', function () {
                   })
                },
                async (project, parents) => {
-                  return await update(project, parents)
+                  return await update.fn(project, parents)
                },
                async (project, { namespace, model, instance }) => {
                   let collection = Switch.onType(type, {
@@ -292,7 +298,7 @@ describe('Plugins', function () {
                      //@ts-ignore
                      Instance: () => instance.instances
                   })
-   
+
                   expect(collection).to.have.lengthOf(7)
                   let ten = await collection.get('ten')
                   //@ts-ignore
@@ -304,31 +310,37 @@ describe('Plugins', function () {
       //-- Move
       async function moveData(type: QualifiedObjectType): Promise<void> {
          let updates = [
-            async (project, { namespace, model, instance }) => {
-               await Switch.onType(type, {
-                  //@ts-ignore
-                  Namespace: async () => await namespace.children.get('one'),
-                  //@ts-ignore
-                  Model: async () => await model.models.get('one'),
-                  //@ts-ignore
-                  Instance: async () => await instance.instances.get('one')
-               })
+            {
+               name: 'children.get()',
+               fn: async (project, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     //@ts-ignore
+                     Namespace: async () => await namespace.children.get('one'),
+                     //@ts-ignore
+                     Model: async () => await model.models.get('one'),
+                     //@ts-ignore
+                     Instance: async () => await instance.instances.get('one')
+                  })
+               }
             },
-            async (project, { namespace, model, instance }) => {
-               await Switch.onType(type, {
-                  //@ts-ignore
-                  Namespace: async () => await namespace.update(),
-                  //@ts-ignore
-                  Model: async () => await model.update(),
-                  //@ts-ignore
-                  Instance: async () => await instance.update()
-               })
+            {
+               name: `object.update()`,
+               fn: async (project, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     //@ts-ignore
+                     Namespace: async () => await namespace.update(),
+                     //@ts-ignore
+                     Model: async () => await model.update(),
+                     //@ts-ignore
+                     Instance: async () => await instance.update()
+                  })
+               }
             }
          ]
 
-         for(let update of updates) {
-            backendTest(
-               `${type} Move: children.get()`,
+         for (let update of updates) {
+            await backendTest(
+               `${type} Move: ${update.name}`,
                /*
                   starting:[ one, two, three, four, five, six ]
                   ends with:[ two, three, six, five, one, four ]
@@ -342,7 +354,7 @@ describe('Plugins', function () {
                      //@ts-ignore
                      Instance: () => instance.instances
                   })
-   
+
                   await collection.move(1, 0)
                   // two, one, three, four, five six
                   await collection.move(2, 1)
@@ -353,7 +365,7 @@ describe('Plugins', function () {
                   // two, three, six, five, one, four
                },
                async (project, parents) => {
-                  await update(project, parents)
+                  await update.fn(project, parents)
                },
                async (project, { namespace, model, instance }) => {
                   let collection = Switch.onType(type, {
@@ -364,7 +376,7 @@ describe('Plugins', function () {
                      //@ts-ignore
                      Instance: () => instance.instances
                   })
-   
+
                   expect(collection).to.have.lengthOf(6)
                   expect(collection.observable.at(0).name).to.equal('two')
                   expect(collection.observable.at(1).name).to.equal('three')
@@ -377,33 +389,39 @@ describe('Plugins', function () {
       }
 
       //-- Delete
-      async function deleteData(type:QualifiedObjectType): Promise<void> {
+      async function deleteData(type: QualifiedObjectType): Promise<void> {
          let updates = [
-            async (project, { namespace, model, instance }) => {
-               await Switch.onType(type, {
-                  //@ts-ignore
-                  Namespace: async () => namespace.children.get('one'),
-                  //@ts-ignore
-                  Model: async () => model.models.get('one'),
-                  //@ts-ignore
-                  Instance: async () => instance.instances.get('one')
-               })
+            {
+               name: 'children.get()',
+               fn: async (project, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     //@ts-ignore
+                     Namespace: async () => namespace.children.get('one'),
+                     //@ts-ignore
+                     Model: async () => model.models.get('one'),
+                     //@ts-ignore
+                     Instance: async () => instance.instances.get('one')
+                  })
+               }
             },
-            async (project, { namespace, model, instance }) => {
-               await Switch.onType(type, {
-                  //@ts-ignore
-                  Namespace: async () => namespace.update(),
-                  //@ts-ignore
-                  Model: async () => model.update(),
-                  //@ts-ignore
-                  Instance: async () => instance.update()
-               })
+            {
+               name: 'object.update()',
+               fn: async (project, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     //@ts-ignore
+                     Namespace: async () => namespace.update(),
+                     //@ts-ignore
+                     Model: async () => model.update(),
+                     //@ts-ignore
+                     Instance: async () => instance.update()
+                  })
+               }
             }
          ]
 
          for (let update of updates) {
-            backendTest(
-               `${type} Delete: collection.get()`,
+            await backendTest(
+               `${type} Delete: ${update.name}`,
                async (source, { namespace, model, instance }) => {
                   let collection = Switch.onType(type, {
                      //@ts-ignore
@@ -413,11 +431,11 @@ describe('Plugins', function () {
                      //@ts-ignore
                      Instance: () => instance.instances
                   })
-   
+
                   await collection.delete('three')
                },
                async (project, parents) => {
-                  await update(project, parents)
+                  await update.fn(project, parents)
                },
                async (project, { namespace, model, instance }) => {
                   let collection = Switch.onType(type, {
@@ -428,7 +446,7 @@ describe('Plugins', function () {
                      //@ts-ignore
                      Instance: () => instance.instances
                   })
-   
+
                   expect(collection).to.have.lengthOf(5)
                   expect(collection.observable.at(0).name).to.equal('one')
                   expect(collection.observable.at(1).name).to.equal('two')
@@ -442,34 +460,40 @@ describe('Plugins', function () {
       //-- Move and Delete Parent
       async function moveAndDeleteParent(type: QualifiedObjectType): Promise<void> {
          let updates = [
-            async (project, { namespace, model, instance }) => {
-               await Switch.onType(type, {
-                  //@ts-ignore
-                  Namespace: async () => namespace.children.get('one'),
-                  //@ts-ignore
-                  Model: async () => model.models.get('one'),
-                  //@ts-ignore
-                  Instance: async () => instance.instances.get('one')
-               })
+            {
+               name: 'children.get()',
+               fn: async (project, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     //@ts-ignore
+                     Namespace: async () => namespace.children.get('one'),
+                     //@ts-ignore
+                     Model: async () => model.models.get('one'),
+                     //@ts-ignore
+                     Instance: async () => instance.instances.get('one')
+                  })
+               }
             },
-            async (project, { namespace, model, instance }) => {
-               await Switch.onType(type, {
-                  //@ts-ignore
-                  Namespace: async () => namespace.update(),
-                  //@ts-ignore
-                  Model: async () => model.update(),
-                  //@ts-ignore
-                  Instance: async () => instance.update()
-               })
+            {
+               name: 'object.update()',
+               fn: async (project, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     //@ts-ignore
+                     Namespace: async () => namespace.update(),
+                     //@ts-ignore
+                     Model: async () => model.update(),
+                     //@ts-ignore
+                     Instance: async () => instance.update()
+                  })
+               }
             }
          ]
 
-         for(let update of updates) {
-            backendTest(
-               `${type} Move from another collection and Delete Parent: collection.get()`,
+         for (let update of updates) {
+            await backendTest(
+               `${type} Move from another collection and Delete Parent: ${update.name}`,
                async (source, { namespace, model, instance }) => {
                   let newParent = await source.create('testtparent')
-   
+
                   await Switch.onType(type, {
                      Namespace: async () => {
                         let ns = await newParent.children.create('new')
@@ -486,18 +510,18 @@ describe('Plugins', function () {
                         await inst.move(instance)
                      }
                   })
-   
+
                   //@ts-ignore
                   await newParent.parent.children.delete(newParent.name)
                },
                async (project, parents) => {
-                  await update(project, parents)
+                  await update.fn(project, parents)
                },
                async (project, { namespace, model, instance }) => {
                   Switch.onType(type, {
                      //@ts-ignore
                      Namespace: () => {
-                        expect(namespace.children).to.have.lengthOf(6)
+                        expect(namespace.children).to.have.lengthOf(7)
                         //@ts-ignore
                         let found = namespace.children.observable.find(it => it.name === 'new')
                         //@ts-ignore
@@ -505,14 +529,14 @@ describe('Plugins', function () {
                      },
                      //@ts-ignore
                      Model: () => {
-                        expect(model.models).to.have.lengthOf(6)
+                        expect(model.models).to.have.lengthOf(7)
                         let found = model.models.observable.find(it => it.name === 'new')
                         //@ts-ignore
                         expect(found.parent.id).to.equal(model.id)
                      },
                      //@ts-ignore
                      Instance: () => {
-                        expect(instance.instances).to.have.lengthOf(6)
+                        expect(instance.instances).to.have.lengthOf(7)
                         let found = instance.instances.observable.find(it => it.name === 'new')
                         //@ts-ignore
                         expect(found.parent.id).to.equal(instance.id)
@@ -525,22 +549,37 @@ describe('Plugins', function () {
       //-- Reorder & Rename
       async function reorderAndRename(type: QualifiedObjectType): Promise<void> {
          let updates = [
-            async (project, { namespace, model, instance }) => {
-               await Switch.onType(type, {
-                  //@ts-ignore
-                  Namespace: async () => namespace.children.get('one'),
-                  //@ts-ignore
-                  Model: async () => model.models.get('one'),
-                  //@ts-ignore
-                  Instance: async () => instance.instances.get('one')
-               })
+            {
+               name: 'children.get()',
+               fn: async (project, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     //@ts-ignore
+                     Namespace: async () => namespace.children.get('one'),
+                     //@ts-ignore
+                     Model: async () => model.models.get('one'),
+                     //@ts-ignore
+                     Instance: async () => instance.instances.get('one')
+                  })
+               }
             },
-
+            {
+               name: 'object.update()',
+               fn: async (project, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     //@ts-ignore
+                     Namespace: async () => namespace.update(),
+                     //@ts-ignore
+                     Model: async () => model.update(),
+                     //@ts-ignore
+                     Instance: async () => instance.update()
+                  })
+               }
+            }
          ]
 
-         for(let update of updates) {
-            backendTest(
-               `${type} Reorder in Collection and Rename: collection.get()`,
+         for (let update of updates) {
+            await backendTest(
+               `${type} Reorder in Collection and Rename: ${update.name}`,
                /*
                   starting:[ one, two, three, four, five, six ]
                   ends with:[ two, three, six, five, one, four ]
@@ -554,7 +593,7 @@ describe('Plugins', function () {
                      //@ts-ignore
                      Instance: () => instance.instances
                   })
-   
+
                   await collection.move(1, 0)
                   // two, one, three, four, five six
                   await collection.move(2, 1)
@@ -563,7 +602,7 @@ describe('Plugins', function () {
                   // two, three, six, one, four, five
                   await collection.move(5, 3)
                   // two, three, six, five, one, four
-   
+
                   // Rename them
                   await (await collection.at(0)).rename('six')
                   await (await collection.at(1)).rename('five')
@@ -573,7 +612,7 @@ describe('Plugins', function () {
                   await (await collection.at(5)).rename('one')
                },
                async (project, parents) => {
-                  await update(project, parents)
+                  await update.fn(project, parents)
                },
                async (project, { namespace, model, instance }) => {
                   let collection = Switch.onType(type, {
@@ -584,7 +623,7 @@ describe('Plugins', function () {
                      //@ts-ignore
                      Instance: () => instance.instances
                   })
-   
+
                   expect(collection).to.have.lengthOf(6)
                   expect(collection.observable.at(0).name).to.equal('six')
                   expect(collection.observable.at(1).name).to.equal('five')
@@ -604,11 +643,11 @@ describe('Plugins', function () {
          await reorderAndRename(type)
       }
 
-      testType(QualifiedObjectType.Namespace)
-      testType(QualifiedObjectType.Model)
-      testType(QualifiedObjectType.Instance)
+      await testType(QualifiedObjectType.Namespace)
+      await testType(QualifiedObjectType.Model)
+      await testType(QualifiedObjectType.Instance)
 
-      backendTest(
+      await backendTest(
          `Creating members updates fields`,
          async (source, { instance }) => {
             let inst = await source.get<IInstance>(QualifiedObjectType.Instance, 'instance.one')
@@ -633,33 +672,4 @@ describe('Plugins', function () {
          }
       )
    })
-
-
-
-   /*
-   // TODO:
-   it('Namespace delete returns action in depth first order', function() {
-      let project = fill({
-         namespaces: [
-            'one.two.three.four.ns1',
-            'one.two.three.ns2',
-            'one.two.three.ns3',
-         ],
-         models: [
-            'one.two.three.model1',
-            'one.two.three.model2',
-            'one.two.three.model3',
-            'one.two.three.model4',
-            'one.two.three.four.model5',
-            'one.two.three.four.model6',
-            'one.two.three.four.ns1.model7',
-         ],
-         instances: [
-            'one.two.three.four.inst1',
-            'one.two.three.int2'
-         ]
-      })
-   })
-   */
-
 })

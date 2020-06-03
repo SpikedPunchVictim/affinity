@@ -25,6 +25,43 @@ export type DiffHandlersAsync<TMaster, TOther> = {
    move: DiffMoveHandlerAsync<TOther>
 }
 
+/**
+ * Synchronizes two collections, with one of them being the master collection. The
+ * master collection is impressed onto the "other" collection. When this function
+ * ends, the "other" collection mirrors the master.
+ * 
+ * Note: 
+ * This is a non-destructive sync. Elements that still exist after the sync
+ * are preserved. Any elements that no longer exist are removed from the "other"
+ * collection.
+ * 
+ * -- Copy Paste Section For Handler --
+ * 
+ * 
+ * {
+ * 
+ *     equal: (master: TMaster, other: TOther): boolean => {
+ *
+ *     },
+ *     add: (master: TMaster, index: number, collection: IObservableCollection<TOther>): void {
+ *
+ *     },
+ *     remove: (other: TOther, index: number, collection: IObservableCollection<TOther>): void => {
+ *        
+ *     },
+ *     move: (other, from: Number, to: Number, collection: IObservableCollection<TOther>): void => {
+ *        
+ *     }
+ *  }
+ * 
+ * @param master The master collection that contains the desired order
+ * @param other The other collection that needs to be updated
+ * @param handlers Set of handlers for the update operations. It contains:
+ *    * equal {function(a: TMaster, b: TOther): boolean}: Determines equality
+ *    * add {function(master: TMaster, index: number, collection: IObservableCollection<TOther>) => void}: Adds a TMaster item into the TOther collection
+ *    * remove {function(other: TOther, index: number, collection: IObservableCollection<TOther>) => void}: Removes a TMaster item from the TOther collection
+ *    * move {function(other: TOther, from: number, to: number, collection: IObservableCollection<TOther>) => void}: Moves a TOther item
+ */
 export function syncToMaster<TMaster, TOther>(
    master: IObservableCollection<TMaster>,
    other: IObservableCollection<TOther>,
@@ -202,6 +239,45 @@ export function syncToMaster<TMaster, TOther>(
    }
 }
 
+/**
+ * Async version of sncToMaster
+ * 
+ * Synchronizes two collections, with one of them being the master collection. The
+ * master collection is impressed onto the "other" collection. When this function
+ * ends, the "other" collection mirrors the master.
+ * 
+ * Note: 
+ * This is a non-destructive sync. Elements that still exist after the sync
+ * are preserved. Any elements that no longer exist are removed from the "other"
+ * collection.
+ * 
+ * -- Copy Paste Section For Handler --
+ * 
+ * 
+ * { 
+ *     
+ *     equal: async (master: TMaster, other: TOther): Promise<boolean> => {
+ *
+ *     },
+ *     add: async (master: TMaster, index: number, collection: IObservableCollection<TOther>): Promise<void> {
+ *
+ *     },
+ *     remove: async (other: TOther, index: number, collection: IObservableCollection<TOther>): Promise<void> => {
+ *        
+ *     },
+ *     move: async (other, from: Number, to: Number, collection: IObservableCollection<TOther>): Promise<void> => {
+ *        
+ *     }
+ *  }
+ * 
+ * @param master The master collection that contains the desired order
+ * @param other The other collection that needs to be updated
+ * @param handlers Set of handlers for the update operations. It contains:
+ *    * equal {function(a: TMaster, b: TOther): Promise<boolean>}: Determines equality
+ *    * add {function(master: TMaster, index: number, collection: IObservableCollection<TOther>) => Promise<void>}: Adds a TMaster item into the TOther collection
+ *    * remove {function(other: TOther, index: number, collection: IObservableCollection<TOther>) => Promise<void>}: Removes a TMaster item from the TOther collection
+ *    * move {function(other: TOther, from: number, to: number, collection: IObservableCollection<TOther>) => Promise<void>}: Moves a TOther item
+ */
 export async function syncToMasterAsync<TMaster, TOther>(
    master: IObservableCollection<TMaster>,
    other: IObservableCollection<TOther>,

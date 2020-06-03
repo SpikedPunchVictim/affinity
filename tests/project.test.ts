@@ -9,6 +9,11 @@ import { INamespace } from '../src/core/Namespace'
 import { populate } from './utils/create'
 
 /*
+   TODO:
+      * Finish building out Model/Instance Restore
+
+   TODO: In General:
+      * Restrict and validate names
    TODO Tests:
       project.test.ts
          * getById() should work correctly. If the QualifiedObject is not yet in the Project, it should
@@ -35,6 +40,16 @@ import { populate } from './utils/create'
          * Reorder members
          * Reordeing members at indexes that don't exist should throw an error
          * Adding members with the same name should fail
+      events.test.ts
+         * Add
+         * Remove
+         * Reorder
+         * Move
+         * Events should be raised when synching a colection on:
+            * Add
+            * Remove
+            * Move
+         
 
 */
 

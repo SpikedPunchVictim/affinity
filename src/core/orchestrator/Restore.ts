@@ -11,10 +11,12 @@ import { Search } from "../Search";
 import { Composer } from "./Composer";
 import { emit } from "../utils/Eventing";
 import { Events } from "../Events";
-import { ModelLazyRestoreInfo, IModel, Model } from "../Model";
+import { ModelLazyRestoreInfo, IModel, Model, ModelFullRestoreInfo } from "../Model";
 import { IQualifiedObject, QualifiedObject } from "../QualifiedObject";
 import { InstanceLazyRestoreInfo, IInstance, Instance } from "../Instance";
 import { RestoreInfo } from '../Restore'
+import { MemberRestoreInfo, IMember, Member } from "../Member";
+import { Value } from "../values/Value";
 
 
 export class Restore {
@@ -36,6 +38,42 @@ export class Restore {
       this.composer = composer
    }
 
+   private async qualifiedObject(object: IQualifiedObject, restore: RestoreInfo): Promise<void> {
+      let obj = object as QualifiedObject
+
+      if (restore.id !== obj.id) {
+         throw new Error(`Restore information does not represent the same object being updated. Source ID: ${obj.id}   Restore ID: ${restore.id}`)
+      }
+
+      obj.setName(restore.name)
+
+      let parent = await this.project.getById<INamespace>(QualifiedObjectType.Namespace, restore.parentId)
+
+      if (parent === undefined) {
+         throw new Error(`Failed to retrieve the parent Namespace when restoring a Namespace`)
+      }
+
+      // Does it need to be moved?
+      if (obj.parent == null) {
+         // Has no Parent (no idea how we would get here)
+         // TODO: Revisit this action type here
+         let action = this.composer.action.create(obj, restore.index)
+         this.composer.add(obj, parent, restore.index, action)
+      } else if (parent.id !== obj.parent.id) {
+         let action = this.composer.action.move(obj, parent)
+         this.composer.move(obj, parent, restore.index, action)
+      } else {
+         // Does it need to be reordered?
+         let currentIndex = this.composer.getIndex(object)
+
+         if (currentIndex && currentIndex !== restore.index) {
+            let action = this.composer.action.reorder(obj, currentIndex, restore.index)
+            let collection = this.composer.getOwningCollection(obj)
+            this.composer.reorder(obj, collection, action.from, action.to, action)
+         }
+      }
+   }
+
    /**
     * Restores an already existing Namespace
     * 
@@ -43,42 +81,7 @@ export class Restore {
     * @param restore The restore information
     */
    async namespace(namespace: INamespace, restore: NamespaceLazyRestoreInfo | NamespaceFullRestoreInfo): Promise<void> {
-      let ns = namespace as Namespace
-
-      if (restore.id !== ns.id) {
-         throw new Error(`Restore information does not represent the same object being updated. Source ID: ${ns.id}   Restore ID: ${restore.id}`)
-      }
-
-      ns.setName(restore.name)
-
-      let parentQualifiedPath = parentPath(restore.qualifiedPath)
-
-      if (parentQualifiedPath === undefined) {
-         throw new Error(`Encountered invalid parent Qualified Path When restoring a Namespace`)
-      }
-
-      let parent = await this.project.get<INamespace>(QualifiedObjectType.Namespace, parentQualifiedPath)
-
-      if (parent === undefined) {
-         throw new Error(`Failed to retrieve the parent Namespace when restoring a Namespace`)
-      }
-
-      // Does it need to be moved?
-      if (ns.parent == null) {
-         // Has no Parent (no idea how we would get here)
-         // TODO: Revisit this action type here
-         this.composer.add(ns, parent, restore.index, new NamespaceCreateAction(ns, restore.index))
-      } else if (parent.id !== ns.parent.id) {
-         this.composer.move(ns, parent, restore.index, new NamespaceMoveAction(ns, ns.parent, parent))
-      } else {
-         // Does it need to be moved?
-         let currentIndex = parent.children.observable.findIndex(n => n.id === ns.id)
-
-         if (currentIndex !== restore.index) {
-            let action = new NamespaceReorderAction(ns, currentIndex, restore.index)
-            this.composer.reorder(ns, parent.children, action.from, action.to, action)
-         }
-      }
+      await this.qualifiedObject(namespace, restore)
 
       let isFullRestore = (restore instanceof NamespaceFullRestoreInfo)
 
@@ -117,6 +120,53 @@ export class Restore {
          console.error(err)
       }
    }
+
+   async model(model: IModel, restore: ModelLazyRestoreInfo | ModelFullRestoreInfo): Promise<void> {
+      await this.qualifiedObject(model, restore)
+
+      let isFullRestore = restore instanceof ModelFullRestoreInfo
+
+      if(!isFullRestore) {
+         return
+      }
+
+      let full = restore as ModelFullRestoreInfo
+
+      // Restore the Members
+      await syncToMasterAsync(
+         new ObservableCollection(...full.members),
+         model.members.observable,
+         {
+            equal: async (master: MemberRestoreInfo, other: IMember): Promise<boolean> => {
+               if(master.id !== other.id) {
+                  return false
+               }               
+
+               if(master.name !== other.name) {
+                  let member = other as Member
+                  member.setName(master.name)
+               }
+
+               if(!master.value.equals(other.value)) {
+                  let val = other.value as Value
+                 val.internalSet(master.value)
+               }
+
+               return true
+            },
+            add: async (master: MemberRestoreInfo, index: number, collection: IObservableCollection<IMember>): Promise<void> {
+           
+            },
+            remove: async (other: IMember, index: number, collection: IObservableCollection<IMember>): Promise<void> => {
+           
+            },
+            move: async (other, from: Number, to: Number, collection: IObservableCollection<IMember>): Promise<void> => {
+           
+            }
+           }
+      )
+   }
+
 
    /**
     * Provided a collection of Restore Info, will update a Collection
@@ -166,7 +216,8 @@ export class Restore {
                   // TODO: If found is not a Namespace, delete it
                   let foundObj = found as TQualifiedObject
                   //@ts-ignore
-                  this.composer.move(foundObj, parent, master.index, new NamespaceMoveAction(foundObj, foundObj.parent, parent))
+                  let action = this.composer.action.move(foundObj, parent)
+                  this.composer.move(foundObj, parent, master.index, action)
                } else {
                   let newObj = await create(master)
                   let action = this.composer.action.create(newObj, index)

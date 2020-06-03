@@ -1,5 +1,6 @@
 import { IValueAttachment, EmptyValueAttachment } from "./ValueAttachment"
 import { NotImplementedError } from "../../errors/NotImplementedError"
+import { EventEmitter } from 'events'
 
 /*
    Note:
@@ -37,10 +38,10 @@ export interface IValue {
     * 
     * @param other The value of the same type to this value to
     */
-   setLocally(other: IValue): IValue
+   internalSet(other: IValue): IValue
 }
 
-export class Value implements IValue {
+export class Value extends EventEmitter implements IValue {
    readonly type: IType
 
    get attachment(): IValueAttachment {
@@ -50,6 +51,7 @@ export class Value implements IValue {
    private _attachment: IValueAttachment
 
    constructor(type: IType, attachment: IValueAttachment = new EmptyValueAttachment()) {
+      super()
       this.type = type
       this._attachment = attachment
    }
@@ -71,11 +73,17 @@ export class Value implements IValue {
    }
 
    set(other: IValue): Promise<IValue> {
-      throw new NotImplementedError(`set() not implements`)
+      throw new NotImplementedError(`set() not implemented`)
    }
 
-   setLocally(other: IValue): IValue {
-      throw new NotImplementedError(`setLocally() not implements`)
+   /**
+    * This is used internally to update objects in memory without
+    * emitting plugin events
+    * 
+    * @param other The value to set as
+    */
+   internalSet(other: IValue): IValue {
+      throw new NotImplementedError(`setLocally() not implemented`)
    }
 }
 

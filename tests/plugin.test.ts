@@ -33,6 +33,8 @@ import { QualifiedObjectType, Switch } from '../src/core/utils/Types';
 import { TestPlugin } from './utils/plugin';
 import { backendTest } from './utils/test';
 import { IInstance } from '../src/core/Instance';
+import { IQualifiedObject } from '../src/core';
+import { InstanceEvents } from '../src/core/Events';
 
 function action(type: string, fn: () => Promise<void>) {
    return {
@@ -633,6 +635,99 @@ describe('Plugins', async function () {
                   expect(collection.observable.at(5).name).to.equal('one')
                })
          }
+      }
+
+      async function ChangeObject(type: QualifiedObjectType): Promise<void> {
+         let updates = [
+            {
+               name: 'children.get()',
+               fn: async (project, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     //@ts-ignore
+                     Namespace: async () => namespace.children.get('one'),
+                     //@ts-ignore
+                     Model: async () => model.models.get('one'),
+                     //@ts-ignore
+                     Instance: async () => instance.instances.get('one')
+                  })
+               }
+            },
+            {
+               name: 'object.update()',
+               fn: async (project, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     //@ts-ignore
+                     Namespace: async () => {
+                        let found = namespace.children.observable.find(ns => ns.name === 'chosen-one')
+                        expect(found).to.not.be.undefined
+                        found.update()
+                     },
+                     //@ts-ignore
+                     Model: async () => {
+                        let one = await model.models.observable.find(m => m.name === 'one')
+                        expect(one).to.not.be.undefined
+                        one.update()
+                     },
+                     //@ts-ignore
+                     Instance: async () => {
+                        let one = await instance.instances.observable.find(i => i.name === 'one')
+                        expect(one).to.not.be.undefined
+                        one.update()
+                     }
+                  })
+               }
+            }
+         ]
+
+         for(let update of updates) {
+            await backendTest(
+               `${type} Change QualifiedObject: ${update.name}`,
+               async (source, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     Namespace: async () => {
+                        let one = await namespace.children.get('one')
+                        await one.rename('chosen-one')
+                     },
+                     Model: async () => {
+                        let one = await model.models.get('one')
+                        await one.members.append({
+                           chosen: 1
+                        })
+                     },
+                     Instance: async () => {
+                        let one = await instance.instances.get('one')
+                        await one.model.members.append({
+                           chosen: 1
+                        })
+                     }
+                  })
+               },
+               async (project, parents) => {
+                  await update.fn(project, parents)
+               },
+               async (project, { namespace, model, instance }) => {
+                  await Switch.onType(type, {
+                     Namespace: async () => {
+                        let one = await namespace.children.get('chosen-one')
+                        expect(one).to.not.be.undefined
+                     },
+                     Model: async () => {
+                        let one = await model.models.observable.find(m => m.name === 'one')
+                        expect(one).to.not.be.undefined
+                        expect(one.members).to.have.lengthOf(1)
+                        let chosen = one.members.observable.find(m => m.name === 'chosen')
+                        expect(chosen).to.not.be.undefined
+                     },
+                     Instance: async () => {
+                        let one = await instance.instances.observable.find(m => m.name === 'one')
+                        expect(one).to.not.be.undefined
+                        expect(one.fields).to.have.lengthOf(1)
+                        let chosen = one.fields.observable.find(m => m.name === 'chosen')
+                        expect(chosen).to.not.be.undefined
+                     }
+                  })
+               })
+            }
       }
 
       async function testType(type: QualifiedObjectType): Promise<void> {

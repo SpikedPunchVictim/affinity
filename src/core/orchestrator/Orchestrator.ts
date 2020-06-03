@@ -127,6 +127,12 @@ export class Orchestrator implements IOrchestrator {
       this.restore = new Restore(project, context, this.composer)
    }
 
+   /**
+    * Creates a Namespace
+    * 
+    * @param parent The new parent of the Namespace that will be created
+    * @param name The name
+    */
    async createNamespace(parent: INamespace, name: string): Promise<INamespace> {
       let qualifiedName = parent.qualifiedName === "" ? name : `${parent.qualifiedName}.${name}`
 
@@ -151,6 +157,12 @@ export class Orchestrator implements IOrchestrator {
       return namespace
    }
 
+   /**
+    * Creates a Model
+    * 
+    * @param parent The PArent of the new Model
+    * @param name The Model name
+    */
    async createModel(parent: INamespace, name: string): Promise<IModel> {
       let qualifiedName = parent.qualifiedName === "" ? name : `${parent.qualifiedName}.${name}`
 
@@ -175,6 +187,13 @@ export class Orchestrator implements IOrchestrator {
       return model
    }
 
+   /**
+    * Creates an Instance
+    * 
+    * @param parent The Parent of the Instance
+    * @param model The Model the Instance is based on
+    * @param name The name
+    */
    async createInstance(parent: INamespace, model: IModel, name: string): Promise<IInstance> {
       let qualifiedName = parent.qualifiedName === "" ? name : `${parent.qualifiedName}.${name}`
 
@@ -199,6 +218,12 @@ export class Orchestrator implements IOrchestrator {
       return instance
    }
 
+   /**
+    * Creates Members on a Model
+    * 
+    * @param model The Model that owns the Members
+    * @param params Member creation info
+    */
    async createMembers(model: IModel, params: MemberCreateInfo | Array<MemberCreateInfo>): Promise<IndexableItem<IMember>[]> {
       if (!Array.isArray(params)) {
          params = [params]
@@ -261,10 +286,20 @@ export class Orchestrator implements IOrchestrator {
       return toAdd
    }
 
-   async delete<T extends IQualifiedObject>(item: T | T[]): Promise<boolean> {
-      return this.composer.delete(item)
+   /**
+    * Deletes objects from the Project
+    * 
+    * @param objs The item(s) to delete
+    */
+   async delete<T extends IQualifiedObject>(objs: T | T[]): Promise<boolean> {
+      return this.composer.delete(objs)
    }
 
+   /**
+    * Retrieves the current data for an Instance
+    * 
+    * @param instance The Instance owning the Fields
+    */
    async updateFields(instance: IInstance): Promise<IndexableItem<IField>[]> {
       // Ensure the Model is updated
       await this.updateMembers(instance.model)
@@ -301,6 +336,11 @@ export class Orchestrator implements IOrchestrator {
       return results
    }
 
+   /**
+    * Updates Members on a Model
+    * 
+    * @param model The Model
+    */
    async updateMembers(model: IModel): Promise<IndexableItem<IMember>[]> {
       let observable = model.members.observable
 
@@ -414,6 +454,12 @@ export class Orchestrator implements IOrchestrator {
       return results
    }
 
+   /**
+    * Renames a QualifiedObject
+    * 
+    * @param source The QualifiedObject to be renamed
+    * @param newName The new name
+    */
    async rename(source: IQualifiedObject, newName: string): Promise<IQualifiedObject> {
       let action = this.composer.action.rename(source, newName)
 
@@ -440,6 +486,12 @@ export class Orchestrator implements IOrchestrator {
       return source
    }
 
+   /**
+    * Moves a Qualified Object to a new Namespace
+    * 
+    * @param source The QualifiedObject to Move
+    * @param to The new PArent
+    */
    async move(source: IQualifiedObject, to: INamespace): Promise<IQualifiedObject> {
       if (source == null) {
          throw new ArgumentError(`source must be valid`)
@@ -498,6 +550,14 @@ export class Orchestrator implements IOrchestrator {
       return source
    }
 
+   /**
+    * Updates a Member's Value
+    * 
+    * @param member The Member to update
+    * @param oldValue The previous (current) value
+    * @param newValue The new Value
+    * @param changeValue Handler that updates the Value
+    */
    async updateMemberValue(member: IMember, oldValue: IValue, newValue: IValue, changeValue: ChangeValueHandler): Promise<IValue> {
       let change = new MemberValueChange(member, oldValue, newValue)
       let updatedValue: IValue
@@ -524,6 +584,14 @@ export class Orchestrator implements IOrchestrator {
       return updatedValue
    }
 
+   /**
+    * Updates a Field's Value
+    * 
+    * @param field The Field to update
+    * @param oldValue The previous (current) Value
+    * @param newValue The new Value
+    * @param changeValue The handler responsible for updating the in-memory value
+    */
    async updateFieldValue(field: IField, oldValue: IValue, newValue: IValue, changeValue: ChangeValueHandler): Promise<IValue> {
       let change = new FieldValueChange(field, oldValue, newValue)
       let updatedValue: IValue
@@ -550,13 +618,12 @@ export class Orchestrator implements IOrchestrator {
       return updatedValue
    }
 
-   /*
-      composer
-         .request(new InstanceGetAction(parent))
-         .update()
-
-   */
-
+   /**
+    * Updates all QualifiedObjects in a Collection
+    * 
+    * @param type The QualifiedObjectType of the Collection to update
+    * @param parent The Parent Namespace of the Collection
+    */
    async updateQualifiedObjects(type: QualifiedObjectType, parent: INamespace): Promise<void> {
       let action = Switch.onType<QualifiedObjectGetChildrenAction<RestoreInfo>>(type, {
          //@ts-ignore
@@ -609,6 +676,11 @@ export class Orchestrator implements IOrchestrator {
          .commit()
    }
 
+   /**
+    * Updates a Qualified Object
+    * 
+    * @param obj The QualifiedObject to update
+    */
    async updateQualifiedObject<T extends IQualifiedObject>(obj: T): Promise<void> {
       let action = this.composer.action.update(obj)
 
@@ -649,6 +721,13 @@ export class Orchestrator implements IOrchestrator {
          .commit()
    }
 
+   /**
+    * Moves a QualifiedObject in its Collection
+    * 
+    * @param source The QualifiedObject being moved
+    * @param from The start index
+    * @param to The end index
+    */
    async reorder(source: IQualifiedObject, from: number, to: number): Promise<IQualifiedObject> {
       let action = this.composer.action.reorder(source, from, to)
 
@@ -662,12 +741,12 @@ export class Orchestrator implements IOrchestrator {
                },
                Model: (model) => {
                   //@ts-ignore
-                  let collection = <ModelCollection>ns.parent.models
+                  let collection = <ModelCollection>model.parent.models
                   this.composer.reorder<IModel>(model, collection, from, to, action)
                },
                Instance: (inst) => {
                   //@ts-ignore
-                  let collection = <InstanceCollection>ns.parent.children
+                  let collection = <InstanceCollection>inst.parent.instances
                   this.composer.reorder<IInstance>(inst, collection, from, to, action)
                }
             })
@@ -677,6 +756,13 @@ export class Orchestrator implements IOrchestrator {
       return source
    }
 
+   /**
+    * Reorders a Member within a Model
+    * 
+    * @param model The Model containing the Members
+    * @param from The start index
+    * @param to TRhe end index
+    */
    async reorderMember(model: IModel, from: number, to: number): Promise<IMember> {
       let member = await model.members.at(from)
 
@@ -717,6 +803,12 @@ export class Orchestrator implements IOrchestrator {
       return member
    }
 
+   /**
+    * Deletes MEmbers from a Model
+    * 
+    * @param model The Model
+    * @param names The names of the Members to delete
+    */
    async deleteMembers(model: IModel, names: string[]): Promise<IndexableItem<IMember>[]> {
       let collection = model.members.observable
 
@@ -754,6 +846,12 @@ export class Orchestrator implements IOrchestrator {
       return results
    }
 
+   /**
+    * Retrieves a QualifiedObject by ID
+    * 
+    * @param type The QualifiedObject Type of the object being searched for
+    * @param id The ID
+    */
    async getById(type: QualifiedObjectType, id: string): Promise<IQualifiedObject> {
       let result = await this.uidWarden.get(id)
 

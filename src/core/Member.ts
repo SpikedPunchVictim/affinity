@@ -5,6 +5,8 @@ import { IModel } from './Model';
 import { IValueAttachment, ChangeValueHandler } from './values/ValueAttachment';
 import { IOrchestrator } from './orchestrator/Orchestrator';
 import { RestoreInfo } from './Restore'
+import { MemberRenameAction } from './actions/Model';
+import { Events } from './Events';
 
 // For use in object literals
 export class MemberAdd {
@@ -83,6 +85,24 @@ export class Member
 
       this.attachment = new MemberValueAttachment(this, this.orchestrator)
       this.value.attach(this.attachment)
+   }
+
+   /**
+    * Sets the name. This is used internally to update the name
+    * without emitting plugin events
+    * 
+    * @param name The new name
+    */
+   setName(name: string): void {
+      if(this.name === name) {
+         return
+      }
+
+      // TODO: Bubble this up?
+      let action = new MemberRenameAction(this, this.name, name)
+      this.emit(Events.Member.NameChanging, action)
+      this._name = name
+      this.emit(Events.Member.NameChanged, action)
    }
 }
 

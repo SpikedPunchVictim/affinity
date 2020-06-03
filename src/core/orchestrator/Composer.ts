@@ -2,7 +2,7 @@ import { INamespace } from "../Namespace"
 import { IQualifiedObject, QualifiedObject } from "../QualifiedObject"
 import { Switch, sortByType, QualifiedObjectType, as } from "../utils/Types"
 import { IQualifiedObjectCollection } from "../collections/QualifiedObjectCollection"
-import { IRfcAction, BatchedActions } from "../actions/Actions"
+import { IRfcAction, BatchedActions, ReorderAction } from "../actions/Actions"
 import { Events } from "../Events"
 import { emit } from "../utils/Eventing"
 import { ItemAdd } from "../collections/ChangeSets"
@@ -94,7 +94,7 @@ export class ComposerAction {
       })
    }
 
-   reorder<T extends IQualifiedObject>(obj: T, from: number, to: number): IRfcAction {
+   reorder<T extends IQualifiedObject>(obj: T, from: number, to: number): ReorderAction<T> {
       return Switch.case(obj, {
          //@ts-ignore
          Namespace: (ns) => new NamespaceReorderAction(ns, from, to),
@@ -173,6 +173,14 @@ export class Composer {
          Model: (model) => model.parent.models,
          //@ts-ignore
          Instance: (inst) => inst.parent.instances
+      })
+   }
+
+   getIndex(obj: IQualifiedObject): number | undefined {
+      return Switch.case(obj, {
+         Namespace: (ns) => ns.parent?.children.observable.findIndex(n => n.id === obj.id),
+         Model: (model) => model.parent?.models.observable.findIndex(m => m.id === obj.id),
+         Instance: (inst) => inst.parent?.instances.observable.findIndex(int => int.id === obj.id)
       })
    }
 

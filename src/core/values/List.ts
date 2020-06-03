@@ -3,7 +3,9 @@ import { ArgumentError } from "../../errors/ArgumentError"
 import { asValue, asType } from "../utils/Types"
 import { IValueAttachment, EmptyValueAttachment } from "./ValueAttachment"
 import { IndexOutOfRangeError } from "../../errors"
-import { ObservableCollection } from "../collections/ObservableCollection"
+import { ObservableCollection, IObservableCollection } from "../collections/ObservableCollection"
+import { syncToMaster } from "../utils/Collections"
+import { ItemAdd } from "../collections/ChangeSets"
 
 export type VisitValueHandler = (value: IValue) => void
 export type PredicateValueHandler = (value: IValue) => boolean
@@ -301,6 +303,45 @@ export class ListValue extends Value implements IListValue {
       } catch(err) {
          throw err
       }
+   }
+
+   internalSet(other: IValue): IValue {
+      if(!this.type.equals(other.type)) {
+         throw new Error(`List type does not match the value to be set`)
+      }
+
+      let otherList = other as ListValue
+
+      syncToMaster(
+         otherList._values,
+         this._values,
+         {
+            equal: (master: IValue, other: IValue): boolean => master.equals(other),
+            add: (master: IValue, index: number, collection: IObservableCollection<IValue>): void => {
+               this._values.customAdd(master.clone(), (change, add) => {
+                  let ch = [new ItemAdd(change[0].item, index)]
+
+                  // TODO: Emit events locally (no plugins)
+                  //this.emit(Events.)
+                  add(ch)
+               })
+            },
+            remove: (other: IValue, index: number, collection: IObservableCollection<IValue>): void => {
+               this._values.customRemove(other, (change, remove) => {
+                  // TODO: Emit events locally
+                  remove()
+               })
+            },
+            move: (other: IValue, from: number, to: number, collection: IObservableCollection<IValue>): void => {
+               this._values.customMove(from, to, (change, move) => {
+                  // TODO: Emit events locally
+                  move()
+               })
+            }
+           }
+         )
+      
+      return this
    }
 }
 

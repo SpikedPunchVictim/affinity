@@ -48,7 +48,7 @@ export class SimpleValue<T> extends Value implements ISimpleValue<T> {
       return this.update(other)
    }
 
-   setLocally(other: IValue): IValue {
+   internalSet(other: IValue): IValue {
       if(other == null) {
          throw new Error(`other Value must be valid`)
       }

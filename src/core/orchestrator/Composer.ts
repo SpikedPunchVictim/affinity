@@ -1,8 +1,8 @@
 import { INamespace } from "../Namespace"
 import { IQualifiedObject, QualifiedObject } from "../QualifiedObject"
-import { Switch, sortByType, QualifiedObjectType, as } from "../utils/Types"
+import { Switch, sortByType, as } from "../utils/Types"
 import { IQualifiedObjectCollection } from "../collections/QualifiedObjectCollection"
-import { IRfcAction, BatchedActions, ReorderAction } from "../actions/Actions"
+import { IRfcAction, BatchedActions } from "../actions/Actions"
 import { Events } from "../Events"
 import { emit } from "../utils/Eventing"
 import { ItemAdd } from "../collections/ChangeSets"
@@ -10,14 +10,13 @@ import { ObservableEvents } from "../collections/ObservableCollection"
 import { IProject } from "../.."
 import { IProjectContext } from "../Project"
 import { IRequestForChangeSource } from "../actions/RequestForChange"
-import { NamespaceDeleteAction, NamespaceCreateAction, NamespaceGetChildrenAction, NamespaceMoveAction, NamespaceRenameAction, NamespaceReorderAction, NamespaceUpdateAction } from '../actions/Namespace'
-import { ModelDeleteAction, ModelCreateAction, ModelRenameAction, ModelMoveAction, ModelGetChildrenAction, ModelReorderAction, ModelUpdateAction } from '../actions/Model'
-import { InstanceDeleteAction, InstanceRenameAction, InstanceMoveAction, InstanceGetChildrenAction, InstanceCreateAction, InstanceReorderAction, InstanceUpdateAction } from '../actions/Instance'
 import { InvalidOperationError } from "../../errors/InvalidOperationError"
 import { IOrchestrator } from "./Orchestrator"
 import { NameCollisionError } from "../../errors/NameCollisionError"
 import { IUidWarden } from "../UidWarden"
 import { Search } from "../Search"
+import { ComposerCreate } from "./Create"
+import { ComposerAction } from "./Action"
 
 /*
 
@@ -38,89 +37,11 @@ type PrePostChangeHandlers = {
    after?: ChangeHandler
 }
 
-export class ComposerAction {
-   create<T extends IQualifiedObject>(obj: T, index: number): IRfcAction {
-      return Switch.case(obj, {
-         //@ts-ignore
-         Namespace: (ns) => new NamespaceCreateAction(ns, index),
-         //@ts-ignore
-         Model: (model) => new ModelCreateAction(model, index),
-         //@ts-ignore
-         Instance: (inst) => new InstanceCreateAction(inst, index)
-      })
-   }
-
-   delete<T extends IQualifiedObject>(obj: T): IRfcAction {
-      return Switch.case(obj, {
-         //@ts-ignore
-         Namespace: (ns) => new NamespaceDeleteAction(ns),
-         //@ts-ignore
-         Model: (model) => new ModelDeleteAction(model),
-         //@ts-ignore
-         Instance: (inst) => new InstanceDeleteAction(inst)
-      })
-   }
-
-   getChildren(type: QualifiedObjectType, parent: INamespace): IRfcAction {
-      return Switch.onType(type, {
-         //@ts-ignore
-         Namespace: (ns) => new NamespaceGetChildrenAction(parent),
-         //@ts-ignore
-         Model: (model) => new ModelGetChildrenAction(parent),
-         //@ts-ignore
-         Instance: (inst) => new InstanceGetChildrenAction(parent)
-      })
-   }
-
-   move<T extends IQualifiedObject>(obj: T, to: INamespace): IRfcAction {
-      return Switch.case(obj, {
-         //@ts-ignore
-         Namespace: (ns) => new NamespaceMoveAction(ns, ns.parent, to),
-         //@ts-ignore
-         Model: (model) => new ModelMoveAction(model, model.parent, to),
-         //@ts-ignore
-         Instance: (inst) => new InstanceMoveAction(inst, inst.parent, to)
-      })
-   }
-
-   rename<T extends IQualifiedObject>(obj: T, newName: string): IRfcAction {
-      return Switch.case(obj, {
-         //@ts-ignore
-         Namespace: (ns) => new NamespaceRenameAction(ns, ns.name, newName),
-         //@ts-ignore
-         Model: (model) => new ModelRenameAction(model, model.name, newName),
-         //@ts-ignore
-         Instance: (inst) => new InstanceRenameAction(inst, inst.name, newName)
-      })
-   }
-
-   reorder<T extends IQualifiedObject>(obj: T, from: number, to: number): ReorderAction<T> {
-      return Switch.case(obj, {
-         //@ts-ignore
-         Namespace: (ns) => new NamespaceReorderAction(ns, from, to),
-         //@ts-ignore
-         Model: (model) => new ModelReorderAction(model, from, to),
-         //@ts-ignore
-         Instance: (inst) => new InstanceReorderAction(inst, from, to)
-      })
-   }
-
-   update<T extends IQualifiedObject>(obj: T): IRfcAction {
-      return Switch.case(obj, {
-         //@ts-ignore
-         Namespace: (ns) => new NamespaceUpdateAction(ns),
-         //@ts-ignore
-         Model: (model) => new ModelUpdateAction(model),
-         //@ts-ignore
-         Instance: (inst) => new InstanceUpdateAction(inst)
-      })
-   }
-}
-
 export class Composer {
    readonly project: IProject
    readonly context: IProjectContext
    readonly action: ComposerAction
+   readonly create: ComposerCreate
 
    get rfc(): IRequestForChangeSource {
       return this.context.rfc
@@ -142,6 +63,7 @@ export class Composer {
       this.project = project
       this.context = context
       this.action = new ComposerAction()
+      this.create = new ComposerCreate(this.context)
    }
 
    getAllChildren(parent: INamespace): Array<IQualifiedObject> {
@@ -155,7 +77,7 @@ export class Composer {
          results.push(inst)
       }
 
-      let children = parent.children.toArray()
+      let children = parent.namespaces.toArray()
       results.push(...children)
 
       for (let child of children) {
@@ -168,7 +90,7 @@ export class Composer {
    getOwningCollection<T extends IQualifiedObject>(obj: IQualifiedObject): IQualifiedObjectCollection<T> {
       return Switch.case(obj, {
          //@ts-ignore
-         Namespace: (ns) => ns.parent.children,
+         Namespace: (ns) => ns.parent.namespaces,
          //@ts-ignore
          Model: (model) => model.parent.models,
          //@ts-ignore
@@ -178,7 +100,7 @@ export class Composer {
 
    getIndex(obj: IQualifiedObject): number | undefined {
       return Switch.case(obj, {
-         Namespace: (ns) => ns.parent?.children.observable.findIndex(n => n.id === obj.id),
+         Namespace: (ns) => ns.parent?.namespaces.observable.findIndex(n => n.id === obj.id),
          Model: (model) => model.parent?.models.observable.findIndex(m => m.id === obj.id),
          Instance: (inst) => inst.parent?.instances.observable.findIndex(int => int.id === obj.id)
       })
@@ -236,7 +158,7 @@ export class Composer {
 
       let collection = Switch.case<IQualifiedObjectCollection<T>>(obj, {
          //@ts-ignore
-         Namespace: (ns) => parent.children,
+         Namespace: (ns) => parent.namespaces,
          //@ts-ignore
          Model: (model) => parent.models,
          //@ts-ignore
@@ -312,7 +234,7 @@ export class Composer {
    async move<T extends IQualifiedObject>(source: T, newParent: INamespace, index: number, action: IRfcAction): Promise<void> {
       let exists = await Switch.case(source, {
          Namespace: async () => {
-            let found = await newParent.children.get(source.name)
+            let found = await newParent.namespaces.get(source.name)
             return found !== undefined
          },
          Model: async () => {
@@ -336,7 +258,7 @@ export class Composer {
       try {
          this.remove(source, action)
          hasRemoved = true
-         this.add(source, newParent, index, action, { after: () => as<QualifiedObject>(source).setParent(newParent) })
+         this.add(source, newParent, index, action, { after: () => as<QualifiedObject>(source).internalSetParent(newParent) })
       } catch (err) {
          if (hasRemoved) {
             // Recover from a failure

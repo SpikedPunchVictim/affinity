@@ -1,4 +1,6 @@
 export class FieldEvents {
+   readonly AttachmentChanging: string = 'field-attachment-changing'
+   readonly AttachmentChanged: string = 'field-attachment-changed'
    readonly InheritedChanging: string = 'field-inherited-changing'
    readonly InheritedChanged: string = 'field-inherited-changed'
    readonly ResetStart: string = 'field-reset-start'

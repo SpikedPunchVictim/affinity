@@ -17,6 +17,11 @@ export interface IQualifiedObjectCollection<T extends IQualifiedObject>
    remove(items: T | T[]): Promise<boolean>
    removeAt(index: number): Promise<boolean>
    removeAll(filter: PredicateHandler<T>): Promise<boolean>
+
+   /**
+    * REtrieves the latest contents of the collection
+    */
+   update(): Promise<void>
 }
 
 export class QualifiedObjectCollection<T extends IQualifiedObject>
@@ -60,7 +65,7 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async next(): Promise<IteratorResult<T>> {
-      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      await this.update()
 
       let self = this
       let index = 0
@@ -75,7 +80,7 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async at(index: number): Promise<T> {
-      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      await this.update()
       return this.items.at(index)
    }
 
@@ -88,7 +93,7 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async delete(name: string): Promise<boolean> {
-      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      await this.update()
 
       let found = this.items.find(item => item.name === name)
 
@@ -96,33 +101,33 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async forEach(visit: VisitHandler<T>): Promise<void> {
-      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      await this.update()
       this.items.forEach(visit)
       return
    }
 
    async filter(visit: VisitHandler<T>): Promise<Array<T>> {
-      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      await this.update()
       return this.items.filter(visit)
    }
 
    async find(visit: VisitHandler<T>): Promise<T | undefined> {
-      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      await this.update()
       return this.items.find(visit)
    }
 
    async findIndex(visit: VisitHandler<T>): Promise<number> {
-      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      await this.update()
       return this.items.findIndex(visit)
    }
 
    async get(name: string): Promise<T | undefined> {
-      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      await this.update()
       return this.items.find(item => item.name === name)
    }
 
    async indexOf(item: T): Promise<number | undefined> {
-      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      await this.update()
 
       let found = this.getById(item.id)
 
@@ -135,7 +140,7 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async map(visit: VisitHandler<T>): Promise<void[]> {
-      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      await this.update()
       return this.items.map(visit)
    }
 
@@ -159,7 +164,7 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
    }
 
    async removeAll(filter: PredicateHandler<T>): Promise<boolean> {
-      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
+      await this.update()
 
       let toRemove = new Array<T>()
 
@@ -174,5 +179,9 @@ export class QualifiedObjectCollection<T extends IQualifiedObject>
 
    toArray(): T[] {
       return this.items.toArray()
+   }
+
+   async update(): Promise<void> {
+      await this.orchestrator.updateQualifiedObjects(this.type, this.parent)
    }
 }

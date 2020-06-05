@@ -94,8 +94,7 @@ export class Model extends QualifiedObject implements IModel {
    }
 
    async update(): Promise<void> {
-      //this.orchestrator.
-      this.orchestrator.updateMembers(this)
+      await this.orchestrator.updateQualifiedObject(this)
    }
 
    protected async onRename(newName: string): Promise<void> {

@@ -3,7 +3,7 @@ import { IActionRouter } from "../../src/core/actions/ActionRouter"
 import { ProjectOpenAction, ProjectCommitAction } from "../../src/core/actions/Project"
 import { IRfcAction, BatchedActions } from "../../src/core/actions/Actions"
 import { NamespaceCreateAction, NamespaceDeleteAction, NamespaceRenameAction, NamespaceMoveAction, NamespaceGetByIdAction, NamespaceGetChildrenAction, NamespaceReorderAction, NamespaceUpdateAction } from "../../src/core/actions/Namespace"
-import { ModelCreateAction, ModelDeleteAction, ModelRenameAction, ModelMoveAction, MemberCreateAction, MemberDeleteAction, MemberRenameAction, MemberReorderAction, ModelReorderAction, ModelGetChildrenAction } from "../../src/core/actions/Model"
+import { ModelCreateAction, ModelDeleteAction, ModelRenameAction, ModelMoveAction, MemberCreateAction, MemberDeleteAction, MemberRenameAction, MemberReorderAction, ModelReorderAction, ModelGetChildrenAction, ModelUpdateAction, ModelGetMembersAction } from "../../src/core/actions/Model"
 import { IPlugin } from "../../src/core/plugins/Plugin"
 
 import {
@@ -16,7 +16,8 @@ import {
    FieldRenameAction,
    FieldReorderAction,
    InstanceReorderAction,
-   InstanceGetChildrenAction
+   InstanceGetChildrenAction,
+   InstanceUpdateAction
 } from "../../src/core/actions/Instance"
 
 import { InstanceFullRestoreInfo, InstanceLazyRestoreInfo, IInstance } from '../../src/core/Instance'
@@ -27,6 +28,8 @@ import { IQualifiedObject } from "../../src/core/QualifiedObject"
 import { IObservableCollection } from "../../src/core/collections/ObservableCollection"
 import { RestoreInfo } from '../../src/core/Restore'
 import { Search } from "../../src/core/Search"
+import { MemberRestoreInfo } from "../../src/core/Member"
+import { FieldRestoreInfo } from "../../src/core/Field"
 
 export class TestPlugin implements IPlugin {
    readonly name: string = 'test-only-plugin'
@@ -191,7 +194,7 @@ export class DataPlugin implements IPlugin {
             return
          }
 
-         let index = found.parent == null ? 0 : found.parent.children.observable.findIndex(n => n.id === action.id)
+         let index = found.parent == null ? 0 : found.parent.namespaces.observable.findIndex(n => n.id === action.id)
 
          action.set(new NamespaceLazyRestoreInfo(
             found.name,
@@ -210,7 +213,7 @@ export class DataPlugin implements IPlugin {
          }
 
          action.restore = 
-            this.buildCollectionRestore(QualifiedObjectType.Namespace, found.children.observable)
+            this.buildCollectionRestore(QualifiedObjectType.Namespace, found.namespaces.observable)
       })
 
       router.on<NamespaceRenameAction>(NamespaceRenameAction.type, async (action) => {
@@ -229,7 +232,7 @@ export class DataPlugin implements IPlugin {
             return
          }
 
-         let index = found.parent == null ? 0 : found.parent.children.observable.findIndex(n => n.id === action.source.id)
+         let index = found.parent == null ? 0 : found.parent.namespaces.observable.findIndex(n => n.id === action.source.id)
 
          let restore = new NamespaceFullRestoreInfo(
             found.name,
@@ -239,8 +242,8 @@ export class DataPlugin implements IPlugin {
             index
          )
 
-         restore.children =
-            this.buildCollectionRestore(QualifiedObjectType.Namespace, found.children.observable)
+         restore.namespaces =
+            this.buildCollectionRestore(QualifiedObjectType.Namespace, found.namespaces.observable)
 
          restore.models =
             this.buildCollectionRestore(QualifiedObjectType.Model, found.models.observable)
@@ -249,6 +252,49 @@ export class DataPlugin implements IPlugin {
             this.buildCollectionRestore(QualifiedObjectType.Instance, found.instances.observable)
 
          action.restore = restore
+      })
+
+      router.on<ModelUpdateAction>(ModelUpdateAction.type, async (action) => {
+         let found = this.search.findObjectById(action.source.id) as IModel
+
+         if (!found) {
+            return
+         }
+
+         let restore = new ModelFullRestoreInfo(
+            found.name,
+            found.qualifiedName,
+            found.id,
+            //@ts-ignore
+            found.parent.id
+         )
+
+         let members = new Array<MemberRestoreInfo>()
+
+         for(let i = 0; i < found.members.length; ++i) {
+            let member = found.members.observable.at(i)
+            members.push(new MemberRestoreInfo(member.name, member.value.clone(), member.id, member.model.id, i))
+         }
+
+         restore.members = members
+         action.restore = restore
+      })
+
+      router.on<ModelGetMembersAction>(ModelGetMembersAction.type, async (action) => {
+         let found = this.search.findObjectById(action.model.id) as IModel
+
+         if (!found) {
+            return
+         }
+
+         let members = new Array<MemberRestoreInfo>()
+
+         for(let i = 0; i < found.members.length; ++i) {
+            let member = found.members.observable.at(i)
+            members.push(new MemberRestoreInfo(member.name, member.value.clone(), member.id, member.model.id, i))
+         }
+
+         action.restore = members
       })
 
       router.on<ModelGetChildrenAction>(ModelGetChildrenAction.type, async (action) => {
@@ -260,6 +306,30 @@ export class DataPlugin implements IPlugin {
 
          action.restore = 
             this.buildCollectionRestore(QualifiedObjectType.Model, found.models.observable)
+      })
+
+      router.on<InstanceUpdateAction>(InstanceUpdateAction.type, async (action) => {
+         let found = this.search.findObjectById(action.source.id) as IInstance
+
+         if (!found) {
+            return
+         }
+
+         let restore = new InstanceFullRestoreInfo(
+            found.name,
+            found.qualifiedName,
+            found.id,
+            found.model.id,
+            //@ts-ignore
+            found.parent.id
+         )
+
+         for(let i = 0; i < found.fields.length; ++i) {
+            let field = found.fields.observable.at(i)
+            restore.fields.push(new FieldRestoreInfo(field.name, field.id, field.value.clone(), i, field.attachment))
+         }
+
+         action.restore = restore
       })
 
       router.on<InstanceGetChildrenAction>(InstanceGetChildrenAction.type, async (action) => {

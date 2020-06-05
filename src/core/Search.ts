@@ -29,7 +29,7 @@ export class Search {
          this.objectCacheVisit(obj)
       }
 
-      for(let ns of start.children.observable) {
+      for(let ns of start.namespaces.observable) {
          cacheVisit(ns)
       }
 
@@ -41,7 +41,7 @@ export class Search {
          cacheVisit(inst)
       }
 
-      for(let ns of start.children.observable) {
+      for(let ns of start.namespaces.observable) {
          this.breadthFirst(ns, visit)
       }
    }
@@ -71,7 +71,7 @@ export class Search {
          return start
       }
       
-      for(let ns of start.children.observable) {
+      for(let ns of start.namespaces.observable) {
          if(predicate(ns)) {
             return ns
          }
@@ -89,8 +89,11 @@ export class Search {
          }
       }
 
-      for(let ns of start.children.observable) {
-         return this.visitUntil(ns, predicate)
+      for(let ns of start.namespaces.observable) {
+         let result = this.visitUntil(ns, predicate)
+         if(result !== undefined) {
+            return result
+         }
       }
 
       return undefined

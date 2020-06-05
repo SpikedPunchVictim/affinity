@@ -68,7 +68,7 @@ describe('Namespaces', function() {
       expect(parent).to.not.be.undefined
 
       //@ts-ignore
-      let child = await parent.children.create(childName)
+      let child = await parent.namespaces.create(childName)
 
       //@ts-ignore
       validateQualifiedPath(parent, parentName)
@@ -221,7 +221,7 @@ describe('Namespaces', function() {
       let one = await project.get<INamespace>(QualifiedObjectType.Namespace, 'one')
 
       // @ts-ignore
-      await one.children.delete('two')
+      await one.namespaces.delete('two')
 
       model1 = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model1')
       model2 = await project.get<IModel>(QualifiedObjectType.Model, 'one.two.model2')

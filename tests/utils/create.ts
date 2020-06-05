@@ -145,6 +145,7 @@ export async function populate(project: IProject, config: any): Promise<void> {
       }
       
       warden.add(QualifiedObjectType.Instance, item.path, item.id)
+      warden.add(QualifiedObjectType.Model, item.path, `m${item.id}`)
       let base = basename(item.path)
       let pPath = parentPath(item.path)
 

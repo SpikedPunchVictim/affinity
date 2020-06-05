@@ -181,7 +181,7 @@ export class Project
          .filter(it => it !== '')
 
       for (let token of tokens) {
-         current = await current.children.get(token)
+         current = await current.namespaces.get(token)
 
          if (current === undefined) {
             return undefined
@@ -192,7 +192,7 @@ export class Project
       let baseQPath = basename(qualifiedPath)
 
       let result = await Switch.onType<Promise<IQualifiedObject | undefined>>(qualifiedType, {
-         Namespace: async () => await current?.children.get(baseQPath),
+         Namespace: async () => await current?.namespaces.get(baseQPath),
          Model: async () => await current?.models.get(baseQPath),
          Instance: async () => await current?.instances.get(baseQPath)
       })
@@ -225,10 +225,10 @@ export class Project
       let tokens = qualifiedPath.split('.')
 
       for (let token of tokens) {
-         let child = await current.children.get(token)
+         let child = await current.namespaces.get(token)
 
          current = child === undefined ?
-            await current.children.create(token) :
+            await current.namespaces.create(token) :
             child
       }
 
@@ -255,7 +255,7 @@ export class Project
       let baseQName = basename(qualifiedPath)
 
       let result = await Switch.onType(qualifiedType, {
-         Namespace: async () => parent?.children.delete(baseQName),
+         Namespace: async () => parent?.namespaces.delete(baseQName),
          Model: async () => parent?.models.delete(baseQName),
          Instance: async () => parent?.instances.delete(baseQName)
       })

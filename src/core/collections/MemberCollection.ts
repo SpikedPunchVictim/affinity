@@ -44,6 +44,11 @@ export interface IMemberCollection extends IAsyncReadableCollection<IMember>, Ev
     * @param index The index of the Member to remove
     */
    removeAt(index: number): Promise<boolean>
+
+   /**
+    * Retrieves the latest version of the Members
+    */
+   update(): Promise<void>
 }
 
 /**
@@ -80,7 +85,7 @@ export class MemberCollection extends EventEmitter implements IMemberCollection 
    }
 
    async next(): Promise<IteratorResult<IMember>> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
 
       let self = this
       let index = 0
@@ -95,17 +100,17 @@ export class MemberCollection extends EventEmitter implements IMemberCollection 
    }
 
    async add(...params: Array<MemberCreateInfo>): Promise<IndexableItem<IMember>[]> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       return this.orchestrator.createMembers(this.model, params)
    }
 
    async at(index: number): Promise<IMember> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       return this.items.at(index)
    }
 
    async append(params: MemberAdd): Promise<IndexableItem<IMember>[]> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
 
       // TODO: Validate Member names
       let startIndex = this.items.length
@@ -124,7 +129,7 @@ export class MemberCollection extends EventEmitter implements IMemberCollection 
    }
 
    async clear(): Promise<boolean> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       let names = this.items.map(m => m.name)
       //@ts-ignore
       await this.orchestrator.deleteMembers(this.model, names)
@@ -132,65 +137,65 @@ export class MemberCollection extends EventEmitter implements IMemberCollection 
    }
 
    async contains(item: IMember): Promise<boolean> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       return this.items.find(m => m.name.toLowerCase() === item.name.toLowerCase()) !== undefined
    }
 
    async create(params: MemberCreateInfo | Array<MemberCreateInfo>): Promise<IndexableItem<IMember>[]> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       return this.orchestrator.createMembers(this.model, params)
    }
 
    //exists(name: string): Promise<boolean> // Add one day
    async filter(visit: VisitHandler<IMember>): Promise<Array<IMember>> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       return this.items.filter(visit)
    }
 
    async find(visit: VisitHandler<IMember>): Promise<IMember | undefined> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       return this.items.find(visit)
    }
 
    async findIndex(visit: VisitHandler<IMember>): Promise<number> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       return this.items.findIndex(visit)
    }
 
    async forEach(visit: VisitHandler<IMember>): Promise<void> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       return this.items.forEach(visit)
    }
 
    async get(name: string): Promise<IMember | undefined> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       return this.items.find(m => m.name.toLowerCase() === name.toLowerCase())
    }
 
    async indexOf(item: IMember): Promise<number | undefined> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       return this.items.indexOf(item)
    }
 
    async map(visit: VisitHandler<IMember>): Promise<void[]> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       return this.items.map(visit)
    }
 
    async move(from: number, to: number): Promise<boolean> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       await this.orchestrator.reorderMember(this.model, from, to)
       return true
    }
 
    async remove(name: string): Promise<boolean> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       let removed = await this.orchestrator.deleteMembers(this.model, [name])
       return removed.length > 0
    }
 
    async removeAt(index: number): Promise<boolean> {
-      await this.orchestrator.updateMembers(this.model)
+      await this.update()
       let member = this.items.at(index)
       let removed = await this.orchestrator.deleteMembers(this.model, [member.name])
       return removed.length > 0
@@ -198,5 +203,9 @@ export class MemberCollection extends EventEmitter implements IMemberCollection 
    
    toArray(): IMember[] {
       return this.items.toArray()
+   }
+
+   async update(): Promise<void> {
+      await this.orchestrator.updateMembers(this.model)
    }
 }

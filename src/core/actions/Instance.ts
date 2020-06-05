@@ -1,11 +1,10 @@
 import { CreateAction, DeleteAction, RenameAction, MoveAction, ReorderAction, ValueChangeAction, RfcAction, UpdateAction, GetByIdAction } from "./Actions"
 import { IInstance, InstanceFullRestoreInfo, InstanceLazyRestoreInfo } from "../Instance"
-import { IField, FieldRestoreInfo } from "../Field"
+import { IField, FieldRestoreInfo, FieldAttachment } from "../Field"
 import { INamespace } from "../Namespace"
 import { IValue } from "../values/Value"
 import { ActionSet } from './ActionSet'
 import { QualifiedObjectGetChildrenAction } from "./QualifiedObject"
-import { IndexableItem } from "../collections/ChangeSets"
 
 export class InstanceCreateAction extends CreateAction<IInstance> {
    static readonly type: string = ActionSet.InstanceCreate
@@ -84,6 +83,7 @@ export class InstanceUpdateAction extends UpdateAction<IInstance, InstanceFullRe
 /*
 The following Field Actions only get raised on the Project level. They
 don't need to make their way to the Plugin:
+   * FieldAttachmentChangeAction
    * FieldCreateAction
    * FieldDeleteAction
    * FieldRenameAction
@@ -94,6 +94,21 @@ The ones that make it to the plugins are:
    * FieldResetAction
    * FieldValueChangeAction
 */
+
+export class FieldAttachmentChangeAction extends RfcAction {
+   static readonly type: string = ActionSet.FieldAttachmentChange
+
+   readonly field: IField
+   readonly oldValue: FieldAttachment
+   readonly newValue: FieldAttachment
+   
+   constructor(field: IField, oldValue: FieldAttachment, newValue: FieldAttachment) {
+      super(FieldAttachmentChangeAction.type)
+      this.field = field
+      this.oldValue = oldValue
+      this.newValue = newValue
+   }
+}
 export class FieldCreateAction extends CreateAction<IField> {
    static readonly type: string = ActionSet.FieldCreate
 
@@ -115,7 +130,7 @@ export class FieldGetAction extends RfcAction {
    static readonly type: string = ActionSet.FieldGet
    readonly instance: IInstance
 
-   results: Array<IndexableItem<FieldRestoreInfo>> = new Array<IndexableItem<FieldRestoreInfo>>()
+   restore: Array<FieldRestoreInfo> = new Array<FieldRestoreInfo>()
 
    get contentsUpdated(): boolean {
       return this._contentsUpdated
@@ -128,8 +143,8 @@ export class FieldGetAction extends RfcAction {
       this.instance = instance
    }
 
-   set(items: IndexableItem<FieldRestoreInfo>[]): void {
-      this.results = items
+   set(items: FieldRestoreInfo[]): void {
+      this.restore = items
       this._contentsUpdated = true
    }
 }

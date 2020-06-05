@@ -43,13 +43,13 @@ export type DiffHandlersAsync<TMaster, TOther> = {
  *     equal: (master: TMaster, other: TOther): boolean => {
  *
  *     },
- *     add: (master: TMaster, index: number, collection: IObservableCollection<TOther>): void {
+ *     add: (master: TMaster, index: number, collection: IObservableCollection<TOther>): void => {
  *
  *     },
  *     remove: (other: TOther, index: number, collection: IObservableCollection<TOther>): void => {
  *        
  *     },
- *     move: (other, from: Number, to: Number, collection: IObservableCollection<TOther>): void => {
+ *     move: (other, from: number, to: number, collection: IObservableCollection<TOther>): void => {
  *        
  *     }
  *  }
@@ -259,13 +259,13 @@ export function syncToMaster<TMaster, TOther>(
  *     equal: async (master: TMaster, other: TOther): Promise<boolean> => {
  *
  *     },
- *     add: async (master: TMaster, index: number, collection: IObservableCollection<TOther>): Promise<void> {
+ *     add: async (master: TMaster, index: number, collection: IObservableCollection<TOther>): Promise<void> => {
  *
  *     },
  *     remove: async (other: TOther, index: number, collection: IObservableCollection<TOther>): Promise<void> => {
  *        
  *     },
- *     move: async (other, from: Number, to: Number, collection: IObservableCollection<TOther>): Promise<void> => {
+ *     move: async (other, from: number, to: number, collection: IObservableCollection<TOther>): Promise<void> => {
  *        
  *     }
  *  }

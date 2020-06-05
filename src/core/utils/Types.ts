@@ -77,7 +77,7 @@ export class Switch {
 }
 
 export function isNamespace(obj: IQualifiedObject): obj is INamespace {
-   return (obj as INamespace).children !== undefined
+   return (obj as INamespace).namespaces !== undefined
 }
 
 export function isModel(obj: IQualifiedObject): obj is IModel {

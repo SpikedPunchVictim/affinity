@@ -5,7 +5,6 @@ import { INamespace } from "../Namespace"
 import { IValue } from "../values/Value"
 import { ActionSet } from './ActionSet'
 import { QualifiedObjectGetChildrenAction } from "./QualifiedObject"
-import { IndexableItem } from "../collections/ChangeSets"
 
 export class ModelCreateAction extends CreateAction<IModel> {
    static readonly type: string = ActionSet.ModelCreate
@@ -46,6 +45,36 @@ export class ModelGetChildrenAction extends QualifiedObjectGetChildrenAction<Mod
 
    constructor(parent: INamespace) {
       super(ModelGetChildrenAction.type, parent)
+   }
+}
+
+/**
+ * Retrieves all Members for a Model
+ */
+export class ModelGetMembersAction extends RfcAction {
+   static readonly type: string = ActionSet.ModelGetMembers
+   readonly model: IModel
+
+   get restore(): Array<MemberRestoreInfo> {
+      return this._restore
+   }
+
+   set restore(value: Array<MemberRestoreInfo>) {
+      this._restore = value
+      this._contentsUpdated = value != null
+   }
+
+   private _restore: Array<MemberRestoreInfo> = new Array<MemberRestoreInfo>()
+
+   get contentsUpdated(): boolean {
+      return this._contentsUpdated
+   }
+
+   private _contentsUpdated: boolean = false
+
+   constructor(model: IModel) {
+      super(ModelGetMembersAction.type)
+      this.model = model
    }
 }
 
@@ -96,32 +125,6 @@ export class MemberDeleteAction extends DeleteAction<IMember> {
 
    constructor(member: IMember) {
       super(MemberDeleteAction.type, member)
-   }
-}
-
-/**
- * Retrieves all Members for a Model
- */
-export class MemberGetAction extends RfcAction {
-   static readonly type: string = ActionSet.MemberGet
-   readonly model: IModel
-
-   results: Array<IndexableItem<MemberRestoreInfo>> = new Array<IndexableItem<MemberRestoreInfo>>()
-
-   get contentsUpdated(): boolean {
-      return this._contentsUpdated
-   }
-
-   private _contentsUpdated: boolean = false
-
-   constructor(model: IModel) {
-      super(MemberGetAction.type)
-      this.model = model
-   }
-
-   set(items: IndexableItem<MemberRestoreInfo>[]): void {
-      this.results = items
-      this._contentsUpdated = true
    }
 }
 

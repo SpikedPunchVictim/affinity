@@ -40,6 +40,8 @@ import { populate } from './utils/create'
          * Reorder members
          * Reordeing members at indexes that don't exist should throw an error
          * Adding members with the same name should fail
+      instance.test.ts
+         * Test Field attachment state is updated when restored
       events.test.ts
          * Add
          * Remove
@@ -82,7 +84,7 @@ describe('Projects', function () {
       let two = await project.create('one.two')
       let model = await two.models.create('model')
       let inst = await two.instances.create('model', model)
-      let ns = await two.children.create('model')
+      let ns = await two.namespaces.create('model')
 
       let modelGot = await project.get(QualifiedObjectType.Model, 'one.two.model')
 
@@ -97,7 +99,7 @@ describe('Projects', function () {
       let two = await project.create('one.two')
       let model = await two.models.create('model')
       let inst = await two.instances.create('model', model)
-      let ns = await two.children.create('model')
+      let ns = await two.namespaces.create('model')
 
       let instGot = await project.get<IInstance>(QualifiedObjectType.Instance, 'one.two.model')
 

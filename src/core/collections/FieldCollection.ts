@@ -9,6 +9,12 @@ import { EventEmitter } from 'events';
 export interface IFieldCollection extends IAsyncReadableCollection<IField>, EventEmitter {
    readonly instance: IInstance
    readonly observable: IObservableCollection<IField>
+
+   /**
+    * Retrieves the latest Field data
+    */
+   update(): Promise<void>
+
    //sync(model: IModel): Promise<void>
 }
 
@@ -20,7 +26,6 @@ export class FieldCollection
    readonly context: IProjectContext
 
    private items: ObservableCollection<IField>
-
 
    get length(): number {
       return this.items.length
@@ -42,48 +47,48 @@ export class FieldCollection
    }
 
    async at(index: number): Promise<IField> {
-      await this.orchestrator.updateFields(this.instance)
+      await this.update()
       return this.items.at(index)
    }
 
    async contains(item: IField): Promise<boolean> {
-      await this.orchestrator.updateFields(this.instance)
+      await this.update()
       return this.items.find(m => m.id === item.id) !== undefined
    }
 
    //exists(name: string): Promise<boolean> // Add one day
    async filter(visit: VisitHandler<IField>): Promise<Array<IField>> {
-      await this.orchestrator.updateFields(this.instance)
+      await this.update()
       return this.items.filter(visit)
    }
 
    async find(visit: VisitHandler<IField>): Promise<IField | undefined> {
-      await this.orchestrator.updateFields(this.instance)
+      await this.update()
       return this.items.find(visit)
    }
 
    async findIndex(visit: VisitHandler<IField>): Promise<number> {
-      await this.orchestrator.updateFields(this.instance)
+      await this.update()
       return this.items.findIndex(visit)
    }
 
    async forEach(visit: VisitHandler<IField>): Promise<void> {
-      await this.orchestrator.updateFields(this.instance)
+      await this.update()
       return this.items.forEach(visit)
    }
 
    async get(name: string): Promise<IField | undefined> {
-      await this.orchestrator.updateFields(this.instance)
+      await this.update()
       return this.items.find(m => m.name.toLowerCase() === name.toLowerCase())
    }
 
    async indexOf(item: IField): Promise<number | undefined> {
-      await this.orchestrator.updateFields(this.instance)
+      await this.update()
       return this.items.indexOf(item)
    }
 
    async map(visit: VisitHandler<IField>): Promise<void[]> {
-      await this.orchestrator.updateFields(this.instance)
+      await this.update()
       return this.items.map(visit)
    }
 
@@ -91,8 +96,12 @@ export class FieldCollection
       return this.items.toArray()
    }
 
-   async next(): Promise<IteratorResult<IField>> {
+   async update(): Promise<void> {
       await this.orchestrator.updateFields(this.instance)
+   }
+
+   async next(): Promise<IteratorResult<IField>> {
+      await this.update()
 
       let self = this
       let index = 0

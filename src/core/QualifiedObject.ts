@@ -84,7 +84,7 @@ export class QualifiedObject
    }
 
    attach(parent: INamespace, context: IProjectContext): void {
-      this.setParent(parent)
+      this.internalSetParent(parent)
       this._context = context
    }
 
@@ -113,7 +113,7 @@ export class QualifiedObject
       this._name = '@rphaned'
    }
 
-   setParent(parent: INamespace): void {
+   internalSetParent(parent: INamespace): void {
       if(this.parent && this.parent.id === parent.id) {
          return
       }
@@ -133,7 +133,7 @@ export class QualifiedObject
       this.emit(Events.QualifiedObject.ParentChanged, change)
    }
 
-   setName(name: string): void {
+   internalSetName(name: string): void {
       if(this.name === name) {
          return
       }

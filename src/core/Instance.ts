@@ -101,7 +101,6 @@ export class Instance
             { source: this.context.project, event: Events.Instance.FieldAdding, data: action }
          ])
 
-
          add([ch])
 
          emit([

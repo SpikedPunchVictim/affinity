@@ -5,16 +5,14 @@ import { emit } from '../utils/Eventing'
 import { IProject, IProjectContext } from "../Project";
 import { ArgumentError } from "../../errors/ArgumentError";
 import { NameCollisionError } from "../../errors/NameCollisionError";
-import { QualifiedObjectGetChildrenAction } from "../actions/QualifiedObject";
-import { RestoreInfo } from '../Restore'
+
 
 import {
    NamespaceCollection,
    ObservableEvents,
    ModelCollection,
    InstanceCollection,
-   ObservableCollection,
-   IObservableCollection
+   ObservableCollection
 } from "../collections";
 
 import {
@@ -30,7 +28,7 @@ import {
    InstanceGetChildrenAction,
    MemberReorderAction,
    MemberDeleteAction,
-   MemberGetAction,
+   ModelGetMembersAction,
    FieldGetAction,
    NamespaceUpdateAction,
    RfcAction,
@@ -46,14 +44,13 @@ import { Events } from "../Events";
 import { IModel, Model } from "../Model";
 import { IInstance, Instance } from "../Instance";
 import { RfcError } from "../../errors/RfcError";
-import { IMember, Member, MemberCreateInfo, MemberRestoreInfo } from "../Member";
+import { IMember, MemberCreateInfo } from "../Member";
 import { IField, Field } from "../Field";
 import { IValue, } from "../values/Value";
 import { MemberValueChange, FieldValueChange } from "../values/Changes";
 import { ChangeValueHandler } from "../values/ValueAttachment";
-import { IndexableItem, ItemAdd, ItemRemove } from "../collections/ChangeSets";
+import { IndexableItem, ItemAdd } from "../collections/ChangeSets";
 import { IUidWarden } from "../UidWarden";
-import { syncToMaster } from "../utils/Collections";
 import { Composer } from "./Composer";
 import { IndexOutOfRangeError } from "../../errors/IndexOutOfRangeError";
 import { ObjectDoesNotExistError } from "../../errors/ObjectDoesNotExist";
@@ -142,7 +139,7 @@ export class Orchestrator implements IOrchestrator {
          type: QualifiedObjectType.Namespace
       }))
 
-      let index = parent.children.length
+      let index = parent.namespaces.length
 
       await this.rfc.create(new NamespaceCreateAction(namespace, index))
          .fulfill(async (action) => {
@@ -231,15 +228,16 @@ export class Orchestrator implements IOrchestrator {
 
       let actions = new Array<IndexableItem<MemberCreateAction>>()
 
-      // Note: The id field is ignored since these Members have not been created yet
+      // Default index is at the end
       let index = model.members.length
+
       for (let param of params) {
-         let id = await this.context.uidWarden.generate({
+         let id = await this.uidWarden.generate({
             isMember: true,
             memberName: param.name
          })
 
-         let member = new Member(model, param.name, param.value, this, id)
+         let member = await this.composer.create.member(model, param.name, param.value, id)
          let action = new MemberCreateAction(member.model, member, param.index || index)
          actions.push(new IndexableItem<MemberCreateAction>(action, param.index || index))
          index++
@@ -267,9 +265,6 @@ export class Orchestrator implements IOrchestrator {
 
                add(toAdd)
 
-               // Register each Member with the UID Warden
-               collection.observable.forEach(member => this.uidWarden.register(member.id, member))
-
                emit([
                   { source: collection.observable, event: ObservableEvents.added, data: change },
                   { source: collection, event: ObservableEvents.added, data: change },
@@ -277,6 +272,11 @@ export class Orchestrator implements IOrchestrator {
                   { source: this.project, event: Events.Model.MemberAdded, data: action }
                ])
             })
+
+            // Register each Member with the UID Warden
+            for (let item of toAdd) {
+               await this.uidWarden.register(item.item.id, item.item)
+            }
          })
          .reject(async (action: IRfcAction, err?: Error) => {
             throw new RfcError(action, err)
@@ -320,15 +320,15 @@ export class Orchestrator implements IOrchestrator {
                return
             }
 
-            for (let { item } of getAction.results) {
-               let member = members.observable.find(m => m.name === item.name)
+            for (let info of getAction.restore) {
+               let member = members.observable.find(m => m.name === info.name)
 
                if (member == undefined) {
-                  throw new Error(`Expected Member to exist (${item.name}) does not exist in the Model`)
+                  throw new Error(`Expected Member to exist (${info.name}) does not exist in the Model`)
                }
 
                let field = new Field(instance, member, member.value.clone())
-               results.push(new IndexableItem<IField>(field, item.index))
+               results.push(new IndexableItem<IField>(field, info.index))
             }
          })
          .commit()
@@ -346,9 +346,9 @@ export class Orchestrator implements IOrchestrator {
 
       let results = new Array<IndexableItem<IMember>>()
 
-      await this.rfc.create(new MemberGetAction(model))
+      await this.rfc.create(new ModelGetMembersAction(model))
          .fulfill(async (action) => {
-            let getAction = <MemberGetAction>action
+            let getAction = <ModelGetMembersAction>action
 
             // If no contents were updated, return what exists now
             if (!getAction.contentsUpdated) {
@@ -357,97 +357,8 @@ export class Orchestrator implements IOrchestrator {
                return
             }
 
-            // Update the Members
-            // Unpack into info objects and sort
-            let unpacked = getAction.results.map(indexable => indexable.item)
-            unpacked.sort((a, b) => a.index - b.index)
-
-            // Ensure indexes are sequnetial
-            for (let i = 0; i < unpacked.length; ++i) {
-               if (unpacked[i].index != i) {
-                  throw new Error(`Failed to retrieve an accurate list of Members. The indexes are not sequential.`)
-               }
-            }
-
-            let observableResults = new ObservableCollection(...unpacked)
-
             // Merge the results
-            syncToMaster<MemberRestoreInfo, IMember>(
-               observableResults,
-               model.members.observable,
-               {
-                  equal: (master: MemberRestoreInfo, other: IMember): boolean => master.id === other.id,
-                  add: (master: MemberRestoreInfo, index: number, collection: IObservableCollection<IMember>): void => {
-                     let member = new Member(model, master.name, master.value.clone(), this, master.id)
-
-                     collection.customAdd(member, (change, add) => {
-                        let action = new MemberCreateAction(model, member, index)
-
-                        emit([
-                           { source: collection, event: ObservableEvents.adding, data: change },
-                           { source: model.members, event: ObservableEvents.adding, data: change },
-                           { source: model, event: Events.Model.MemberAdding, data: action },
-                           { source: this.project, event: Events.Model.MemberAdding, data: action }
-                        ])
-
-                        let updatedChange = new ItemAdd<IMember>(member, index)
-                        add([updatedChange])
-
-                        emit([
-                           { source: collection, event: ObservableEvents.added, data: change },
-                           { source: model.members, event: ObservableEvents.added, data: change },
-                           { source: model, event: Events.Model.MemberAdded, data: action },
-                           { source: this.project, event: Events.Model.MemberAdded, data: action }
-                        ])
-                     })
-                  },
-                  remove: (other: IMember, index: number, collection: IObservableCollection<IMember>): void => {
-                     collection.customRemove(other, (change, remove) => {
-                        let action = new MemberDeleteAction(other)
-
-                        emit([
-                           { source: collection, event: ObservableEvents.removing, data: change },
-                           { source: model.members, event: ObservableEvents.removing, data: change },
-                           { source: model, event: Events.Model.MemberRemoving, data: action },
-                           { source: this.project, event: Events.Model.MemberRemoving, data: action }
-                        ])
-
-                        let updatedChange = new ItemRemove<IMember>(other, index)
-                        remove([updatedChange])
-
-                        emit([
-                           { source: collection, event: ObservableEvents.removed, data: change },
-                           { source: model.members, event: ObservableEvents.removed, data: change },
-                           { source: model, event: Events.Model.MemberRemoved, data: action },
-                           { source: this.project, event: Events.Model.MemberRemoved, data: action }
-                        ])
-                     })
-                  },
-                  move: (other: IMember, from: number, to: number, collection: IObservableCollection<IMember>): void => {
-                     let member = collection.at(from)
-
-                     collection.customMove(from, to, (change, move) => {
-                        let action = new MemberReorderAction(member, from, to)
-
-                        emit([
-                           { source: collection, event: ObservableEvents.moving, data: change },
-                           { source: model.members, event: ObservableEvents.moving, data: change },
-                           { source: model, event: Events.Model.MemberMoving, data: action },
-                           { source: this.project, event: Events.Model.MemberMoving, data: action }
-                        ])
-
-                        move()
-
-                        emit([
-                           { source: collection, event: ObservableEvents.moved, data: change },
-                           { source: model.members, event: ObservableEvents.moved, data: change },
-                           { source: model, event: Events.Model.MemberMoved, data: action },
-                           { source: this.project, event: Events.Model.MemberMoved, data: action }
-                        ])
-                     })
-                  }
-               }
-            )
+            this.restore.members(model, getAction.restore)
          })
          .commit()
 
@@ -472,7 +383,7 @@ export class Orchestrator implements IOrchestrator {
 
             //@ts-ignore
             let qobj = as<QualifiedObject>(source)
-            qobj.setName(newName)
+            qobj.internalSetName(newName)
 
             emit([
                { source, event: Events.QualifiedObject.NameChanged, data: action },
@@ -518,7 +429,7 @@ export class Orchestrator implements IOrchestrator {
       // Is there a QualifiedObject with that name already at the destination?
       let exists = await Switch.case(source, {
          Namespace: async () => {
-            let found = await to.children.get(source.name)
+            let found = await to.namespaces.get(source.name)
             return found !== undefined
          },
          Model: async () => {
@@ -540,7 +451,7 @@ export class Orchestrator implements IOrchestrator {
       await this.rfc.create(action)
          .fulfill(async (action) => {
             await Switch.case(source, {
-               Namespace: async (ns) => this.composer.move(ns, to, to.children.length, action),
+               Namespace: async (ns) => this.composer.move(ns, to, to.namespaces.length, action),
                Model: async (model) => this.composer.move(model, to, to.models.length, action),
                Instance: async (inst) => this.composer.move(inst, to, to.instances.length, action)
             })
@@ -625,7 +536,7 @@ export class Orchestrator implements IOrchestrator {
     * @param parent The Parent Namespace of the Collection
     */
    async updateQualifiedObjects(type: QualifiedObjectType, parent: INamespace): Promise<void> {
-      let action = Switch.onType<QualifiedObjectGetChildrenAction<RestoreInfo>>(type, {
+      let action = Switch.onType(type, {
          //@ts-ignore
          Namespace: () => new NamespaceGetChildrenAction(parent),
          //@ts-ignore
@@ -645,7 +556,7 @@ export class Orchestrator implements IOrchestrator {
             } else {
                let observable = Switch.onType(type, {
                   //@ts-ignore
-                  Namespace: () => parent.children.observable,
+                  Namespace: () => parent.namespaces.observable,
                   //@ts-ignore
                   Model: () => parent.models.observable,
                   //@ts-ignore
@@ -682,6 +593,17 @@ export class Orchestrator implements IOrchestrator {
     * @param obj The QualifiedObject to update
     */
    async updateQualifiedObject<T extends IQualifiedObject>(obj: T): Promise<void> {
+      // For Instances, their Models need to be updated firs
+      // to ensure the Fields are up-to-date
+      await Switch.case<Promise<void>>(obj, {
+         Namespace: async (ns) => { },
+         Model: async () => { },
+         Instance: async (inst) => {
+            await this.updateQualifiedObject(inst.model)
+            return
+         }
+      })
+      
       let action = this.composer.action.update(obj)
 
       await this.rfc.create(action)
@@ -701,18 +623,38 @@ export class Orchestrator implements IOrchestrator {
 
                   await this.restore.namespace(ns, updateAction.restore)
                },
-               Model: (model) => {
+               Model: async (model) => {
                   let updateAction = RfcAction.as<ModelUpdateAction>(action)
 
                   if (!updateAction.contentsUpdated) {
                      return
                   }
+
+                  if (updateAction.restore == null) {
+                     return
+                  }
+
+                  if(!updateAction.exists) {
+                     let mdl = model as Model
+                     return mdl.orphan()
+                  }
+
+                  await this.restore.model(updateAction.source, updateAction.restore)
                },
                Instance: (inst) => {
                   let updateAction = RfcAction.as<InstanceUpdateAction>(action)
 
                   if (!updateAction.contentsUpdated) {
                      return
+                  }
+
+                  if (updateAction.restore == null) {
+                     return
+                  }
+
+                  if(!updateAction.exists) {
+                     let ins = inst as Instance
+                     return ins.orphan()
                   }
                }
             })
@@ -736,7 +678,7 @@ export class Orchestrator implements IOrchestrator {
             return Switch.case(source, {
                Namespace: (ns) => {
                   //@ts-ignore
-                  let collection = <NamespaceCollection>ns.parent.children
+                  let collection = <NamespaceCollection>ns.parent.namespaces
                   this.composer.reorder<INamespace>(ns, collection, from, to, action)
                },
                Model: (model) => {

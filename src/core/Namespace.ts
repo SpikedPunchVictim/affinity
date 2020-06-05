@@ -26,7 +26,7 @@ export class NamespaceLazyRestoreInfo extends RestoreInfo {
 }
 
 export class NamespaceFullRestoreInfo extends NamespaceLazyRestoreInfo {
-   children: Array<NamespaceLazyRestoreInfo> = new Array<NamespaceLazyRestoreInfo>()
+   namespaces: Array<NamespaceLazyRestoreInfo> = new Array<NamespaceLazyRestoreInfo>()
    models: Array<ModelLazyRestoreInfo> = new Array<ModelLazyRestoreInfo>()
    instances: Array<InstanceLazyRestoreInfo> = new Array<InstanceLazyRestoreInfo>()
 
@@ -41,13 +41,13 @@ export class NamespaceFullRestoreInfo extends NamespaceLazyRestoreInfo {
 }
 
 export interface INamespace extends IQualifiedObject {
-   readonly children: INamespaceCollection
+   readonly namespaces: INamespaceCollection
    readonly models: IModelCollection
    readonly instances: IInstanceCollection
 }
 
 export class Namespace extends QualifiedObject {
-   readonly children: INamespaceCollection
+   readonly namespaces: INamespaceCollection
    readonly models: IModelCollection
    readonly instances: IInstanceCollection
 
@@ -58,11 +58,11 @@ export class Namespace extends QualifiedObject {
       id: string
    ) {
       super(name, parent, QualifiedObjectType.Namespace, context, id)
-      this.children = new NamespaceCollection(this, context)
+      this.namespaces = new NamespaceCollection(this, context)
       this.models = new ModelCollection(this, context)
       this.instances = new InstanceCollection(this, context)
 
-      this.children.on(ObservableEvents.added, this.onQualifiedObjectAdded.bind(this))
+      this.namespaces.on(ObservableEvents.added, this.onQualifiedObjectAdded.bind(this))
       this.models.on(ObservableEvents.added, this.onQualifiedObjectAdded.bind(this))
       this.instances.on(ObservableEvents.added, this.onQualifiedObjectAdded.bind(this))
    }
@@ -71,7 +71,7 @@ export class Namespace extends QualifiedObject {
       change.forEach(ch => {
          //@ts-ignore
          let obj = <QualifiedObject>ch.item
-         obj.setParent(this)
+         obj.internalSetParent(this)
       })
    }
 
@@ -85,7 +85,7 @@ export class RootNamespace
    implements INamespace {
 
    context: IProjectContext
-   children: INamespaceCollection
+   namespaces: INamespaceCollection
    models: IModelCollection
    instances: IInstanceCollection
 
@@ -99,11 +99,11 @@ export class RootNamespace
       super()
       this.id = id
       this.context = context
-      this.children = new NamespaceCollection(this, context)
+      this.namespaces = new NamespaceCollection(this, context)
       this.models = new ModelCollection(this, this.context)
       this.instances = new InstanceCollection(this, this.context)
 
-      this.children.on(ObservableEvents.added, this._onQualifiedObjectAdded.bind(this))
+      this.namespaces.on(ObservableEvents.added, this._onQualifiedObjectAdded.bind(this))
       this.models.on(ObservableEvents.added, this._onQualifiedObjectAdded.bind(this))
       this.instances.on(ObservableEvents.added, this._onQualifiedObjectAdded.bind(this))
    }
@@ -134,7 +134,7 @@ export class RootNamespace
 export class OrphanedNamespace implements INamespace {
    readonly type: QualifiedObjectType = QualifiedObjectType.Namespace
 
-   get children(): INamespaceCollection {
+   get namespaces(): INamespaceCollection {
       throw new Error(`Orphaned Namespaces have no children`)
    }
 

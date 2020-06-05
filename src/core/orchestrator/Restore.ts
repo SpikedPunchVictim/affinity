@@ -1,11 +1,9 @@
 import { IProject, IProjectContext } from "../Project";
-import { syncToMasterAsync } from "../utils/Collections";
+import { syncToMasterAsync, syncToMaster } from "../utils/Collections";
 import { IObservableCollection, ObservableCollection, ObservableEvents } from "../collections/ObservableCollection";
 import { INamespace } from "../..";
 import { NamespaceLazyRestoreInfo, Namespace, NamespaceFullRestoreInfo } from "../Namespace";
 import { QualifiedObjectType, Switch } from "../utils/Types";
-import { parentPath } from "../utils/QualifiedPath";
-import { NamespaceCreateAction, NamespaceReorderAction, NamespaceMoveAction } from '../actions/Namespace'
 import { IUidWarden } from "../UidWarden";
 import { Search } from "../Search";
 import { Composer } from "./Composer";
@@ -13,10 +11,13 @@ import { emit } from "../utils/Eventing";
 import { Events } from "../Events";
 import { ModelLazyRestoreInfo, IModel, Model, ModelFullRestoreInfo } from "../Model";
 import { IQualifiedObject, QualifiedObject } from "../QualifiedObject";
-import { InstanceLazyRestoreInfo, IInstance, Instance } from "../Instance";
+import { InstanceLazyRestoreInfo, IInstance, Instance, InstanceFullRestoreInfo } from "../Instance";
 import { RestoreInfo } from '../Restore'
 import { MemberRestoreInfo, IMember, Member } from "../Member";
 import { Value } from "../values/Value";
+import { IOrchestrator } from "./Orchestrator";
+import { ItemAdd, ItemRemove } from "../collections/ChangeSets";
+import { FieldRestoreInfo, IField, FieldAttachment, Field } from "../Field";
 
 
 export class Restore {
@@ -32,6 +33,10 @@ export class Restore {
       return this.context.search
    }
 
+   get orchestrator(): IOrchestrator {
+      return this.context.orchestrator
+   }
+
    constructor(project: IProject, context: IProjectContext, composer: Composer) {
       this.project = project
       this.context = context
@@ -45,7 +50,7 @@ export class Restore {
          throw new Error(`Restore information does not represent the same object being updated. Source ID: ${obj.id}   Restore ID: ${restore.id}`)
       }
 
-      obj.setName(restore.name)
+      obj.internalSetName(restore.name)
 
       let parent = await this.project.getById<INamespace>(QualifiedObjectType.Namespace, restore.parentId)
 
@@ -97,8 +102,8 @@ export class Restore {
          // Update the Namespace collections
          await this.collection<INamespace, NamespaceLazyRestoreInfo>(
             namespace,
-            namespace.children.observable,
-            new ObservableCollection(...full.children),
+            namespace.namespaces.observable,
+            new ObservableCollection(...full.namespaces),
             async (restore) => new Namespace(restore.name, namespace, this.context, restore.id))
 
          await this.collection<IModel, ModelLazyRestoreInfo>(
@@ -121,49 +126,190 @@ export class Restore {
       }
    }
 
+   /**
+    * Restores an Instance's Fields
+    * 
+    * @param instance The Instance contianing the Fields
+    * @param restore The restore info
+    */
+   async instance(instance: IInstance, restore: InstanceLazyRestoreInfo | InstanceFullRestoreInfo): Promise<void> {
+      await this.qualifiedObject(instance, restore)
+
+      let isFullRestore = restore instanceof InstanceFullRestoreInfo
+
+      if (!isFullRestore) {
+         return
+      }
+
+      let full = restore as InstanceFullRestoreInfo
+
+      this.fields(instance, full.fields)
+   }
+
+   /**
+    * Restores an Instance's Fields
+    * 
+    * @param instance The Instance containing the Fields
+    * @param restore The restore info
+    */
+   fields(instance: IInstance, restore: FieldRestoreInfo[]): void {
+      syncToMaster(
+         new ObservableCollection(...restore),
+         instance.fields.observable,
+         {
+            equal: (master: FieldRestoreInfo, other: IField): boolean => {
+               if(master.id !== other.id) {
+                  return false
+               }
+
+               let field = other as Field
+
+               if(master.attached !== other.attachment) {
+                  if(master.attached === FieldAttachment.Attached) {
+                     field.internalSetAttachment(master.attached)
+                     field.internalSetValue(master.value)
+                  } else {
+                     field.internalSetAttachment(master.attached)
+                  }
+               }
+
+               if(!master.value.equals(other.value)) {
+                  field.internalSetValue(master.value)
+               }
+
+               return true
+            },
+            add: (master: FieldRestoreInfo, index: number, collection: IObservableCollection<IField>): void => {
+               // Fields are added when Members are updated
+            },
+            remove: (other: IField, index: number, collection: IObservableCollection<IField>): void => {
+               // Fields are removed when Members are updated
+            },
+            move: (other, from: number, to: number, collection: IObservableCollection<IField>): void => {
+               // Fields are moved when Members are updated
+            }
+         }
+      )
+   }
+
+   /**
+    * Restores a Model
+    * 
+    * @param model The Model to restore
+    * @param restore The Restore Info
+    */
    async model(model: IModel, restore: ModelLazyRestoreInfo | ModelFullRestoreInfo): Promise<void> {
       await this.qualifiedObject(model, restore)
 
       let isFullRestore = restore instanceof ModelFullRestoreInfo
 
-      if(!isFullRestore) {
+      if (!isFullRestore) {
          return
       }
 
       let full = restore as ModelFullRestoreInfo
 
-      // Restore the Members
-      await syncToMasterAsync(
-         new ObservableCollection(...full.members),
+      this.members(model, full.members)
+   }
+
+   /**
+    * Restores a Model's Members
+    * 
+    * @param model The Model whose Members will be updated
+    * @param restore Member restore info
+    */
+   members(model: IModel, restore: MemberRestoreInfo[]): void {
+      syncToMaster(
+         new ObservableCollection(...restore),
          model.members.observable,
          {
-            equal: async (master: MemberRestoreInfo, other: IMember): Promise<boolean> => {
-               if(master.id !== other.id) {
+            equal: (master: MemberRestoreInfo, other: IMember): boolean => {
+               if (master.id !== other.id) {
                   return false
-               }               
+               }
 
-               if(master.name !== other.name) {
+               if (master.name !== other.name) {
                   let member = other as Member
                   member.setName(master.name)
                }
 
-               if(!master.value.equals(other.value)) {
+               if (!master.value.equals(other.value)) {
                   let val = other.value as Value
-                 val.internalSet(master.value)
+                  val.internalSet(master.value)
                }
 
                return true
             },
-            add: async (master: MemberRestoreInfo, index: number, collection: IObservableCollection<IMember>): Promise<void> {
-           
+            add: (master: MemberRestoreInfo, index: number, collection: IObservableCollection<IMember>): void => {
+               let member = this.composer.create.member(model, master.name, master.value, master.id)
+
+               collection.customAdd(member, (change, add) => {
+                  let action = this.composer.action.createMember(model, member, index)
+
+                  emit([
+                     { source: collection, event: ObservableEvents.adding, data: change },
+                     { source: model.members, event: ObservableEvents.adding, data: change },
+                     { source: model, event: Events.Model.MemberAdding, data: action },
+                     { source: this.project, event: Events.Model.MemberAdding, data: action }
+                  ])
+
+                  let updatedChange = new ItemAdd<IMember>(member, index)
+                  add([updatedChange])
+
+                  emit([
+                     { source: collection, event: ObservableEvents.added, data: change },
+                     { source: model.members, event: ObservableEvents.added, data: change },
+                     { source: model, event: Events.Model.MemberAdded, data: action },
+                     { source: this.project, event: Events.Model.MemberAdded, data: action }
+                  ])
+               })
             },
-            remove: async (other: IMember, index: number, collection: IObservableCollection<IMember>): Promise<void> => {
-           
+            remove: (other: IMember, index: number, collection: IObservableCollection<IMember>): void => {
+               collection.customRemove(other, (change, remove) => {
+                  let action = this.composer.action.deleteMember(other)
+
+                  emit([
+                     { source: collection, event: ObservableEvents.removing, data: change },
+                     { source: model.members, event: ObservableEvents.removing, data: change },
+                     { source: model, event: Events.Model.MemberRemoving, data: action },
+                     { source: this.project, event: Events.Model.MemberRemoving, data: action }
+                  ])
+
+                  let updatedChange = new ItemRemove<IMember>(other, index)
+                  remove([updatedChange])
+
+                  emit([
+                     { source: collection, event: ObservableEvents.removed, data: change },
+                     { source: model.members, event: ObservableEvents.removed, data: change },
+                     { source: model, event: Events.Model.MemberRemoved, data: action },
+                     { source: this.project, event: Events.Model.MemberRemoved, data: action }
+                  ])
+               })
             },
-            move: async (other, from: Number, to: Number, collection: IObservableCollection<IMember>): Promise<void> => {
-           
+            move: (other, from: number, to: number, collection: IObservableCollection<IMember>): void => {
+               let member = collection.at(from)
+
+               collection.customMove(from, to, (change, move) => {
+                  let action = this.composer.action.reorderMember(member, from, to)
+
+                  emit([
+                     { source: collection, event: ObservableEvents.moving, data: change },
+                     { source: model.members, event: ObservableEvents.moving, data: change },
+                     { source: model, event: Events.Model.MemberMoving, data: action },
+                     { source: this.project, event: Events.Model.MemberMoving, data: action }
+                  ])
+
+                  move()
+
+                  emit([
+                     { source: collection, event: ObservableEvents.moved, data: change },
+                     { source: model.members, event: ObservableEvents.moved, data: change },
+                     { source: model, event: Events.Model.MemberMoved, data: action },
+                     { source: this.project, event: Events.Model.MemberMoved, data: action }
+                  ])
+               })
             }
-           }
+         }
       )
    }
 
@@ -182,7 +328,7 @@ export class Restore {
       collection: IObservableCollection<TQualifiedObject>,
       restores: IObservableCollection<TRestoreInfo>,
       create: (restore: TRestoreInfo) => Promise<TQualifiedObject>
-   ) {
+   ): Promise<void> {
       await syncToMasterAsync(
          restores,
          collection,
@@ -196,7 +342,7 @@ export class Restore {
                if (other.name !== master.name) {
                   //@ts-ignore
                   let obj = other as QualifiedObject
-                  obj.setName(master.name)
+                  obj.internalSetName(master.name)
                }
 
                // Ensure the parent is set correctly
@@ -204,7 +350,7 @@ export class Restore {
                if (other.parent.id !== parent.id) {
                   //@ts-ignore
                   let obj = other as QualifiedObject
-                  obj.setParent(parent)
+                  obj.internalSetParent(parent)
                }
 
                return true
@@ -242,7 +388,7 @@ export class Restore {
 
                   emit([
                      { source: collection, event: ObservableEvents.moving, data: change },
-                     { source: parent.children, event: ObservableEvents.moving, data: change },
+                     { source: parent.namespaces, event: ObservableEvents.moving, data: change },
                      { source: parent, event: parentChange.notifying, data: action },
                      { source: this.project, event: parentChange.notifying, data: action }
                   ])
@@ -251,7 +397,7 @@ export class Restore {
 
                   emit([
                      { source: collection, event: ObservableEvents.moved, data: change },
-                     { source: parent.children, event: ObservableEvents.moved, data: change },
+                     { source: parent.namespaces, event: ObservableEvents.moved, data: change },
                      { source: parent, event: parentChange.notified, data: action },
                      { source: this.project, event: parentChange.notified, data: action }
                   ])

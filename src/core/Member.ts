@@ -31,10 +31,7 @@ export type MemberCreateInfo = {
  * Used for restoring a Member from a data store
  */
 export class MemberRestoreInfo extends RestoreInfo {
-   name: string = ""
    value: IValue
-   index: number = -1
-   id: string = ""
    modelId: string
 
    constructor(name: string, value: IValue, id: string, modelId: string, index: number) {
